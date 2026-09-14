@@ -1,0 +1,23 @@
+# Dependencias y compilados
+node_modules/
+dist/
+
+# Variables de entorno: NUNCA se suben (usa .env.example como plantilla)
+.env
+.env.*
+!.env.example
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs
+npm-debug.log*
+*.log
+
+# Temporales de Word
+~$*.docx
