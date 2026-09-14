@@ -1,0 +1,116 @@
+[
+  {
+    "key": "institute_business",
+    "label": "Giros de Institutos",
+    "description": "Clasificación del giro o actividad principal de un instituto.",
+    "collection": "eeducation",
+    "section": "Institutos",
+    "sequence": 1,
+    "route": "/eeducation/institute-business",
+    "values": [
+      { "ref": "edu", "code": "EDUCACION", "value": "Educación", "alias": "EDU" },
+      { "ref": "inv", "code": "INVESTIGACION", "value": "Investigación", "alias": "INV" },
+      { "ref": "cap", "code": "CAPACITACION", "value": "Capacitación", "alias": "CAP" }
+    ]
+  },
+  {
+    "key": "prod_serv_status",
+    "label": "Estatus de Productos y Servicios",
+    "description": "Estados posibles de un producto o servicio dentro de su ciclo de vida.",
+    "collection": "eeducation",
+    "section": "Productos",
+    "sequence": 2,
+    "route": "/eeducation/prod-serv-status",
+    "values": [
+      { "ref": "act", "code": "PS_ACTIVO", "value": "Activo", "alias": "ACT" },
+      { "ref": "ina", "code": "PS_INACTIVO", "value": "Inactivo", "alias": "INA" },
+      { "ref": "ago", "code": "PS_AGOTADO", "value": "Agotado", "alias": "AGO" },
+      { "ref": "des", "code": "PS_DESCONTINUADO", "value": "Descontinuado", "alias": "DES" }
+    ]
+  },
+  {
+    "key": "prod_serv_type",
+    "label": "Tipos de Productos y Servicios",
+    "description": "Clasificación en dos niveles (tipo > subtipo) de lo que ofrece un instituto.",
+    "collection": "eeducation",
+    "section": "Productos",
+    "sequence": 3,
+    "route": "/eeducation/prod-serv-type",
+    "values": [
+      { "ref": "srv", "code": "SERVICIO_ESCOLAR", "value": "Servicio escolar", "alias": "SE" },
+      { "ref": "srv-con", "parentRef": "srv", "code": "CONSTANCIAS", "value": "Constancias y certificados", "alias": "CON" },
+      { "ref": "srv-cre", "parentRef": "srv", "code": "CREDENCIALES", "value": "Credenciales", "alias": "CRE" },
+      { "ref": "cur", "code": "CURSO", "value": "Curso", "alias": "CUR" },
+      { "ref": "cur-idi", "parentRef": "cur", "code": "IDIOMAS", "value": "Idiomas", "alias": "IDI" },
+      { "ref": "cur-ver", "parentRef": "cur", "code": "VERANO", "value": "Curso de verano", "alias": "VER" },
+      { "ref": "pro", "code": "PRODUCTO", "value": "Producto", "alias": "PRO" },
+      { "ref": "pro-pap", "parentRef": "pro", "code": "PAPELERIA", "value": "Papelería institucional", "alias": "PAP" }
+    ]
+  },
+  {
+    "key": "education_levels",
+    "label": "Niveles Educativos",
+    "description": "Ejemplo maestro-detalle-detalle: nivel > tipo de programa > programa.",
+    "collection": "eeducation",
+    "section": "Academico",
+    "sequence": 4,
+    "route": "/eeducation/education-levels",
+    "values": [
+      { "ref": "sup", "code": "SUPERIOR", "value": "Educación superior", "alias": "SUP" },
+      { "ref": "sup-lic", "parentRef": "sup", "code": "LICENCIATURA", "value": "Licenciatura", "alias": "LIC" },
+      { "ref": "sup-lic-isc", "parentRef": "sup-lic", "code": "ING_SISTEMAS", "value": "Ingeniería en Sistemas Computacionales", "alias": "ISC" },
+      { "ref": "sup-lic-iin", "parentRef": "sup-lic", "code": "ING_INDUSTRIAL", "value": "Ingeniería Industrial", "alias": "IIN" },
+      { "ref": "sup-pos", "parentRef": "sup", "code": "POSGRADO", "value": "Posgrado", "alias": "POS" },
+      { "ref": "sup-pos-mti", "parentRef": "sup-pos", "code": "MAESTRIA_TI", "value": "Maestría en Tecnologías de la Información", "alias": "MTI" },
+      { "ref": "med", "code": "MEDIA_SUPERIOR", "value": "Educación media superior", "alias": "MS" },
+      { "ref": "med-bac", "parentRef": "med", "code": "BACHILLERATO_TEC", "value": "Bachillerato tecnológico", "alias": "BT" }
+    ]
+  },
+  {
+    "key": "file_type",
+    "label": "Tipos de Archivo",
+    "description": "Tipos de archivo que se pueden asociar a una presentación de producto.",
+    "collection": "config",
+    "section": "Digital",
+    "sequence": 5,
+    "route": "/config/file-type",
+    "values": [
+      { "ref": "img", "code": "IMG", "value": "Imagen", "alias": "IMG" },
+      { "ref": "pdf", "code": "PDF", "value": "Documento PDF", "alias": "PDF" },
+      { "ref": "vid", "code": "VIDEO", "value": "Video", "alias": "VID" },
+      { "ref": "lnk", "code": "LINK", "value": "Enlace externo", "alias": "URL" }
+    ]
+  },
+  {
+    "key": "vehicle_type",
+    "label": "Tipos de Vehículo",
+    "description": "Ejemplo del tutorial: jerarquía de tres niveles con parentId.",
+    "collection": "config",
+    "section": "Digital",
+    "sequence": 6,
+    "route": "/config/vehicle-type",
+    "values": [
+      { "ref": "veh", "code": "VEHICULOS", "value": "Vehículos", "alias": "VEH" },
+      { "ref": "veh-ter", "parentRef": "veh", "code": "TERRESTRES", "value": "Terrestres", "alias": "TER" },
+      { "ref": "veh-ter-aut", "parentRef": "veh-ter", "code": "AUTOMOVIL", "value": "Automóvil", "alias": "AUT" },
+      { "ref": "veh-ter-mot", "parentRef": "veh-ter", "code": "MOTOCICLETA", "value": "Motocicleta", "alias": "MOT" },
+      { "ref": "veh-aer", "parentRef": "veh", "code": "AEREOS", "value": "Aéreos", "alias": "AER" },
+      { "ref": "veh-aer-avi", "parentRef": "veh-aer", "code": "AVION", "value": "Avión", "alias": "AVI" },
+      { "ref": "veh-aer-hel", "parentRef": "veh-aer", "code": "HELICOPTERO", "value": "Helicóptero", "alias": "HEL" }
+    ]
+  },
+  {
+    "key": "strategies",
+    "label": "Estrategias",
+    "description": "Ejemplo del esquema canónico del docente (maestro-detalle-detalle).",
+    "collection": "trading",
+    "section": "Operacion",
+    "sequence": 7,
+    "route": "/config/strategies",
+    "values": [
+      { "ref": "opt", "code": "OPTIONS", "value": "Opciones", "alias": "OPT" },
+      { "ref": "opt-ic", "parentRef": "opt", "code": "IRON_CONDOR", "value": "Iron Condor", "alias": "IC" },
+      { "ref": "opt-ic-wic", "parentRef": "opt-ic", "code": "WIDE_IRON_CONDOR", "value": "Iron Condor Ancho", "alias": "WIC" }
+    ]
+  }
+]

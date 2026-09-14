@@ -1,0 +1,144 @@
+{
+  "info": {
+    "name": "catalogos-api · Catálogo de catálogos",
+    "description": "Endpoints de catalogos-api. Ejecuta primero `npm run seed` y `npm run dev`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3020/api/v1" },
+    { "key": "user", "value": "KPEREZ" },
+    { "key": "valueId", "value": "" },
+    { "key": "parentId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Catálogos",
+      "item": [
+        {
+          "name": "Listar catálogos",
+          "request": { "method": "GET", "url": "{{baseUrl}}/catalogs" }
+        },
+        {
+          "name": "Obtener catálogo",
+          "request": { "method": "GET", "url": "{{baseUrl}}/catalogs/education_levels" }
+        },
+        {
+          "name": "Crear catálogo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/catalogs",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"payment_method\",\n  \"label\": \"Métodos de pago\",\n  \"description\": \"Formas de pago aceptadas por un instituto\",\n  \"collection\": \"eeducation\",\n  \"section\": \"Pagos\",\n  \"sequence\": 8,\n  \"route\": \"/eeducation/payment-method\",\n  \"values\": [\n    { \"code\": \"CASH\", \"value\": \"Efectivo\", \"alias\": \"EFE\" },\n    { \"code\": \"CARD\", \"value\": \"Tarjeta\", \"alias\": \"TAR\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar catálogo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/catalogs/payment_method",
+            "body": { "mode": "raw", "raw": "{\n  \"label\": \"Métodos de pago aceptados\",\n  \"section\": \"Finanzas\"\n}" }
+          }
+        },
+        {
+          "name": "Borrar catálogo (lógico)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "x-user", "value": "{{user}}" }],
+            "url": "{{baseUrl}}/catalogs/payment_method"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jerarquía",
+      "item": [
+        {
+          "name": "Árbol completo",
+          "request": { "method": "GET", "url": "{{baseUrl}}/catalogs/education_levels/tree" }
+        },
+        {
+          "name": "Hijos de nivel 1 (guarda parentId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const values = pm.response.json();",
+                  "if (values.length) pm.collectionVariables.set('parentId', values[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/catalogs/education_levels/children" }
+        },
+        {
+          "name": "Hijos de un valor",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/catalogs/education_levels/children?parentId={{parentId}}", "host": ["{{baseUrl}}"], "path": ["catalogs", "education_levels", "children"], "query": [{ "key": "parentId", "value": "{{parentId}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Valores",
+      "item": [
+        {
+          "name": "Agregar valor (guarda valueId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('valueId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/catalogs/file_type/values",
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"AUDIO\",\n  \"value\": \"Audio\",\n  \"alias\": \"AUD\",\n  \"description\": \"Archivos de audio\"\n}" }
+          }
+        },
+        {
+          "name": "Actualizar valor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/catalogs/file_type/values/{{valueId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"value\": \"Audio (MP3)\",\n  \"sequence\": 10\n}" }
+          }
+        },
+        {
+          "name": "Borrar valor (lógico)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "x-user", "value": "{{user}}" }],
+            "url": "{{baseUrl}}/catalogs/file_type/values/{{valueId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
