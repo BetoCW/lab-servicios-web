@@ -1,0 +1,29 @@
+[
+  {
+    "IdInstitutoOK": "1",
+    "IdInstitutoBK": "18DIT0002Z",
+    "DesInstituto": "Instituto Tecnológico de Tepic",
+    "Alias": "ITT",
+    "Matriz": "S",
+    "Giro": "EDUCACION",
+    "IdInstitutoSupOK": ""
+  },
+  {
+    "IdInstitutoOK": "3",
+    "IdInstitutoBK": "ITBB-PRUEBA",
+    "DesInstituto": "Instituto Tecnológico de Bahía de Banderas",
+    "Alias": "ITBB",
+    "Matriz": "S",
+    "Giro": "EDUCACION",
+    "IdInstitutoSupOK": ""
+  },
+  {
+    "IdInstitutoOK": "4",
+    "IdInstitutoBK": "ITT-CLE",
+    "DesInstituto": "Coordinación de Lenguas Extranjeras del ITT",
+    "Alias": "CLE-ITT",
+    "Matriz": "N",
+    "Giro": "CAPACITACION",
+    "IdInstitutoSupOK": "1"
+  }
+]

@@ -1,0 +1,102 @@
+[
+  {
+    "IdInstitutoOK": "1",
+    "IdProdServOK": "1-CONST-EST",
+    "IdProdServBK": "SE-001",
+    "DesProdServ": "Constancia de estudios",
+    "IdTipoProdServOK": "CONSTANCIAS",
+    "Indice": "constancia estudios servicios escolares",
+    "estatus": ["PS_ACTIVO"],
+    "cat_prod_serv_info_ad": [
+      { "IdEtiquetaOK": "education_levels", "Etiqueta": "Nivel educativo", "Valor": "SUPERIOR" },
+      { "IdEtiquetaOK": "tiempo_entrega", "Etiqueta": "Tiempo de entrega", "Valor": "3 días hábiles" }
+    ],
+    "cat_prod_serv_presenta": [
+      {
+        "IdPresentaOK": "1-CONST-EST-SIMPLE",
+        "DesPresenta": "Constancia simple",
+        "Precio": 50,
+        "Principal": "S",
+        "cat_prod_serv_archivos": [
+          { "IdArchivoOK": "ARCH-001", "IdTipoArchivoOK": "PDF", "DesArchivo": "Formato de solicitud", "RutaArchivo": "https://example.com/itt/constancia-solicitud.pdf", "Principal": "S" }
+        ]
+      },
+      { "IdPresentaOK": "1-CONST-EST-KARDEX", "DesPresenta": "Constancia con kárdex", "Precio": 90, "Principal": "N" }
+    ]
+  },
+  {
+    "IdInstitutoOK": "1",
+    "IdProdServOK": "1-CRED-EST",
+    "IdProdServBK": "SE-002",
+    "DesProdServ": "Credencial de estudiante",
+    "IdTipoProdServOK": "CREDENCIALES",
+    "Indice": "credencial estudiante identificación",
+    "estatus": ["PS_ACTIVO"],
+    "cat_prod_serv_presenta": [
+      { "IdPresentaOK": "1-CRED-EST-NUEVA", "DesPresenta": "Credencial de primer ingreso", "Precio": 0, "Principal": "S" },
+      { "IdPresentaOK": "1-CRED-EST-REPO", "DesPresenta": "Reposición por extravío", "Precio": 120, "Principal": "N" }
+    ]
+  },
+  {
+    "IdInstitutoOK": "1",
+    "IdProdServOK": "1-PAP-LIBRETA",
+    "IdProdServBK": "PR-001",
+    "CodigoBarras": "7500000000017",
+    "DesProdServ": "Libreta institucional",
+    "IdTipoProdServOK": "PAPELERIA",
+    "Indice": "libreta cuaderno papelería",
+    "estatus": ["PS_ACTIVO", "PS_AGOTADO"],
+    "cat_prod_serv_presenta": [
+      {
+        "IdPresentaOK": "1-PAP-LIBRETA-100",
+        "CodigoBarras": "7500000000024",
+        "DesPresenta": "Libreta profesional 100 hojas",
+        "Precio": 65,
+        "Principal": "S",
+        "cat_prod_serv_archivos": [
+          { "IdArchivoOK": "ARCH-002", "IdTipoArchivoOK": "IMG", "DesArchivo": "Foto de portada", "RutaArchivo": "https://example.com/itt/libreta.jpg", "Principal": "S" }
+        ]
+      }
+    ]
+  },
+  {
+    "IdInstitutoOK": "4",
+    "IdProdServOK": "4-INGLES-N1",
+    "IdProdServBK": "CUR-ING-01",
+    "DesProdServ": "Curso de inglés nivel 1",
+    "IdTipoProdServOK": "IDIOMAS",
+    "Indice": "inglés idiomas curso nivel 1",
+    "estatus": ["PS_ACTIVO"],
+    "cat_prod_serv_info_ad": [
+      { "IdEtiquetaOK": "duracion", "Etiqueta": "Duración", "Valor": "60 horas" }
+    ],
+    "cat_prod_serv_presenta": [
+      { "IdPresentaOK": "4-INGLES-N1-SAB", "DesPresenta": "Modalidad sabatina", "Precio": 1800, "Principal": "S" },
+      {
+        "IdPresentaOK": "4-INGLES-N1-INT",
+        "DesPresenta": "Modalidad intensiva de verano",
+        "Precio": 2100,
+        "Principal": "N",
+        "cat_prod_serv_archivos": [
+          { "IdArchivoOK": "ARCH-003", "IdTipoArchivoOK": "VIDEO", "DesArchivo": "Video promocional", "RutaArchivo": "https://example.com/itt/ingles-verano.mp4", "Principal": "S" }
+        ]
+      }
+    ]
+  },
+  {
+    "IdInstitutoOK": "3",
+    "IdProdServOK": "3-VER-PYTHON",
+    "IdProdServBK": "CUR-VER-01",
+    "DesProdServ": "Curso de verano: programación en Python",
+    "IdTipoProdServOK": "VERANO",
+    "Indice": "python programación verano curso",
+    "estatus": ["PS_ACTIVO"],
+    "cat_prod_serv_info_ad": [
+      { "IdEtiquetaOK": "education_levels", "Etiqueta": "Programa relacionado", "Valor": "ING_SISTEMAS" }
+    ],
+    "cat_prod_serv_presenta": [
+      { "IdPresentaOK": "3-VER-PYTHON-PRES", "DesPresenta": "Presencial", "Precio": 1500, "Principal": "S" },
+      { "IdPresentaOK": "3-VER-PYTHON-LIN", "DesPresenta": "En línea", "Precio": 1200, "Principal": "N" }
+    ]
+  }
+]

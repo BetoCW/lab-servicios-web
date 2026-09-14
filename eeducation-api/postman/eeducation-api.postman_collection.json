@@ -1,0 +1,153 @@
+{
+  "info": {
+    "name": "eeducation-api · Institutos y Productos/Servicios",
+    "description": "Endpoints de eeducation-api. Ejecuta primero `npm run seed` y `npm run dev`. Para validar códigos, levanta también catalogos-api.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3030/api/v1" },
+    { "key": "user", "value": "KPEREZ" }
+  ],
+  "item": [
+    {
+      "name": "Institutos",
+      "item": [
+        { "name": "Listar institutos", "request": { "method": "GET", "url": "{{baseUrl}}/institutos" } },
+        { "name": "Obtener instituto", "request": { "method": "GET", "url": "{{baseUrl}}/institutos/1" } },
+        { "name": "Productos/servicios del instituto", "request": { "method": "GET", "url": "{{baseUrl}}/institutos/1/prod-serv" } },
+        {
+          "name": "Crear instituto",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/institutos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"5\",\n  \"IdInstitutoBK\": \"ITT-CC\",\n  \"DesInstituto\": \"Centro de Cómputo del ITT\",\n  \"Alias\": \"CC-ITT\",\n  \"Matriz\": \"N\",\n  \"Giro\": \"CAPACITACION\",\n  \"IdInstitutoSupOK\": \"1\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar instituto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/institutos/5",
+            "body": { "mode": "raw", "raw": "{\n  \"DesInstituto\": \"Centro de Cómputo e Innovación del ITT\"\n}" }
+          }
+        },
+        {
+          "name": "Borrar instituto (lógico)",
+          "request": { "method": "DELETE", "header": [{ "key": "x-user", "value": "{{user}}" }], "url": "{{baseUrl}}/institutos/5" }
+        },
+        {
+          "name": "Borrar instituto (físico)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "x-user", "value": "{{user}}" }],
+            "url": { "raw": "{{baseUrl}}/institutos/5?fisico=true", "host": ["{{baseUrl}}"], "path": ["institutos", "5"], "query": [{ "key": "fisico", "value": "true" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Productos/Servicios",
+      "item": [
+        { "name": "Listar productos/servicios", "request": { "method": "GET", "url": "{{baseUrl}}/prod-serv" } },
+        {
+          "name": "Filtrar por instituto",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/prod-serv?IdInstitutoOK=4", "host": ["{{baseUrl}}"], "path": ["prod-serv"], "query": [{ "key": "IdInstitutoOK", "value": "4" }] }
+          }
+        },
+        { "name": "Obtener producto/servicio", "request": { "method": "GET", "url": "{{baseUrl}}/prod-serv/1-CONST-EST" } },
+        {
+          "name": "Crear producto/servicio",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/prod-serv",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"1\",\n  \"IdProdServOK\": \"1-CERT-ING\",\n  \"IdProdServBK\": \"SE-010\",\n  \"DesProdServ\": \"Certificado de inglés\",\n  \"IdTipoProdServOK\": \"CONSTANCIAS\",\n  \"Indice\": \"certificado inglés idiomas\",\n  \"cat_prod_serv_info_ad\": [\n    { \"IdEtiquetaOK\": \"tiempo_entrega\", \"Etiqueta\": \"Tiempo de entrega\", \"Valor\": \"5 días hábiles\" }\n  ],\n  \"cat_prod_serv_presenta\": [\n    {\n      \"IdPresentaOK\": \"1-CERT-ING-DIG\",\n      \"DesPresenta\": \"Certificado digital\",\n      \"Precio\": 150,\n      \"Principal\": \"S\",\n      \"cat_prod_serv_archivos\": [\n        { \"IdArchivoOK\": \"ARCH-010\", \"IdTipoArchivoOK\": \"PDF\", \"DesArchivo\": \"Ejemplo\", \"RutaArchivo\": \"https://example.com/itt/cert-ingles.pdf\", \"Principal\": \"S\" }\n      ]\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Actualizar producto/servicio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/prod-serv/1-CERT-ING",
+            "body": { "mode": "raw", "raw": "{\n  \"DesProdServ\": \"Certificado de dominio del idioma inglés\"\n}" }
+          }
+        },
+        {
+          "name": "Cambiar estatus",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/prod-serv/1-CERT-ING/estatus",
+            "body": { "mode": "raw", "raw": "{\n  \"IdTipoEstatusOK\": \"PS_INACTIVO\",\n  \"Observacion\": \"Pausado durante vacaciones\"\n}" }
+          }
+        },
+        {
+          "name": "Agregar presentación",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/prod-serv/1-CERT-ING/presentaciones",
+            "body": { "mode": "raw", "raw": "{\n  \"IdPresentaOK\": \"1-CERT-ING-IMP\",\n  \"DesPresenta\": \"Certificado impreso\",\n  \"Precio\": 220,\n  \"Principal\": \"N\"\n}" }
+          }
+        },
+        {
+          "name": "Actualizar presentación",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-user", "value": "{{user}}" }
+            ],
+            "url": "{{baseUrl}}/prod-serv/1-CERT-ING/presentaciones/1-CERT-ING-IMP",
+            "body": { "mode": "raw", "raw": "{\n  \"Precio\": 200,\n  \"Principal\": \"S\"\n}" }
+          }
+        },
+        {
+          "name": "Borrar presentación (lógico)",
+          "request": { "method": "DELETE", "header": [{ "key": "x-user", "value": "{{user}}" }], "url": "{{baseUrl}}/prod-serv/1-CERT-ING/presentaciones/1-CERT-ING-IMP" }
+        },
+        {
+          "name": "Borrar producto/servicio (lógico)",
+          "request": { "method": "DELETE", "header": [{ "key": "x-user", "value": "{{user}}" }], "url": "{{baseUrl}}/prod-serv/1-CERT-ING" }
+        },
+        {
+          "name": "Borrar producto/servicio (físico)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "x-user", "value": "{{user}}" }],
+            "url": { "raw": "{{baseUrl}}/prod-serv/1-CERT-ING?fisico=true", "host": ["{{baseUrl}}"], "path": ["prod-serv", "1-CERT-ING"], "query": [{ "key": "fisico", "value": "true" }] }
+          }
+        }
+      ]
+    }
+  ]
+}
