@@ -1,0 +1,57 @@
+# Bases de datos LOCALES para desarrollo y pruebas (opcional).
+# Levantar:  docker compose -f database/docker-compose.yml up -d
+# Apagar:    docker compose -f database/docker-compose.yml down
+# Borrar datos también: agrega -v al comando down
+name: lab-servicios-web
+
+services:
+  mongo:
+    image: mongo:8
+    container_name: lsw-mongo
+    ports:
+      - "27018:27017" # 27018 para no chocar con un MongoDB instalado en la PC
+    volumes:
+      - mongo_data:/data/db
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: lsw-postgres
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab_local_2026 # solo para el contenedor local
+      POSTGRES_DB: eeducation
+    ports:
+      - "5433:5432" # 5433 para no chocar con un PostgreSQL instalado en la PC
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # Al crear el contenedor por primera vez ejecuta el esquema y los datos de prueba
+      - ./postgres:/docker-entrypoint-initdb.d:ro
+
+  # Visores web opcionales (evidencias): docker compose -f database/docker-compose.yml --profile visores up -d
+  pgweb:
+    image: sosedoff/pgweb:latest
+    container_name: lsw-pgweb
+    profiles: ["visores"]
+    environment:
+      PGWEB_DATABASE_URL: postgres://lab:lab_local_2026@postgres:5432/eeducation?sslmode=disable
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: lsw-mongo-express
+    profiles: ["visores"]
+    environment:
+      ME_CONFIG_MONGODB_URL: ${ME_CONFIG_MONGODB_URL:-mongodb://mongo:27017}
+      ME_CONFIG_BASICAUTH: "false"
+      ME_CONFIG_BASICAUTH_ENABLED: "false"
+    ports:
+      - "8082:8081"
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:
+  pg_data:
