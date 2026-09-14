@@ -1,0 +1,100 @@
+erDiagram
+    catalogs ||--o{ catalog_values : "catalog_id"
+    catalog_values |o--o{ catalog_values : "parent_id"
+    institutos |o--o{ institutos : "id_instituto_sup_ok"
+    institutos ||--o{ prod_serv : "id_instituto_ok"
+    prod_serv ||--|{ prod_serv_estatus : "prod_serv_id"
+    prod_serv ||--o{ prod_serv_info_ad : "prod_serv_id"
+    prod_serv ||--o{ prod_serv_presenta : "prod_serv_id"
+    prod_serv_presenta ||--o{ prod_serv_presenta_archivos : "presenta_id"
+
+    catalogs {
+        uuid id PK
+        text key UK "snake_case"
+        text label
+        text description
+        text collection
+        text section
+        int sequence
+        text image_url
+        text route
+        bool active
+        timestamptz deleted_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    catalog_values {
+        uuid id PK
+        uuid catalog_id FK
+        uuid parent_id FK "NULL = nivel 1"
+        text code "UK con catalog_id"
+        text value
+        text alias
+        int sequence "UK por padre"
+        bool active
+        timestamptz deleted_at
+    }
+    institutos {
+        uuid id PK
+        text id_instituto_ok UK
+        text id_instituto_bk
+        text des_instituto
+        text alias
+        char matriz "S o N"
+        text giro "catalogo institute_business"
+        text id_instituto_sup_ok FK
+        char activo
+        char borrado
+    }
+    prod_serv {
+        uuid id PK
+        text id_instituto_ok FK
+        text id_prod_serv_ok UK
+        text id_prod_serv_bk
+        text codigo_barras
+        text des_prod_serv
+        text id_tipo_prod_serv_ok "catalogo prod_serv_type"
+        text indice
+        char activo
+        char borrado
+    }
+    prod_serv_estatus {
+        uuid id PK
+        uuid prod_serv_id FK
+        text id_tipo_estatus_ok "catalogo prod_serv_status"
+        char actual "solo uno S"
+        text observacion
+    }
+    prod_serv_info_ad {
+        uuid id PK
+        uuid prod_serv_id FK
+        text id_etiqueta_ok
+        text etiqueta
+        text valor
+        int secuencia
+    }
+    prod_serv_presenta {
+        uuid id PK
+        uuid prod_serv_id FK
+        text id_presenta_ok "UK con prod_serv_id"
+        text des_presenta
+        numeric precio "mayor o igual a 0"
+        char principal "solo una S"
+        char borrado
+    }
+    prod_serv_presenta_archivos {
+        uuid id PK
+        uuid presenta_id FK
+        text id_archivo_ok
+        text id_tipo_archivo_ok "catalogo file_type"
+        text ruta_archivo
+        char principal
+    }
+    bitacora {
+        bigint id PK
+        text tabla
+        uuid registro_id
+        text accion
+        timestamptz fecha_reg
+        text usuario_reg
+    }

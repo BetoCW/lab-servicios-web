@@ -1,0 +1,25 @@
+flowchart LR
+    subgraph Clientes
+        PM[Postman / Insomnia]
+        FE[Front-end futuro]
+    end
+
+    subgraph eeducation-api [:3030 eeducation-api]
+        R2[routes] --> C2[controllers] --> S2[services] --> M2[models Mongoose]
+    end
+
+    subgraph catalogos-api [:3020 catalogos-api]
+        R1[routes] --> C1[controllers] --> S1[services] --> M1[models Mongoose]
+    end
+
+    PM -->|HTTP JSON| R1
+    PM -->|HTTP JSON| R2
+    FE -->|HTTP JSON| R2
+    S2 -->|GET /api/v1/catalogs/:key| R1
+
+    M1 --> DB1[(MongoDB Atlas<br/>CatalogosDB)]
+    M2 --> DB2[(MongoDB Atlas<br/>eEducationDB)]
+
+    PG[(PostgreSQL / Supabase<br/>esquema relacional)]
+    S1 -. proyecto final .-> PG
+    S2 -. proyecto final .-> PG

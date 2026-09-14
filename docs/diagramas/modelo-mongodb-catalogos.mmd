@@ -1,0 +1,38 @@
+classDiagram
+    direction LR
+    class catalogs {
+        <<colección · CatalogosDB>>
+        ObjectId _id
+        String key UNIQUE
+        String label
+        String description
+        String collection
+        String section
+        Number sequence
+        String imageUrl
+        String route
+        Boolean active
+        Date deletedAt
+        Date createdAt
+        Date updatedAt
+        String createdBy
+        String updatedBy
+        Value[] values
+    }
+    class Value {
+        <<subdocumento values[]>>
+        String id uuid
+        String parentId
+        String code UPPER_SNAKE
+        String value
+        String alias
+        Number sequence
+        String imageUrl
+        String description
+        Boolean active
+        Date deletedAt
+        String createdBy
+        String updatedBy
+    }
+    catalogs *-- "0..*" Value : values[]
+    Value --> Value : parentId (N niveles)

@@ -1,0 +1,27 @@
+flowchart LR
+    ADM([Administrador<br/>de catálogos])
+    OPE([Operador del<br/>instituto])
+    SIS([Sistema cliente<br/>front / otra API])
+
+    subgraph M1 [Módulo 1 · Catálogo de catálogos]
+        CU1(Registrar catálogo)
+        CU2(Editar / dar de baja catálogo)
+        CU3(Agregar valor en cualquier nivel)
+        CU4(Mover / editar / dar de baja valor)
+        CU5(Consultar catálogo, árbol o hijos)
+    end
+
+    subgraph M2 [Módulo 2 · Institutos y productos/servicios]
+        CU6(Registrar / editar instituto)
+        CU7(Baja lógica o física de instituto)
+        CU8(Registrar producto/servicio)
+        CU9(Administrar presentaciones y archivos)
+        CU10(Cambiar estatus con historial)
+        CU11(Consultar productos por instituto)
+    end
+
+    ADM --> CU1 & CU2 & CU3 & CU4 & CU5
+    OPE --> CU6 & CU7 & CU8 & CU9 & CU10 & CU11
+    SIS --> CU5 & CU11
+    CU8 -. valida códigos .-> CU5
+    CU10 -. valida códigos .-> CU5

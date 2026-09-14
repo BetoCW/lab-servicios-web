@@ -1,0 +1,74 @@
+classDiagram
+    direction TB
+    class Institutos {
+        <<colección · eEducationDB>>
+        String IdInstitutoOK UNIQUE
+        String IdInstitutoBK
+        String DesInstituto
+        String Alias
+        String Matriz S/N
+        String Giro
+        String IdInstitutoSupOK
+        detail_row detail_row
+    }
+    class ProdServ {
+        <<colección · eEducationDB>>
+        String IdInstitutoOK
+        String IdProdServOK UNIQUE
+        String IdProdServBK
+        String CodigoBarras
+        String DesProdServ
+        String IdTipoProdServOK
+        String Indice
+        Estatus[] cat_prod_serv_estatus
+        InfoAd[] cat_prod_serv_info_ad
+        Presenta[] cat_prod_serv_presenta
+        detail_row detail_row
+    }
+    class Estatus {
+        <<subdocumento>>
+        String IdTipoEstatusOK
+        String Actual S/N
+        String Observacion
+        detail_row detail_row
+    }
+    class InfoAd {
+        <<subdocumento>>
+        String IdEtiquetaOK
+        String Etiqueta
+        String Valor
+        Number Secuencia
+        detail_row detail_row
+    }
+    class Presenta {
+        <<subdocumento>>
+        String IdPresentaOK
+        String IdPresentaBK
+        String CodigoBarras
+        String DesPresenta
+        Number Precio
+        String Principal S/N
+        Archivo[] cat_prod_serv_archivos
+        detail_row detail_row
+    }
+    class Archivo {
+        <<subdocumento>>
+        String IdArchivoOK
+        String IdTipoArchivoOK
+        String DesArchivo
+        String RutaArchivo
+        String Principal S/N
+        detail_row detail_row
+    }
+    class detail_row {
+        <<subdocumento de auditoría>>
+        String Activo S/N
+        String Borrado S/N
+        Reg[] detail_row_reg
+    }
+    Institutos --> Institutos : IdInstitutoSupOK
+    Institutos "1" <-- "0..*" ProdServ : IdInstitutoOK
+    ProdServ *-- "1..*" Estatus
+    ProdServ *-- "0..*" InfoAd
+    ProdServ *-- "0..*" Presenta
+    Presenta *-- "0..*" Archivo

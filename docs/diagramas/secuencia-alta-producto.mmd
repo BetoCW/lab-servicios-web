@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    actor U as Operador (Postman)
+    participant R as prodServ.routes
+    participant C as prodServ.controller
+    participant S as prodServ.service
+    participant K as catalogos-api
+    participant DB as MongoDB Atlas
+
+    U->>R: POST /api/v1/prod-serv (JSON, x-user)
+    R->>C: createProdServ(req, res, next)
+    C->>S: createProdServ(body, actor)
+    S->>DB: Institutos.exists(IdInstitutoOK)
+    DB-->>S: sí / no
+    alt instituto no existe
+        S-->>C: boom.badRequest
+        C-->>U: 400 { message }
+    end
+    S->>K: GET /catalogs/prod_serv_type
+    K-->>S: 200 { values[] }
+    S->>K: GET /catalogs/prod_serv_status
+    K-->>S: 200 { values[] }
+    alt código inválido
+        S-->>C: boom.badRequest
+        C-->>U: 400 { message }
+    end
+    S->>DB: ProdServ.create(documento + detail_row)
+    DB-->>S: documento guardado
+    S-->>C: producto/servicio
+    C-->>U: 201 Created (JSON)

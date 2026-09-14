@@ -1,0 +1,13 @@
+erDiagram
+    CATALOGO ||--o{ VALOR : "contiene"
+    VALOR |o--o{ VALOR : "es padre de"
+    INSTITUTO |o--o{ INSTITUTO : "es superior de"
+    INSTITUTO ||--o{ PRODUCTO_SERVICIO : "ofrece"
+    PRODUCTO_SERVICIO ||--|{ ESTATUS : "tiene historial"
+    PRODUCTO_SERVICIO ||--o{ INFO_ADICIONAL : "describe"
+    PRODUCTO_SERVICIO ||--o{ PRESENTACION : "se vende como"
+    PRESENTACION ||--o{ ARCHIVO : "muestra"
+    VALOR ||--o{ INSTITUTO : "clasifica giro"
+    VALOR ||--o{ PRODUCTO_SERVICIO : "clasifica tipo"
+    VALOR ||--o{ ESTATUS : "define estatus"
+    VALOR ||--o{ ARCHIVO : "define tipo"
