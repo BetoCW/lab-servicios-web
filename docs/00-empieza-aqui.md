@@ -30,6 +30,7 @@ Como el Equipo 4 tiene integrantes de los dos casos, el repositorio trae **las d
 3. [04 · Flujo de trabajo en Git (ramas del equipo)](04-flujo-git.md)
 4. [05 · Bases de datos locales con Docker y PostgreSQL](05-bases-locales-docker.md)
 5. [06 · Diseño de datos (modelos y esquemas)](06-diseno-de-datos.md)
+6. [07 · Tutorial: PostgreSQL con Docker desde cero](07-tutorial-postgresql-docker.md): si nunca has usado Docker ni PostgreSQL, empieza aquí para la parte SQL
 
 ## 4. Errores comunes
 

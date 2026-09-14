@@ -13,7 +13,7 @@ El docente dejó dos actividades distintas según la experiencia del equipo. Aqu
 |---|---|---|---|
 | [`catalogos-api/`](catalogos-api) | Integrantes que **ya llevaron clase** con el docente | Catálogo de catálogos (etiquetas → valores con N niveles) | 3020 |
 | [`eeducation-api/`](eeducation-api) | Integrantes **nuevos** | *AppRESTeEducation*: Institutos y Productos/Servicios | 3030 |
-| [`database/`](database) | Todos | Docker (Mongo y Postgres locales) + esquema SQL, datos de prueba y vistas | 27018 / 5433 |
+| [`database/`](database) | Todos | Docker (Mongo y Postgres locales) + esquema SQL, datos de prueba y vistas. Tutorial: [docs/07](docs/07-tutorial-postgresql-docker.md) | 27018 / 5433 |
 | [`docs/`](docs) | Todos | Guías paso a paso, diseño de datos y flujo de trabajo en Git | — |
 
 Las dos APIs son independientes (cada una arranca sola), pero se pueden conectar: `eeducation-api` valida sus códigos (giro, estatus, tipo de producto, tipo de archivo) preguntándole a `catalogos-api`. Ese es el ejemplo de **comunicación entre microservicios** del proyecto.

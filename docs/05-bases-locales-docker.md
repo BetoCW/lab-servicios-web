@@ -2,6 +2,8 @@
 
 Opcional. Sirve para practicar sin internet, para no tocar la base compartida de Atlas y para probar el **esquema relacional** del proyecto final.
 
+> ¿Primera vez con Docker o PostgreSQL? Sigue el tutorial paso a paso: [07 · PostgreSQL con Docker desde cero](07-tutorial-postgresql-docker.md). Esta página es solo la referencia rápida.
+
 ## Levantar
 
 ```bash
