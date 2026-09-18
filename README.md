@@ -14,9 +14,13 @@ El docente dejó dos actividades distintas según la experiencia del equipo. Aqu
 | [`catalogos-api/`](catalogos-api) | Integrantes que **ya llevaron clase** con el docente | Catálogo de catálogos (etiquetas → valores con N niveles) | 3020 |
 | [`eeducation-api/`](eeducation-api) | Integrantes **nuevos** | *AppRESTeEducation*: Institutos y Productos/Servicios | 3030 |
 | [`database/`](database) | Todos | Docker (Mongo y Postgres locales) + esquema SQL, datos de prueba y vistas | 27018 / 5433 |
+| [`app_restful_express/`](app_restful_express) | Todos | **T1-Actividad 3**: Catálogo de Institutos en Express/JS con Swagger | 3050 |
+| [`app_restful_sap_cds/`](app_restful_sap_cds) | Todos | **T1-Actividad 3**: el mismo catálogo en SAP CDS/NodeJS (OData V4 + REST) | 4004 |
 | [`docs/`](docs) | Todos | Guías paso a paso, diseño de datos y flujo de trabajo en Git | — |
 
-Las dos APIs son independientes (cada una arranca sola), pero se pueden conectar: `eeducation-api` valida sus códigos (giro, estatus, tipo de producto, tipo de archivo) preguntándole a `catalogos-api`. Ese es el ejemplo de **comunicación entre microservicios** del proyecto.
+Los proyectos `app_restful_express` y `app_restful_sap_cds` son la entrega de la **T1-Actividad 3**: resuelven el mismo proceso DEMO (Catálogo de Institutos) en dos frameworks distintos, contra la misma base de datos, para poder compararlos respuesta contra respuesta.
+
+Las dos APIs de la Actividad 2 son independientes (cada una arranca sola), pero se pueden conectar: `eeducation-api` valida sus códigos (giro, estatus, tipo de producto, tipo de archivo) preguntándole a `catalogos-api`. Ese es el ejemplo de **comunicación entre microservicios** del proyecto.
 
 ```mermaid
 flowchart LR
