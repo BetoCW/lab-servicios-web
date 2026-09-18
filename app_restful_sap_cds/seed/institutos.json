@@ -1,0 +1,37 @@
+[
+  {
+    "IdInstitutoOK": "1",
+    "IdInstitutoBK": "18DIT0002Z",
+    "DesInstituto": "Instituto Tecnologico de Tepic",
+    "Alias": "ITT",
+    "Matriz": "S",
+    "Giro": "EDUCACION",
+    "IdInstitutoSupOK": "",
+    "informacion_adicional": [
+      { "IdEtiqueta": "IDCIUDAD", "Etiqueta": "CIUDAD", "Valor": "Tepic, Nayarit", "Secuencia": 10 },
+      { "IdEtiqueta": "IDNIVEL", "Etiqueta": "NIVEL", "Valor": "SUPERIOR", "Secuencia": 20 }
+    ]
+  },
+  {
+    "IdInstitutoOK": "3",
+    "IdInstitutoBK": "18DIT0009Y",
+    "DesInstituto": "Instituto Tecnologico de Bahia de Banderas",
+    "Alias": "ITBB",
+    "Matriz": "N",
+    "Giro": "EDUCACION",
+    "IdInstitutoSupOK": "1",
+    "informacion_adicional": [
+      { "IdEtiqueta": "IDCIUDAD", "Etiqueta": "CIUDAD", "Valor": "Bahia de Banderas, Nayarit", "Secuencia": 10 }
+    ]
+  },
+  {
+    "IdInstitutoOK": "4",
+    "IdInstitutoBK": "18CLE0001X",
+    "DesInstituto": "Coordinacion de Lenguas Extranjeras del ITT",
+    "Alias": "CLE-ITT",
+    "Matriz": "N",
+    "Giro": "EDUCACION",
+    "IdInstitutoSupOK": "1",
+    "informacion_adicional": []
+  }
+]

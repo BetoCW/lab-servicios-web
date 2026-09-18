@@ -1,0 +1,338 @@
+{
+  "info": {
+    "_postman_id": "f7dd255c-2945-4f21-8d62-e318c9f36f55",
+    "name": "app_restful_sap_cds - Catalogo de Institutos",
+    "description": "T1-Actividad 3 - Laboratorio de Servicios Web, ITTepic, Equipo 4.\nEl mismo servicio expuesto por SAP CDS en OData V4 y en REST plano.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "odataUrl",
+      "value": "http://localhost:4004/api/v1"
+    },
+    {
+      "key": "restUrl",
+      "value": "http://localhost:4004/rest/api/v1"
+    }
+  ],
+  "item": [
+    {
+      "name": "OData V4 - GET",
+      "item": [
+        {
+          "name": "Lista de institutos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Instituto por llave",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos('1')"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "$filter - solo sucursales",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos?$filter=Matriz eq 'N'"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "$filter - contains()",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos?$filter=contains(DesInstituto,'Tepic')"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "$select y $orderby",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos?$select=IdInstitutoOK,DesInstituto,Alias&$orderby=Alias desc"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "$top, $skip y $count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos?$top=2&$skip=0&$count=true"
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "OData V4 - CUD",
+      "item": [
+        {
+          "name": "Alta de un instituto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"5\",\n  \"IdInstitutoBK\": \"18DIT0005Y\",\n  \"DesInstituto\": \"Instituto Tecnologico de Ruiz\",\n  \"Alias\": \"ITR\",\n  \"Matriz\": \"N\",\n  \"Giro\": \"EDUCACION\",\n  \"IdInstitutoSupOK\": \"1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Actualizar instituto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos('5')"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"DesInstituto\": \"Instituto Tecnologico de Ruiz - Campus Norte\",\n  \"Alias\": \"ITR-N\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Baja logica (action)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{odataUrl}}/bajaLogica"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"3\",\n  \"usuario\": \"KPEREZ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Baja fisica",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos('5')"
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "REST plano",
+      "item": [
+        {
+          "name": "Lista de institutos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{restUrl}}/Institutos"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Instituto por llave",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{restUrl}}/Institutos/1"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Alta de un instituto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{restUrl}}/Institutos"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"10\",\n  \"IdInstitutoBK\": \"18DIT0010A\",\n  \"DesInstituto\": \"Instituto Tecnologico de Santiago\",\n  \"Alias\": \"ITS\",\n  \"Matriz\": \"N\",\n  \"Giro\": \"EDUCACION\",\n  \"IdInstitutoSupOK\": \"1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Baja fisica",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{restUrl}}/Institutos/10"
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Casos de error",
+      "item": [
+        {
+          "name": "404 - instituto inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos('999')"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "409 - llave duplicada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"1\",\n  \"IdInstitutoBK\": \"Z\",\n  \"DesInstituto\": \"Duplicado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "400 - falta campo obligatorio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{odataUrl}}/Institutos"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"12\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentacion",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:4004/api-docs/api/v1"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Metadatos OData ($metadata)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{odataUrl}}/$metadata"
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ]
+}

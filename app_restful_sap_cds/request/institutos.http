@@ -1,0 +1,75 @@
+### Variables ---------------------------------------------------------------
+# SAP CDS expone el MISMO servicio en dos protocolos:
+@odata = http://localhost:4004/api/v1/Institutos
+@rest  = http://localhost:4004/rest/api/v1/Institutos
+
+### --- OData V4 ------------------------------------------------------------
+
+### GET - lista completa
+GET {{odata}}
+
+### GET - un instituto por su llave (sintaxis OData)
+GET {{odata}}('1')
+
+### GET - filtro y seleccion de columnas (gratis, sin escribir codigo)
+GET {{odata}}?$filter=Matriz eq 'S'&$select=IdInstitutoOK,DesInstituto,Alias
+
+### GET - paginacion y conteo
+GET {{odata}}?$top=2&$skip=0&$count=true
+
+### POST - alta de un instituto
+POST {{odata}}
+Content-Type: application/json
+x-user: KPEREZ
+
+{
+  "IdInstitutoOK": "5",
+  "IdInstitutoBK": "18DIT0005Y",
+  "DesInstituto": "Instituto Tecnologico de Ruiz",
+  "Alias": "ITR",
+  "Matriz": "N",
+  "Giro": "EDUCACION",
+  "IdInstitutoSupOK": "1"
+}
+
+### PUT - actualizar un instituto
+PUT {{odata}}('5')
+Content-Type: application/json
+x-user: KPEREZ
+
+{
+  "DesInstituto": "Instituto Tecnologico de Ruiz - Campus Norte",
+  "Alias": "ITR-N"
+}
+
+### DELETE - baja fisica
+DELETE {{odata}}('5')
+
+### POST - accion bajaLogica (baja logica, detail_row.Borrado = 'S')
+POST http://localhost:4004/api/v1/bajaLogica
+Content-Type: application/json
+
+{ "IdInstitutoOK": "3", "usuario": "KPEREZ" }
+
+### --- REST plano ----------------------------------------------------------
+
+### GET - lista completa
+GET {{rest}}
+
+### GET - un instituto
+GET {{rest}}/1
+
+### --- Casos de error -------------------------------------------------------
+
+### 404 - instituto inexistente
+GET {{odata}}('999')
+
+### 409 - llave de negocio duplicada
+POST {{odata}}
+Content-Type: application/json
+
+{
+  "IdInstitutoOK": "1",
+  "IdInstitutoBK": "18DIT0002Z",
+  "DesInstituto": "Duplicado"
+}

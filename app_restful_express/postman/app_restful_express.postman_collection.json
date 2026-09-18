@@ -1,0 +1,284 @@
+{
+  "info": {
+    "_postman_id": "55d74416-0f1e-46fe-b931-055b8350ed74",
+    "name": "app_restful_express - Catalogo de Institutos",
+    "description": "T1-Actividad 3 - Laboratorio de Servicios Web, ITTepic, Equipo 4.\nAPI RESTful del Catalogo de Institutos en Express/JavaScript.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3050/api/v1"
+    }
+  ],
+  "item": [
+    {
+      "name": "GET",
+      "item": [
+        {
+          "name": "Lista de institutos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/institutos"
+            },
+            "description": "Devuelve todo el catalogo. 200 / 404 si esta vacio."
+          }
+        },
+        {
+          "name": "Instituto por IdInstitutoOK",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/institutos/1"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Instituto por IdInstitutoBK",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/institutos/18DIT0009Y?keyType=BK"
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "POST",
+      "item": [
+        {
+          "name": "Alta de un instituto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/institutos"
+            },
+            "description": "201 / 400 / 409",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"5\",\n  \"IdInstitutoBK\": \"18DIT0005Y\",\n  \"DesInstituto\": \"Instituto Tecnologico de Ruiz\",\n  \"Alias\": \"ITR\",\n  \"Matriz\": \"N\",\n  \"Giro\": \"EDUCACION\",\n  \"IdInstitutoSupOK\": \"1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Alta masiva (arreglo JSON)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/institutos/manyInstitutos"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"IdInstitutoOK\": \"6\",\n    \"IdInstitutoBK\": \"18DIT0006W\",\n    \"DesInstituto\": \"Instituto Tecnologico de Compostela\",\n    \"Alias\": \"ITC\",\n    \"Matriz\": \"N\",\n    \"Giro\": \"EDUCACION\",\n    \"IdInstitutoSupOK\": \"1\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PUT",
+      "item": [
+        {
+          "name": "Actualizar instituto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/institutos/5"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"DesInstituto\": \"Instituto Tecnologico de Ruiz - Campus Norte\",\n  \"Alias\": \"ITR-N\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Informacion adicional",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/institutos/5/infoAdicional"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"IdEtiqueta\": \"IDRECTOR\",\n    \"Etiqueta\": \"DIRECTOR\",\n    \"Valor\": \"Dra. Ana Lopez\",\n    \"Secuencia\": 10\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DELETE",
+      "item": [
+        {
+          "name": "Baja logica",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/institutos/5"
+            },
+            "description": "Marca detail_row.Borrado = 'S'."
+          }
+        },
+        {
+          "name": "Baja fisica",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/institutos/6?modo=fisico"
+            },
+            "description": "Elimina el documento."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Casos de error",
+      "item": [
+        {
+          "name": "404 - instituto inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/institutos/999"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "409 - llave duplicada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/institutos"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"1\",\n  \"IdInstitutoBK\": \"18DIT0002Z\",\n  \"DesInstituto\": \"Duplicado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "400 - falta campo obligatorio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/institutos"
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"IdInstitutoOK\": \"7\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentacion",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api-docs"
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api-docs.json"
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+### Variables ---------------------------------------------------------------
+@api = http://localhost:3050/api/v1/institutos
+
+### GET - lista completa del catalogo
+GET {{api}}
+
+### GET - un instituto por llave interna (IdInstitutoOK)
+GET {{api}}/1
+
+### GET - un instituto por llave interna, indicando el tipo de llave
+GET {{api}}/1?keyType=OK
+
+### GET - un instituto por clave externa (IdInstitutoBK)
+GET {{api}}/18DIT0009Y?keyType=BK
+
+### POST - alta de un instituto
+POST {{api}}
+Content-Type: application/json
+x-user: KPEREZ
+
+{
+  "IdInstitutoOK": "5",
+  "IdInstitutoBK": "18DIT0005Y",
+  "DesInstituto": "Instituto Tecnologico de Ruiz",
+  "Alias": "ITR",
+  "Matriz": "N",
+  "Giro": "EDUCACION",
+  "IdInstitutoSupOK": "1"
+}
+
+### POST - alta masiva enviando un arreglo JSON
+POST {{api}}/manyInstitutos
+Content-Type: application/json
+x-user: KPEREZ
+
+[
+  {
+    "IdInstitutoOK": "6",
+    "IdInstitutoBK": "18DIT0006W",
+    "DesInstituto": "Instituto Tecnologico de Compostela",
+    "Alias": "ITC",
+    "Matriz": "N",
+    "Giro": "EDUCACION",
+    "IdInstitutoSupOK": "1"
+  }
+]
+
+### PUT - actualizar un instituto
+PUT {{api}}/5
+Content-Type: application/json
+x-user: KPEREZ
+
+{
+  "DesInstituto": "Instituto Tecnologico de Ruiz - Campus Norte",
+  "Alias": "ITR-N",
+  "Matriz": "N"
+}
+
+### PUT - agregar o actualizar informacion adicional
+PUT {{api}}/5/infoAdicional
+Content-Type: application/json
+
+[
+  { "IdEtiqueta": "IDRECTOR", "Etiqueta": "DIRECTOR", "Valor": "Dra. Ana Lopez", "Secuencia": 10 }
+]
+
+### DELETE - baja logica (detail_row.Borrado = 'S')
+DELETE {{api}}/5
+x-user: KPEREZ
+
+### DELETE - baja fisica (elimina el documento)
+DELETE {{api}}/6?modo=fisico
+
+### Casos de error ----------------------------------------------------------
+
+### 404 - instituto inexistente
+GET {{api}}/999
+
+### 409 - llave de negocio duplicada
+POST {{api}}
+Content-Type: application/json
+
+{
+  "IdInstitutoOK": "1",
+  "IdInstitutoBK": "18DIT0002Z",
+  "DesInstituto": "Duplicado"
+}
+
+### 400 - falta un campo obligatorio
+POST {{api}}
+Content-Type: application/json
+
+{ "IdInstitutoOK": "7" }

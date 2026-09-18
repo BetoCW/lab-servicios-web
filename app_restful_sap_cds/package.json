@@ -1,0 +1,36 @@
+{
+  "name": "app_restful_sap_cds",
+  "version": "1.0.0",
+  "description": "Proyecto DEMO T1-Actividad 3: API RESTful del Catalogo de Institutos con arquitectura de microservicios en SAP CDS/NodeJS y MongoDB",
+  "dependencies": {
+    "@cap-js/openapi": "^1.6.0",
+    "@sap/cds": "^9",
+    "dotenv": "^17.2.3",
+    "express": "^4",
+    "mongoose": "^8.19.1",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^2"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "dev": "cds watch",
+    "seed": "node scripts/seed.js",
+    "swagger": "cds compile srv --service all -o docs --to openapi"
+  },
+  "private": true,
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "sqlite",
+        "credentials": {
+          "url": ":memory:"
+        }
+      }
+    },
+    "server": {
+      "index": false
+    }
+  }
+}

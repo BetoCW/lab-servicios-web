@@ -1,0 +1,1429 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Use the title annotation on your CDS service to provide a meaningful title.",
+    "description": "Use the Core.LongDescription or Core.Description annotation on your CDS service to provide a meaningful description.",
+    "version": ""
+  },
+  "x-sap-api-type": "ODATAV4",
+  "x-odata-version": "4.01",
+  "x-sap-shortText": "Use the Core.Description annotation on your CDS service to provide a meaningful short text.",
+  "servers": [
+    {
+      "url": "/rest/institutos"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Info Adicional"
+    },
+    {
+      "name": "Institutos"
+    }
+  ],
+  "paths": {
+    "/$batch": {
+      "post": {
+        "summary": "Sends a group of requests",
+        "description": "Group multiple requests into a single request payload, see [Batch Requests](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_BatchRequests).\n\n*Please note that \"Try it out\" is not supported for this request.*",
+        "tags": [
+          "Batch Requests"
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Batch request",
+          "content": {
+            "multipart/mixed;boundary=request-separator": {
+              "schema": {
+                "type": "string"
+              },
+              "example": "--request-separator\nContent-Type: application/http\nContent-Transfer-Encoding: binary\n\nGET Institutos HTTP/1.1\nAccept: application/json\n\n\n--request-separator--"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Batch response",
+            "content": {
+              "multipart/mixed": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "--response-separator\nContent-Type: application/http\n\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{...}\n--response-separator--"
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/InfoAdicional": {
+      "get": {
+        "summary": "Retrieves a list of info adicional.",
+        "tags": [
+          "Info Adicional"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "name": "$filter",
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "instituto_IdInstitutoOK",
+                  "instituto_IdInstitutoOK desc",
+                  "IdEtiqueta",
+                  "IdEtiqueta desc",
+                  "Etiqueta",
+                  "Etiqueta desc",
+                  "Valor",
+                  "Valor desc",
+                  "Secuencia",
+                  "Secuencia desc"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "instituto_IdInstitutoOK",
+                  "IdEtiqueta",
+                  "Etiqueta",
+                  "Valor",
+                  "Secuencia"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "description": "The value of $expand query option is a comma-separated list of navigation property names, stream property names, or $value indicating the stream content of a media-entity. The corresponding related entities and stream values will be represented inline, see [Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "*",
+                  "instituto"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved info adicional",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Collection of InfoAdicional",
+                  "properties": {
+                    "@count": {
+                      "$ref": "#/components/schemas/count"
+                    },
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InstitutosService.InfoAdicional"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Creates a single info adicional.",
+        "tags": [
+          "Info Adicional"
+        ],
+        "requestBody": {
+          "description": "New info adicional",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstitutosService.InfoAdicional-create"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created info adicional",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutosService.InfoAdicional"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/InfoAdicional(instituto_IdInstitutoOK='{instituto_IdInstitutoOK}',IdEtiqueta='{IdEtiqueta}')": {
+      "parameters": [
+        {
+          "description": "key: instituto_IdInstitutoOK",
+          "in": "path",
+          "name": "instituto_IdInstitutoOK",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "maxLength": 20
+          }
+        },
+        {
+          "description": "key: IdEtiqueta",
+          "in": "path",
+          "name": "IdEtiqueta",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "maxLength": 30
+          }
+        }
+      ],
+      "get": {
+        "summary": "Retrieves a single info adicional.",
+        "tags": [
+          "Info Adicional"
+        ],
+        "parameters": [
+          {
+            "name": "$select",
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "instituto_IdInstitutoOK",
+                  "IdEtiqueta",
+                  "Etiqueta",
+                  "Valor",
+                  "Secuencia"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "description": "The value of $expand query option is a comma-separated list of navigation property names, stream property names, or $value indicating the stream content of a media-entity. The corresponding related entities and stream values will be represented inline, see [Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "*",
+                  "instituto"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved info adicional",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutosService.InfoAdicional"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Changes a single info adicional.",
+        "tags": [
+          "Info Adicional"
+        ],
+        "requestBody": {
+          "description": "New property values",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstitutosService.InfoAdicional-update"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Deletes a single info adicional.",
+        "tags": [
+          "Info Adicional"
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/InfoAdicional(instituto_IdInstitutoOK='{instituto_IdInstitutoOK}',IdEtiqueta='{IdEtiqueta}')/instituto": {
+      "parameters": [
+        {
+          "description": "key: instituto_IdInstitutoOK",
+          "in": "path",
+          "name": "instituto_IdInstitutoOK",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "maxLength": 20
+          }
+        },
+        {
+          "description": "key: IdEtiqueta",
+          "in": "path",
+          "name": "IdEtiqueta",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "maxLength": 30
+          }
+        }
+      ],
+      "get": {
+        "summary": "Retrieves instituto of a info adicional.",
+        "tags": [
+          "Info Adicional",
+          "Institutos"
+        ],
+        "parameters": [
+          {
+            "name": "$select",
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "createdAt",
+                  "createdBy",
+                  "modifiedAt",
+                  "modifiedBy",
+                  "IdInstitutoOK",
+                  "IdInstitutoBK",
+                  "DesInstituto",
+                  "Alias",
+                  "Matriz",
+                  "Giro",
+                  "IdInstitutoSupOK",
+                  "detail_row_FechaReg",
+                  "detail_row_UsuarioReg",
+                  "detail_row_FechaUltMod",
+                  "detail_row_UsuarioMod",
+                  "detail_row_Activo",
+                  "detail_row_Borrado"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "description": "The value of $expand query option is a comma-separated list of navigation property names, stream property names, or $value indicating the stream content of a media-entity. The corresponding related entities and stream values will be represented inline, see [Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "*",
+                  "informacion_adicional"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved instituto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutosService.Institutos"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/Institutos": {
+      "get": {
+        "summary": "Retrieves a list of institutos.",
+        "tags": [
+          "Institutos"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "name": "$filter",
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "createdAt",
+                  "createdAt desc",
+                  "createdBy",
+                  "createdBy desc",
+                  "modifiedAt",
+                  "modifiedAt desc",
+                  "modifiedBy",
+                  "modifiedBy desc",
+                  "IdInstitutoOK",
+                  "IdInstitutoOK desc",
+                  "IdInstitutoBK",
+                  "IdInstitutoBK desc",
+                  "DesInstituto",
+                  "DesInstituto desc",
+                  "Alias",
+                  "Alias desc",
+                  "Matriz",
+                  "Matriz desc",
+                  "Giro",
+                  "Giro desc",
+                  "IdInstitutoSupOK",
+                  "IdInstitutoSupOK desc",
+                  "detail_row_FechaReg",
+                  "detail_row_FechaReg desc",
+                  "detail_row_UsuarioReg",
+                  "detail_row_UsuarioReg desc",
+                  "detail_row_FechaUltMod",
+                  "detail_row_FechaUltMod desc",
+                  "detail_row_UsuarioMod",
+                  "detail_row_UsuarioMod desc",
+                  "detail_row_Activo",
+                  "detail_row_Activo desc",
+                  "detail_row_Borrado",
+                  "detail_row_Borrado desc"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "createdAt",
+                  "createdBy",
+                  "modifiedAt",
+                  "modifiedBy",
+                  "IdInstitutoOK",
+                  "IdInstitutoBK",
+                  "DesInstituto",
+                  "Alias",
+                  "Matriz",
+                  "Giro",
+                  "IdInstitutoSupOK",
+                  "detail_row_FechaReg",
+                  "detail_row_UsuarioReg",
+                  "detail_row_FechaUltMod",
+                  "detail_row_UsuarioMod",
+                  "detail_row_Activo",
+                  "detail_row_Borrado"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "description": "The value of $expand query option is a comma-separated list of navigation property names, stream property names, or $value indicating the stream content of a media-entity. The corresponding related entities and stream values will be represented inline, see [Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "*",
+                  "informacion_adicional"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved institutos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Collection of Institutos",
+                  "properties": {
+                    "@count": {
+                      "$ref": "#/components/schemas/count"
+                    },
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InstitutosService.Institutos"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Creates a single instituto.",
+        "tags": [
+          "Institutos"
+        ],
+        "requestBody": {
+          "description": "New instituto",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstitutosService.Institutos-create"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created instituto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutosService.Institutos"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/Institutos('{IdInstitutoOK}')": {
+      "parameters": [
+        {
+          "description": "key: IdInstitutoOK",
+          "in": "path",
+          "name": "IdInstitutoOK",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "maxLength": 20
+          }
+        }
+      ],
+      "get": {
+        "summary": "Retrieves a single instituto.",
+        "tags": [
+          "Institutos"
+        ],
+        "parameters": [
+          {
+            "name": "$select",
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "createdAt",
+                  "createdBy",
+                  "modifiedAt",
+                  "modifiedBy",
+                  "IdInstitutoOK",
+                  "IdInstitutoBK",
+                  "DesInstituto",
+                  "Alias",
+                  "Matriz",
+                  "Giro",
+                  "IdInstitutoSupOK",
+                  "detail_row_FechaReg",
+                  "detail_row_UsuarioReg",
+                  "detail_row_FechaUltMod",
+                  "detail_row_UsuarioMod",
+                  "detail_row_Activo",
+                  "detail_row_Borrado"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "description": "The value of $expand query option is a comma-separated list of navigation property names, stream property names, or $value indicating the stream content of a media-entity. The corresponding related entities and stream values will be represented inline, see [Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "*",
+                  "informacion_adicional"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved instituto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutosService.Institutos"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Changes a single instituto.",
+        "tags": [
+          "Institutos"
+        ],
+        "requestBody": {
+          "description": "New property values",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstitutosService.Institutos-update"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Deletes a single instituto.",
+        "tags": [
+          "Institutos"
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/Institutos('{IdInstitutoOK}')/informacion_adicional": {
+      "parameters": [
+        {
+          "description": "key: IdInstitutoOK",
+          "in": "path",
+          "name": "IdInstitutoOK",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "maxLength": 20
+          }
+        }
+      ],
+      "get": {
+        "summary": "Retrieves a list of informacion adicional of a instituto.",
+        "tags": [
+          "Institutos",
+          "Info Adicional"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "name": "$filter",
+            "description": "Filter items by property values, see [Filtering](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionfilter)",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "description": "Order items by property values, see [Sorting](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionorderby)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "instituto_IdInstitutoOK",
+                  "instituto_IdInstitutoOK desc",
+                  "IdEtiqueta",
+                  "IdEtiqueta desc",
+                  "Etiqueta",
+                  "Etiqueta desc",
+                  "Valor",
+                  "Valor desc",
+                  "Secuencia",
+                  "Secuencia desc"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "description": "Select properties to be returned, see [Select](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionselect)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "instituto_IdInstitutoOK",
+                  "IdEtiqueta",
+                  "Etiqueta",
+                  "Valor",
+                  "Secuencia"
+                ]
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "description": "The value of $expand query option is a comma-separated list of navigation property names, stream property names, or $value indicating the stream content of a media-entity. The corresponding related entities and stream values will be represented inline, see [Expand](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionexpand)",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "*",
+                  "instituto"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved informacion adicional",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Collection of InfoAdicional",
+                  "properties": {
+                    "@count": {
+                      "$ref": "#/components/schemas/count"
+                    },
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InstitutosService.InfoAdicional"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Creates a single informacion adicional of a instituto.",
+        "tags": [
+          "Institutos",
+          "Info Adicional"
+        ],
+        "requestBody": {
+          "description": "New informacion adicional",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstitutosService.InfoAdicional-create"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created informacion adicional",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutosService.InfoAdicional"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/bajaLogica": {
+      "post": {
+        "summary": "Invokes action bajaLogica",
+        "tags": [
+          "Institutos"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/InstitutosService.Institutos"
+                    }
+                  ],
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/error"
+          }
+        },
+        "requestBody": {
+          "description": "Action parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "IdInstitutoOK": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "usuario": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "InstitutosService.InfoAdicional": {
+        "title": "InfoAdicional",
+        "type": "object",
+        "properties": {
+          "instituto": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InstitutosService.Institutos"
+              }
+            ],
+            "nullable": true
+          },
+          "instituto_IdInstitutoOK": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "IdEtiqueta": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "Etiqueta": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "Valor": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "Secuencia": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 0
+          }
+        }
+      },
+      "InstitutosService.InfoAdicional-create": {
+        "title": "InfoAdicional (for create)",
+        "type": "object",
+        "properties": {
+          "instituto_IdInstitutoOK": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "IdEtiqueta": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "Etiqueta": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "Valor": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "Secuencia": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 0
+          }
+        },
+        "required": [
+          "instituto_IdInstitutoOK",
+          "IdEtiqueta"
+        ]
+      },
+      "InstitutosService.InfoAdicional-update": {
+        "title": "InfoAdicional (for update)",
+        "type": "object",
+        "properties": {
+          "Etiqueta": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "Valor": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "Secuencia": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 0
+          }
+        }
+      },
+      "InstitutosService.Institutos": {
+        "title": "Institutos",
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2017-04-13T15:51:04.0000000Z",
+            "nullable": true
+          },
+          "createdBy": {
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true,
+            "description": "{i18n>UserID.Description}"
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2017-04-13T15:51:04.0000000Z",
+            "nullable": true
+          },
+          "modifiedBy": {
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true,
+            "description": "{i18n>UserID.Description}"
+          },
+          "IdInstitutoOK": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "IdInstitutoBK": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "DesInstituto": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "Alias": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "Matriz": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true,
+            "default": "S"
+          },
+          "Giro": {
+            "type": "string",
+            "maxLength": 30,
+            "nullable": true
+          },
+          "IdInstitutoSupOK": {
+            "type": "string",
+            "maxLength": 20,
+            "nullable": true
+          },
+          "informacion_adicional": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstitutosService.InfoAdicional"
+            }
+          },
+          "informacion_adicional@count": {
+            "$ref": "#/components/schemas/count"
+          },
+          "detail_row_FechaReg": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2017-04-13T15:51:04.0000000Z",
+            "nullable": true
+          },
+          "detail_row_UsuarioReg": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "detail_row_FechaUltMod": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2017-04-13T15:51:04.0000000Z",
+            "nullable": true
+          },
+          "detail_row_UsuarioMod": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "detail_row_Activo": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true
+          },
+          "detail_row_Borrado": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true
+          }
+        }
+      },
+      "InstitutosService.Institutos-create": {
+        "title": "Institutos (for create)",
+        "type": "object",
+        "properties": {
+          "IdInstitutoOK": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "IdInstitutoBK": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "DesInstituto": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "Alias": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "Matriz": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true,
+            "default": "S"
+          },
+          "Giro": {
+            "type": "string",
+            "maxLength": 30,
+            "nullable": true
+          },
+          "IdInstitutoSupOK": {
+            "type": "string",
+            "maxLength": 20,
+            "nullable": true
+          },
+          "informacion_adicional": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstitutosService.InfoAdicional-create"
+            }
+          },
+          "detail_row_FechaReg": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2017-04-13T15:51:04.0000000Z",
+            "nullable": true
+          },
+          "detail_row_UsuarioReg": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "detail_row_FechaUltMod": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2017-04-13T15:51:04.0000000Z",
+            "nullable": true
+          },
+          "detail_row_UsuarioMod": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "detail_row_Activo": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true
+          },
+          "detail_row_Borrado": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true
+          }
+        },
+        "required": [
+          "IdInstitutoOK"
+        ]
+      },
+      "InstitutosService.Institutos-update": {
+        "title": "Institutos (for update)",
+        "type": "object",
+        "properties": {
+          "IdInstitutoBK": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "DesInstituto": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "Alias": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "Matriz": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true,
+            "default": "S"
+          },
+          "Giro": {
+            "type": "string",
+            "maxLength": 30,
+            "nullable": true
+          },
+          "IdInstitutoSupOK": {
+            "type": "string",
+            "maxLength": 20,
+            "nullable": true
+          },
+          "informacion_adicional": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstitutosService.InfoAdicional-create"
+            }
+          },
+          "detail_row_FechaReg": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2017-04-13T15:51:04.0000000Z",
+            "nullable": true
+          },
+          "detail_row_UsuarioReg": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "detail_row_FechaUltMod": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2017-04-13T15:51:04.0000000Z",
+            "nullable": true
+          },
+          "detail_row_UsuarioMod": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "detail_row_Activo": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true
+          },
+          "detail_row_Borrado": {
+            "type": "string",
+            "maxLength": 1,
+            "nullable": true
+          }
+        }
+      },
+      "count": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "description": "The number of entities in the collection. Available when using the [$count](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptioncount) query option."
+      },
+      "error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "innererror": {
+                "type": "object",
+                "description": "The structure of this object is service-specific"
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "top": {
+        "name": "$top",
+        "in": "query",
+        "description": "Show only the first n items, see [Paging - Top](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptiontop)",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "example": 50
+      },
+      "skip": {
+        "name": "$skip",
+        "in": "query",
+        "description": "Skip the first n items, see [Paging - Skip](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionskip)",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "count": {
+        "name": "$count",
+        "in": "query",
+        "description": "Include count of items, see [Count](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptioncount)",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      "search": {
+        "name": "$search",
+        "in": "query",
+        "description": "Search items by search phrases, see [Searching](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionsearch)",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "error": {
+        "description": "Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "T1-Actividad 3 - Laboratorio de Servicios Web, ITTepic",
+    "url": "https://github.com/BetoCW/lab-servicios-web"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "app_restful_express",
+  "version": "1.0.0",
+  "description": "Proyecto DEMO T1-Actividad 3: API RESTful del Catalogo de Institutos con arquitectura de microservicios en Express/JavaScript y MongoDB",
+  "main": "src/index.js",
+  "scripts": {
+    "babel-node": "babel-node",
+    "dev": "nodemon --exec npm run babel-node -- src/index.js",
+    "build": "babel src --out-dir dist",
+    "start": "node dist/index.js",
+    "seed": "babel-node scripts/seed.js",
+    "swagger": "babel-node scripts/exportSwagger.js"
+  },
+  "keywords": ["express", "restful", "microservicios", "mongodb", "swagger", "institutos"],
+  "author": "Equipo 4 - Laboratorio de Servicios Web, ITTepic",
+  "license": "MIT",
+  "dependencies": {
+    "@babel/runtime": "^7.28.4",
+    "@hapi/boom": "^10.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "mongoose": "^8.19.1",
+    "morgan": "^1.10.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.3",
+    "@babel/core": "^7.28.4",
+    "@babel/node": "^7.28.0",
+    "@babel/plugin-transform-runtime": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
+    "nodemon": "^3.1.10"
+  }
+}
