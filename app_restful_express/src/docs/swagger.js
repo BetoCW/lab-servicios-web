@@ -8,12 +8,14 @@ import config from '../config/config';
 const definition = {
   openapi: '3.0.3',
   info: {
-    title: 'app_restful_express - Catalogo de Institutos',
+    title: 'app_restful_express - Institutos y Catalogo de Catalogos',
     version: '1.0.0',
     description:
       'API RESTful del proceso DEMO (Catalogo de Institutos) construida con Express/JavaScript, ' +
       'arquitectura de microservicios por capas (modelo, servicio, controlador, ruteo) y MongoDB. ' +
-      'T1-Actividad 3 - Laboratorio de Servicios Web, Instituto Tecnologico de Tepic, Equipo 4.',
+      'T1-Actividad 3 - Laboratorio de Servicios Web, Instituto Tecnologico de Tepic, Equipo 4. ' +
+      'T2-Actividad 2: APIs del Catalogo de Catalogos del proyecto final sobre Supabase (tablas) ' +
+      'y MongoDB (coleccion con subdocumentos). La base de datos se elige al iniciar sesion.',
     contact: { name: 'Equipo 4 - ISC, ITTepic' },
     license: { name: 'MIT' },
   },
@@ -25,9 +27,37 @@ const definition = {
   ],
   tags: [
     { name: 'Institutos', description: 'Operaciones CRUD del Catalogo de Institutos' },
+    { name: 'Sesion', description: 'Inicio de sesion y seleccion de base de datos' },
+    { name: 'Catalogos', description: 'CRUD de la coleccion/tabla principal catalogs' },
+    { name: 'Valores', description: 'CRUD del subdocumento values[] / tabla catalog_values' },
   ],
   components: {
+    securitySchemes: {
+      bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+    },
     parameters: {
+      Key: {
+        in: 'path',
+        name: 'key',
+        required: true,
+        schema: { type: 'string' },
+        description: 'Llave de negocio del catalogo (snake_case).',
+        example: 'strategies',
+      },
+      ValueId: {
+        in: 'path',
+        name: 'valueId',
+        required: true,
+        schema: { type: 'string', format: 'uuid' },
+        description: 'id (uuid) del valor dentro del catalogo.',
+      },
+      Hard: {
+        in: 'query',
+        name: 'hard',
+        required: false,
+        schema: { type: 'boolean', default: false },
+        description: 'true = borrado fisico; por defecto es baja logica (deletedAt).',
+      },
       IdInstituto: {
         in: 'path',
         name: 'id',
@@ -53,6 +83,120 @@ const definition = {
       },
     },
     schemas: {
+      LoginInput: {
+        type: 'object',
+        required: ['usuario', 'dbServer'],
+        properties: {
+          usuario: { type: 'string', example: 'KPEREZ' },
+          dbServer: { type: 'string', enum: ['mongodb', 'supabase'], example: 'supabase' },
+        },
+      },
+      Sesion: {
+        type: 'object',
+        properties: {
+          token: { type: 'string' },
+          tokenType: { type: 'string', example: 'Bearer' },
+          expiresIn: { type: 'string', example: '8h' },
+          usuario: { type: 'string', example: 'KPEREZ' },
+          dbServer: { type: 'string', example: 'supabase' },
+        },
+      },
+      ValueInput: {
+        type: 'object',
+        required: ['code', 'value'],
+        properties: {
+          id: { type: 'string', format: 'uuid', description: 'Opcional; si no viene se genera.' },
+          parentId: { type: 'string', format: 'uuid', nullable: true, description: 'null = nivel 1' },
+          code: { type: 'string', example: 'IRON_CONDOR' },
+          value: { type: 'string', example: 'Iron Condor' },
+          alias: { type: 'string', example: 'IC' },
+          sequence: { type: 'integer', example: 1 },
+          imageUrl: { type: 'string' },
+          description: { type: 'string' },
+          active: { type: 'boolean', example: true },
+        },
+      },
+      ValueUpdate: {
+        type: 'object',
+        properties: {
+          value: { type: 'string', example: 'Iron Condor (corto)' },
+          alias: { type: 'string' },
+          sequence: { type: 'integer' },
+          imageUrl: { type: 'string' },
+          description: { type: 'string' },
+          active: { type: 'boolean' },
+        },
+      },
+      ValueUpdateMany: {
+        allOf: [
+          { type: 'object', required: ['id'], properties: { id: { type: 'string', format: 'uuid' } } },
+          { $ref: '#/components/schemas/ValueUpdate' },
+        ],
+      },
+      Value: {
+        allOf: [
+          { $ref: '#/components/schemas/ValueInput' },
+          {
+            type: 'object',
+            properties: {
+              level: { type: 'integer', example: 2 },
+              deletedAt: { type: 'string', format: 'date-time', nullable: true },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              createdBy: { type: 'string', example: 'KPEREZ' },
+              updatedBy: { type: 'string', example: 'KPEREZ' },
+            },
+          },
+        ],
+      },
+      CatalogUpdate: {
+        type: 'object',
+        properties: {
+          label: { type: 'string', example: 'Estrategias' },
+          description: { type: 'string' },
+          collection: { type: 'string', example: 'trading' },
+          section: { type: 'string', example: 'Operacion' },
+          sequence: { type: 'integer', example: 1 },
+          imageUrl: { type: 'string' },
+          route: { type: 'string', example: '/config/strategies' },
+          active: { type: 'boolean' },
+        },
+      },
+      CatalogUpdateMany: {
+        allOf: [
+          { type: 'object', required: ['key'], properties: { key: { type: 'string' } } },
+          { $ref: '#/components/schemas/CatalogUpdate' },
+        ],
+      },
+      CatalogInput: {
+        allOf: [
+          {
+            type: 'object',
+            required: ['key', 'label', 'collection'],
+            properties: {
+              key: { type: 'string', example: 'strategies' },
+              values: { type: 'array', items: { $ref: '#/components/schemas/ValueInput' } },
+            },
+          },
+          { $ref: '#/components/schemas/CatalogUpdate' },
+        ],
+      },
+      Catalog: {
+        allOf: [
+          { $ref: '#/components/schemas/CatalogInput' },
+          {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              values: { type: 'array', items: { $ref: '#/components/schemas/Value' } },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+              createdBy: { type: 'string' },
+              updatedBy: { type: 'string' },
+            },
+          },
+        ],
+      },
       DetailRow: {
         type: 'object',
         properties: {
@@ -123,6 +267,18 @@ const definition = {
       },
     },
     responses: {
+      NoAutorizado: {
+        description: 'Falta el token de sesion o ya expiro',
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/Error' } },
+        },
+      },
+      Masiva: {
+        description: 'Resultado de una operacion sobre varios elementos (207 = parcial)',
+        content: {
+          'application/json': { schema: { $ref: '#/components/schemas/RespuestaMasiva' } },
+        },
+      },
       SolicitudInvalida: {
         description: 'Datos invalidos en la peticion',
         content: {
@@ -152,6 +308,15 @@ const routesGlob = path
   .join('/');
 
 export const swaggerSpec = swaggerJSDoc({ definition, apis: [routesGlob] });
+
+// Las rutas del Catalogo de Catalogos (y /auth/session) piden el token Bearer;
+// las del Catalogo de Institutos siguen siendo publicas como en la T1.
+Object.entries(swaggerSpec.paths).forEach(([route, operations]) => {
+  if (!route.startsWith('/catalogs') && route !== '/auth/session') return;
+  Object.values(operations).forEach((operation) => {
+    operation.security = [{ bearerAuth: [] }];
+  });
+});
 
 // Monta Swagger UI en /api/v1/api-docs y el JSON crudo en /api/v1/api-docs.json
 export const swaggerDocs = (app) => {

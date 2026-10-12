@@ -1,0 +1,85 @@
+### T2-Actividad 2 - Catalogo de Catalogos (REST Client de VS Code)
+@base = http://localhost:3050/api/v1
+
+### 1) Iniciar sesion eligiendo la base de datos: mongodb | supabase
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "usuario": "kperez", "dbServer": "supabase" }
+
+###
+@token = {{login.response.body.token}}
+
+### Sesion actual
+GET {{base}}/auth/session
+Authorization: Bearer {{token}}
+
+### Lista de catalogos (filtros opcionales: collection, section, active)
+GET {{base}}/catalogs?collection=trading
+Authorization: Bearer {{token}}
+
+### Un catalogo con su arreglo values
+GET {{base}}/catalogs/strategies
+Authorization: Bearer {{token}}
+
+### Arbol maestro-detalle-detalle
+GET {{base}}/catalogs/strategies/tree
+Authorization: Bearer {{token}}
+
+### Valores de nivel 2
+GET {{base}}/catalogs/strategies/values?level=2
+Authorization: Bearer {{token}}
+
+### Alta de un catalogo con valores iniciales
+POST {{base}}/catalogs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "key": "order_types", "label": "Tipos de Orden", "collection": "trading",
+  "section": "Operacion", "sequence": 5, "route": "/config/order-types",
+  "values": [ { "code": "MARKET", "value": "A mercado", "alias": "MKT" } ]
+}
+
+### Alta masiva de catalogos
+POST {{base}}/catalogs/many
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+[
+  { "key": "markets", "label": "Mercados", "collection": "trading" },
+  { "key": "currencies", "label": "Monedas", "collection": "config" }
+]
+
+### Modificar un catalogo (la key no cambia)
+PUT {{base}}/catalogs/order_types
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "label": "Tipos de Orden de Compra/Venta" }
+
+### Agregar un valor (subdocumento / fila de catalog_values)
+POST {{base}}/catalogs/order_types/values
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "code": "LIMIT", "value": "Limitada", "alias": "LMT" }
+
+### Agregar varios valores
+POST {{base}}/catalogs/order_types/values/many
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+[ { "code": "STOP", "value": "Stop" }, { "code": "STOP_LIMIT", "value": "Stop limitada" } ]
+
+### Baja logica de un catalogo (fisica con ?hard=true)
+DELETE {{base}}/catalogs/order_types
+Authorization: Bearer {{token}}
+
+### Baja fisica de varios catalogos
+DELETE {{base}}/catalogs/many?hard=true
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "keys": ["order_types", "markets", "currencies"] }

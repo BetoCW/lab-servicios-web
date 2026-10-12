@@ -33,6 +33,8 @@ app.get(`${api}`, (req, res) => {
   res.send(
     `<h1>RESTful running in root</h1>
      <p>Catalogo de Institutos: <b>${api}/institutos</b></p>
+     <p>Catalogo de Catalogos (Supabase / MongoDB): <b>${api}/catalogs</b>
+        - inicia sesion en <b>POST ${api}/auth/login</b></p>
      <p>Documentacion Swagger: <b>${api}/api-docs</b></p>`,
   );
 });

@@ -1,7 +1,7 @@
 {
   "name": "app_restful_express",
   "version": "1.0.0",
-  "description": "Proyecto DEMO T1-Actividad 3: API RESTful del Catalogo de Institutos con arquitectura de microservicios en Express/JavaScript y MongoDB",
+  "description": "API RESTful en Express/JavaScript con arquitectura de microservicios: Catalogo de Institutos (T1-Act3) y Catalogo de Catalogos del proyecto final sobre Supabase y MongoDB (T2-Act2)",
   "main": "src/index.js",
   "scripts": {
     "babel-node": "babel-node",
@@ -9,9 +9,21 @@
     "build": "babel src --out-dir dist",
     "start": "node dist/index.js",
     "seed": "babel-node scripts/seed.js",
-    "swagger": "babel-node scripts/exportSwagger.js"
+    "swagger": "babel-node scripts/exportSwagger.js",
+    "seed:catalogs": "babel-node scripts/seedCatalogs.js",
+    "test:catalogs": "babel-node scripts/testCatalogs.js"
   },
-  "keywords": ["express", "restful", "microservicios", "mongodb", "swagger", "institutos"],
+  "keywords": [
+    "express",
+    "restful",
+    "microservicios",
+    "mongodb",
+    "swagger",
+    "institutos",
+    "supabase",
+    "postgresql",
+    "catalogos"
+  ],
   "author": "Equipo 4 - Laboratorio de Servicios Web, ITTepic",
   "license": "MIT",
   "dependencies": {
@@ -20,8 +32,10 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.19.1",
     "morgan": "^1.10.1",
+    "pg": "^8.23.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },

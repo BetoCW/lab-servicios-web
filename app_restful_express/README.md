@@ -84,3 +84,43 @@ docker compose -f ../database/docker-compose.yml up -d mongo   # MongoDB 8 en el
 ```
 
 Después pon `CONNECTION_STRING=mongodb://localhost:27018` en el `.env`.
+
+---
+
+## T2-Actividad 2 — Catálogo de Catálogos (proyecto final) en Supabase y MongoDB
+
+El submódulo del equipo se integró en esta misma aplicación. Las APIs operan sobre la base de
+datos que el usuario elige **al iniciar sesión**: el token guarda `dbServer` (`mongodb` o
+`supabase`) y un repositorio por motor resuelve cada operación con el mismo contrato JSON.
+
+```
+ruta -> controlador -> servicio (reglas) -> repositorio (mongodb | supabase) -> base de datos
+```
+
+| Motor | Estructura | Archivo |
+|---|---|---|
+| MongoDB | colección `catalogs` con subdocumento `values[]` | `src/api/v1/models/mongodb/Catalogs.js` |
+| Supabase (PostgreSQL) | tablas `catalogs` y `catalog_values` (recursive CTE) | `src/api/v1/models/supabase/Catalogs.js`, `scripts/supabase/01_catalogs.sql` |
+
+### Configuración
+
+1. Ejecuta `scripts/supabase/01_catalogs.sql` en *Supabase > SQL Editor* (o en el Postgres local de `database/`).
+2. Agrega a `.env` `SUPABASE_DB_URL`, `SUPABASE_DB_SSL`, `JWT_SECRET` y `CATALOGS_COLLECTION` (ver `.env.example`).
+3. `npm run seed:catalogs` carga los mismos catálogos en las dos bases.
+4. `npm run dev` y, en otra terminal, `npm run test:catalogs` (66 peticiones, ambos motores).
+
+### Endpoints (base `/api/v1`, todos con `Authorization: Bearer <token>` salvo el login)
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/auth/login` | Inicia sesión y elige la base (`{ usuario, dbServer }`) |
+| GET | `/auth/session` | Sesión vigente |
+| GET / POST | `/catalogs` | Lista (filtros `collection`, `section`, `active`) / alta de uno |
+| POST / PUT / DELETE | `/catalogs/many` | Alta, cambio y baja de varios |
+| GET / PUT / DELETE | `/catalogs/:key` | Consulta, cambio y baja (lógica; física con `?hard=true`) |
+| GET | `/catalogs/:key/tree` | Árbol maestro-detalle-detalle |
+| GET / POST | `/catalogs/:key/values` | Valores (filtros `parentId`, `level`) / alta de uno |
+| POST / PUT / DELETE | `/catalogs/:key/values/many` | Alta, cambio y baja de varios valores |
+| GET / PUT / DELETE | `/catalogs/:key/values/:valueId` | Consulta, cambio y baja de un valor (con descendientes) |
+
+Ejemplos listos para REST Client en `request/catalogs.http`. Documentación en `/api/v1/api-docs`.

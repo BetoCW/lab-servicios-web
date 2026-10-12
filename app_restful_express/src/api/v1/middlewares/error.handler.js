@@ -13,8 +13,25 @@ export const errorHandler = (err, req, res, next) => {
     return res.status(409).json({
       statusCode: 409,
       error: 'Conflict',
-      message: 'Ya existe un instituto con esos valores unicos.',
+      message: 'Ya existe un registro con esos valores unicos.',
       keyValue: err.keyValue,
+    });
+  }
+
+  // Errores de PostgreSQL (Supabase): unico violado, llave foranea, check, tipo
+  if (err.code === '23505') {
+    return res.status(409).json({
+      statusCode: 409,
+      error: 'Conflict',
+      message: 'Ya existe un registro con esos valores unicos.',
+      detail: err.detail,
+    });
+  }
+  if (['23503', '23514', '22P02', '23502'].includes(err.code)) {
+    return res.status(400).json({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: err.detail || err.message,
     });
   }
 

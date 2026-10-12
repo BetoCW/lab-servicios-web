@@ -1,0 +1,62 @@
+[
+  {
+    "key": "brokers",
+    "label": "Brokers",
+    "description": "Intermediarios con los que se ejecutan las operaciones",
+    "collection": "trading",
+    "section": "Operacion",
+    "sequence": 1,
+    "route": "/config/brokers",
+    "values": [
+      { "code": "IBKR", "value": "Interactive Brokers", "alias": "IB", "sequence": 1 },
+      { "code": "TDA", "value": "TD Ameritrade", "alias": "TDA", "sequence": 2 },
+      { "code": "GBM", "value": "GBM+", "alias": "GBM", "sequence": 3 }
+    ]
+  },
+  {
+    "key": "strategies",
+    "label": "Estrategias",
+    "description": "Estrategias de inversion en tres niveles: familia, estrategia y variante",
+    "collection": "trading",
+    "section": "Operacion",
+    "sequence": 2,
+    "route": "/config/strategies",
+    "values": [
+      { "id": "0b7f6a52-1c2d-4e5f-8a9b-000000000001", "code": "OPTIONS", "value": "Opciones", "alias": "OPT", "sequence": 1 },
+      { "id": "0b7f6a52-1c2d-4e5f-8a9b-000000000002", "parentId": "0b7f6a52-1c2d-4e5f-8a9b-000000000001", "code": "IRON_CONDOR", "value": "Iron Condor", "alias": "IC", "sequence": 1 },
+      { "parentId": "0b7f6a52-1c2d-4e5f-8a9b-000000000002", "code": "WIDE_IRON_CONDOR", "value": "Iron Condor Ancho", "alias": "WIC", "sequence": 1 },
+      { "parentId": "0b7f6a52-1c2d-4e5f-8a9b-000000000002", "code": "NARROW_IRON_CONDOR", "value": "Iron Condor Angosto", "alias": "NIC", "sequence": 2 },
+      { "parentId": "0b7f6a52-1c2d-4e5f-8a9b-000000000001", "code": "COVERED_CALL", "value": "Call Cubierto", "alias": "CC", "sequence": 2 },
+      { "id": "0b7f6a52-1c2d-4e5f-8a9b-000000000003", "code": "EQUITIES", "value": "Acciones", "alias": "EQ", "sequence": 2 },
+      { "parentId": "0b7f6a52-1c2d-4e5f-8a9b-000000000003", "code": "SWING", "value": "Swing Trading", "alias": "SW", "sequence": 1 }
+    ]
+  },
+  {
+    "key": "indicators",
+    "label": "Indicadores",
+    "description": "Indicadores tecnicos disponibles para las estrategias",
+    "collection": "trading",
+    "section": "Analisis",
+    "sequence": 3,
+    "route": "/config/indicators",
+    "values": [
+      { "code": "RSI", "value": "Indice de Fuerza Relativa", "alias": "RSI", "sequence": 1 },
+      { "code": "MACD", "value": "Convergencia/Divergencia de Medias", "alias": "MACD", "sequence": 2 },
+      { "code": "EMA", "value": "Media Movil Exponencial", "alias": "EMA", "sequence": 3 }
+    ]
+  },
+  {
+    "key": "timeframes",
+    "label": "Temporalidades",
+    "description": "Temporalidades de las velas del grafico",
+    "collection": "trading",
+    "section": "Analisis",
+    "sequence": 4,
+    "route": "/config/timeframes",
+    "values": [
+      { "code": "M5", "value": "5 minutos", "alias": "5m", "sequence": 1 },
+      { "code": "H1", "value": "1 hora", "alias": "1h", "sequence": 2 },
+      { "code": "D1", "value": "Diario", "alias": "1d", "sequence": 3 }
+    ]
+  }
+]
