@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quant Core F0</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --text: #16181d; --muted: #646b78; --line: #e2e5ea;
+    --accent: #2457d6; --accent-soft: #e8eefc; --ok: #13804a; --ok-soft: #e3f4ea;
+    --bad: #c2322b; --bad-soft: #fbe7e6; --warn: #9a6200; --warn-soft: #fdf2dc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --panel: #171a20; --text: #e7e9ee; --muted: #9aa1ad; --line: #2a2f38;
+      --accent: #7aa2ff; --accent-soft: #1d2740; --ok: #4cc488; --ok-soft: #14291f;
+      --bad: #ff7b72; --bad-soft: #351a19; --warn: #e3b341; --warn-soft: #30260f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 16px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  h1 { font-size: 17px; margin: 0; }
+  h1 small { color: var(--muted); font-weight: 400; }
+  .conn { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .stats { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; color: var(--muted); font-size: 13px; }
+  .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+  nav { display: flex; gap: 4px; margin-top: 12px; overflow-x: auto; }
+  nav button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 12px; color: var(--muted); font-weight: 500; }
+  nav button.on { color: var(--accent); border-color: var(--accent); }
+  main { padding: 16px; }
+  section { display: none; } section.on { display: block; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .card h2 { font-size: 14px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  input, select, button { font: inherit; color: var(--text); }
+  input, select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: 500; }
+  button.ghost { background: var(--accent-soft); color: var(--accent); }
+  button.danger { background: var(--bad-soft); color: var(--bad); }
+  button.sm { padding: 3px 8px; font-size: 12px; }
+  button:disabled { opacity: .5; cursor: wait; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 4px 2px 9px; margin: 2px; font-size: 12px; font-weight: 500; }
+  .chip button { background: none; color: inherit; padding: 0 5px; font-size: 13px; }
+  .badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 500; background: var(--line); color: var(--muted); }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .muted { color: var(--muted); }
+  .empty { color: var(--muted); padding: 10px 0; }
+  .buy { color: var(--ok); font-weight: 600; } .sell { color: var(--bad); font-weight: 600; }
+  #log { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 220px; overflow: auto; }
+  #log div { padding: 2px 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
+  #log pre { white-space: pre-wrap; word-break: break-all; margin: 4px 0 6px; color: var(--muted); }
+  .help { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: none; }
+  .help code { background: rgba(0,0,0,.08); padding: 1px 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <h1>Quant Core F0 <small>· Market Data · Alpaca + Supabase</small></h1>
+      <div class="conn">
+        <input id="apiUrl" size="26" aria-label="URL de la API">
+        <button id="connect" class="ghost">Conectar</button>
+        <span id="connBadge" class="badge">sin conexión</span>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <nav id="tabs">
+      <button data-tab="watchlists" class="on">Watchlists</button>
+      <button data-tab="chains">Cadenas de opciones</button>
+      <button data-tab="strategies">Estrategias</button>
+      <button data-tab="orders">Órdenes</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="help" id="help">
+    No se pudo conectar con la API. Levántala en tu máquina:
+    <code>cd quant-core-engine/api && npm run dev</code> y vuelve a pulsar <b>Conectar</b>.
+    Si Chrome pregunta por <i>acceso a la red local</i>, permítelo.
+  </div>
+
+  <!-- 1. WATCHLISTS -->
+  <section id="watchlists" class="on">
+    <div class="card">
+      <h2>Nueva watchlist <span class="muted">POST /watchlists</span></h2>
+      <form class="row" id="wlForm">
+        <label>Nombre <input name="name" required placeholder="Tech F0"></label>
+        <label style="flex:1">Símbolos (coma) <input name="symbols" placeholder="AAPL, MSFT, SPY"></label>
+        <button>Crear</button>
+      </form>
+    </div>
+    <div id="wlList"></div>
+  </section>
+
+  <!-- 2. CHAINS -->
+  <section id="chains">
+    <div class="card">
+      <h2>Seguir una cadena <span class="muted">POST /option-chains</span></h2>
+      <form class="row" id="chForm">
+        <label>Subyacente <input name="underlying" required value="SPY" size="6"></label>
+        <label>Vence desde <input name="expiration_from" type="date"></label>
+        <label>Vence hasta <input name="expiration_to" type="date"></label>
+        <label>Tipo <select name="option_type"><option value="">ambos</option><option>call</option><option>put</option></select></label>
+        <label>Strike mín <input name="strike_min" type="number" step="any" size="6"></label>
+        <label>Strike máx <input name="strike_max" type="number" step="any" size="6"></label>
+        <button>Ingestar desde Alpaca</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Cadenas guardadas <span class="muted">GET /option-chains</span></h2>
+      <div class="scroll"><table id="chTable"></table></div>
+    </div>
+    <div class="card" id="chDetail" hidden></div>
+  </section>
+
+  <!-- 3. STRATEGIES -->
+  <section id="strategies">
+    <div class="card">
+      <h2>Armar estrategia <span class="muted">POST /strategies</span></h2>
+      <p class="muted" style="margin:0 0 10px">Agrega piernas desde una cadena (botones <b>+C</b> / <b>+V</b>), máximo 4.</p>
+      <form class="row" id="stForm">
+        <label>Nombre <input name="name" required value="Bull call spread"></label>
+        <label>Cantidad <input name="qty" type="number" min="1" value="1" size="4"></label>
+        <label>Tipo <select name="order_type"><option>limit</option><option>market</option></select></label>
+        <label>Límite (neto) <input name="limit_price" type="number" step="0.01" value="0.01" size="6"></label>
+        <button>Guardar borrador</button>
+      </form>
+      <div id="legs" style="margin-top:10px"></div>
+    </div>
+    <div id="stList"></div>
+  </section>
+
+  <!-- 4. ORDERS -->
+  <section id="orders">
+    <div class="card">
+      <h2>Nueva orden <span class="muted">POST /orders · paper</span></h2>
+      <form class="row" id="orForm">
+        <label>Símbolo <input name="symbol" required value="AAPL" size="7"></label>
+        <label>Cant. <input name="qty" type="number" min="1" value="1" size="4"></label>
+        <label>Lado <select name="side"><option>buy</option><option>sell</option></select></label>
+        <label>Tipo <select name="type"><option>limit</option><option>market</option></select></label>
+        <label>Límite <input name="limit_price" type="number" step="0.01" value="1" size="6"></label>
+        <label>Vigencia <select name="time_in_force"><option>gtc</option><option>day</option></select></label>
+        <button>Enviar</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Órdenes <span class="row"><button class="ghost sm" id="orRefresh">Actualizar</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></h2>
+      <div class="scroll"><table id="orTable"></table></div>
+    </div>
+  </section>
+
+  <div class="card">
+    <h2>Peticiones <span class="muted">clic para ver la respuesta</span></h2>
+    <div id="log"></div>
+  </div>
+</main>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const money = (v) => v == null ? '—' : Number(v).toLocaleString('es-MX', { style: 'currency', currency: 'USD' });
+const num = (v, d = 2) => v == null || v === '' ? '—' : Number(v).toFixed(d);
+const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+
+// En localhost la página la sirve la propia API; en GitHub Pages se apunta a localhost:3060.
+const defaultApi = location.protocol.startsWith('http') && location.port === '3060' ? location.origin : 'http://localhost:3060';
+$('#apiUrl').value = store.get('f0.api', defaultApi);
+const base = () => $('#apiUrl').value.replace(/\/+$/, '');
+
+// ------------------------------------------------------------- HTTP + bitácora
+async function api(method, path, body) {
+  const t0 = performance.now();
+  let res, data;
+  try {
+    res = await fetch(`${base()}/api/v1${path}`, {
+      method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined,
+    });
+    data = res.status === 204 ? null : await res.json();
+  } catch (err) {
+    log(method, path, 'ERR', performance.now() - t0, { error: err.message });
+    $('#help').style.display = 'block';
+    throw err;
+  }
+  log(method, path, res.status, performance.now() - t0, data);
+  if (!res.ok) {
+    const msg = [data?.message, ...(data?.details ?? [])].filter(Boolean).join('\n');
+    alert(`${method} ${path}\n${res.status}: ${msg}`);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+function log(method, path, status, ms, data) {
+  const div = document.createElement('div');
+  const cls = status === 'ERR' || status >= 400 ? 'bad' : 'ok';
+  div.innerHTML = `<span class="badge ${cls}">${status}</span> <b>${method}</b> ${esc(path)} <span class="muted">${Math.round(ms)} ms</span>`;
+  div.onclick = () => {
+    const pre = div.querySelector('pre');
+    if (pre) return pre.remove();
+    div.insertAdjacentHTML('beforeend', `<pre>${esc(JSON.stringify(data, null, 2)).slice(0, 6000)}</pre>`);
+  };
+  $('#log').prepend(div);
+}
+
+// Desactiva el botón mientras corre la petición.
+const busy = (btn, fn) => async (...a) => { btn.disabled = true; try { await fn(...a); } catch {} finally { btn.disabled = false; } };
+const formData = (form) => Object.fromEntries([...new FormData(form)].filter(([, v]) => v !== ''));
+
+// ------------------------------------------------------------- conexión
+async function connect() {
+  store.set('f0.api', base());
+  try {
+    const a = await api('GET', '/account');
+    $('#help').style.display = 'none';
+    $('#connBadge').className = 'badge ok';
+    $('#connBadge').textContent = `conectado · ${a.status}`;
+    $('#stats').innerHTML = `<span>Efectivo <b>${money(a.cash)}</b></span><span>Poder de compra <b>${money(a.buyingPower)}</b></span><span>Nivel de opciones <b>${a.optionsLevel}</b></span><span>Cuenta <b>paper</b></span>`;
+    await Promise.all([loadWatchlists(), loadChains(), loadStrategies(), loadOrders()]);
+  } catch {
+    $('#connBadge').className = 'badge bad';
+    $('#connBadge').textContent = 'sin conexión';
+  }
+}
+$('#connect').onclick = connect;
+
+$('#tabs').onclick = (e) => {
+  const tab = e.target.dataset.tab;
+  if (!tab) return;
+  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b === e.target));
+  document.querySelectorAll('main section').forEach((s) => s.classList.toggle('on', s.id === tab));
+  store.set('f0.tab', tab);
+};
+$(`#tabs [data-tab="${store.get('f0.tab', 'watchlists')}"]`)?.click();
+
+// ------------------------------------------------------------- 1. watchlists
+async function loadWatchlists() {
+  const list = await api('GET', '/watchlists');
+  $('#wlList').innerHTML = list.length ? list.map((w) => `
+    <div class="card" data-id="${w.id}">
+      <h2>${esc(w.name)}
+        <span class="row">
+          <button class="ghost sm" data-act="rename">Renombrar (PUT)</button>
+          <button class="danger sm" data-act="delete">Eliminar</button>
+        </span>
+      </h2>
+      <div>${w.symbols.map((s) => `<span class="chip">${esc(s)}<button data-act="rm" data-sym="${esc(s)}" title="Quitar">×</button></span>`).join('') || '<span class="muted">sin símbolos</span>'}</div>
+      <form class="row" style="margin-top:8px" data-act="add"><input name="symbol" placeholder="Agregar símbolo" size="10" required><button class="ghost sm">Agregar</button></form>
+    </div>`).join('') : '<div class="card empty">No hay watchlists todavía.</div>';
+}
+$('#wlForm').onsubmit = (e) => {
+  e.preventDefault();
+  busy(e.submitter, async () => {
+    const f = formData(e.target);
+    await api('POST', '/watchlists', { name: f.name, symbols: (f.symbols ?? '').split(',').map((s) => s.trim()).filter(Boolean) });
+    e.target.reset();
+    await loadWatchlists();
+  })();
+};
+$('#wlList').onclick = async (e) => {
+  const act = e.target.dataset.act;
+  const card = e.target.closest('[data-id]');
+  if (!act || !card) return;
+  const id = card.dataset.id;
+  if (act === 'delete' && confirm('¿Eliminar la watchlist?')) await api('DELETE', `/watchlists/${id}`);
+  if (act === 'rm') await api('DELETE', `/watchlists/${id}/symbols/${e.target.dataset.sym}`);
+  if (act === 'rename') {
+    const name = prompt('Nuevo nombre:', card.querySelector('h2').firstChild.textContent.trim());
+    if (!name) return;
+    const symbols = [...card.querySelectorAll('[data-sym]')].map((b) => b.dataset.sym);
+    await api('PUT', `/watchlists/${id}`, { name, symbols });
+  }
+  await loadWatchlists();
+};
+$('#wlList').onsubmit = (e) => {
+  e.preventDefault();
+  busy(e.submitter, async () => {
+    await api('POST', `/watchlists/${e.target.closest('[data-id]').dataset.id}/symbols`, formData(e.target));
+    await loadWatchlists();
+  })();
+};
+
+// ------------------------------------------------------------- 2. cadenas
+const iso = (d) => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
+$('#chForm').expiration_from.value = iso(1);
+$('#chForm').expiration_to.value = iso(14);
+
+async function loadChains() {
+  const list = await api('GET', '/option-chains');
+  $('#chTable').innerHTML = list.length ? `
+    <tr><th>Subyacente</th><th class="n">Precio</th><th>Vencimientos</th><th>Tipo</th><th class="n">Contratos</th><th>Actualizada</th><th></th></tr>
+    ${list.map((c) => `<tr data-id="${c.id}">
+      <td><b>${esc(c.underlying)}</b></td><td class="n">${num(c.underlyingPrice)}</td>
+      <td>${c.expirationFrom ?? '…'} → ${c.expirationTo ?? '…'}</td><td>${c.optionType ?? 'ambos'}</td>
+      <td class="n">${c.contractsCount}</td><td class="muted">${c.lastRefreshedAt ? new Date(c.lastRefreshedAt).toLocaleString('es-MX') : '—'}</td>
+      <td><button class="ghost sm" data-act="view">Ver</button> <button class="ghost sm" data-act="refresh">Refresh</button> <button class="danger sm" data-act="delete">Eliminar</button></td>
+    </tr>`).join('')}` : '<tr><td class="empty">No hay cadenas. Ingesta una arriba.</td></tr>';
+}
+$('#chForm').onsubmit = (e) => {
+  e.preventDefault();
+  busy(e.submitter, async () => {
+    const f = formData(e.target);
+    for (const k of ['strike_min', 'strike_max']) if (f[k]) f[k] = Number(f[k]);
+    const chain = await api('POST', '/option-chains', f);
+    await loadChains();
+    showChain(chain);
+  })();
+};
+$('#chTable').onclick = async (e) => {
+  const act = e.target.dataset.act;
+  const id = e.target.closest('[data-id]')?.dataset.id;
+  if (!act || !id) return;
+  e.target.disabled = true;
+  try {
+    if (act === 'view') showChain(await api('GET', `/option-chains/${id}`));
+    if (act === 'refresh') showChain(await api('POST', `/option-chains/${id}/refresh`));
+    if (act === 'delete' && confirm('¿Dejar de seguir esta cadena?')) {
+      await api('DELETE', `/option-chains/${id}`);
+      $('#chDetail').hidden = true;
+    }
+    await loadChains();
+  } finally { e.target.disabled = false; }
+};
+
+function showChain(c) {
+  const exps = [...new Set(c.quotes.map((q) => q.expiration))];
+  const render = (exp) => {
+    const rows = c.quotes.filter((q) => q.expiration === exp);
+    $('#chRows').innerHTML = rows.map((q) => `<tr class="${q.strike <= (c.underlyingPrice ?? 0) ? '' : 'muted'}">
+      <td>${q.type}</td><td class="n"><b>${num(q.strike)}</b></td><td class="n">${num(q.bid)}</td><td class="n">${num(q.ask)}</td>
+      <td class="n">${q.impliedVolatility == null ? '—' : (q.impliedVolatility * 100).toFixed(1) + '%'}</td>
+      <td class="n">${num(q.delta, 3)}</td><td class="n">${num(q.gamma, 4)}</td><td class="n">${num(q.theta, 3)}</td><td class="n">${num(q.vega, 3)}</td>
+      <td><button class="ghost sm" data-leg="buy" data-sym="${q.symbol}">+C</button> <button class="danger sm" data-leg="sell" data-sym="${q.symbol}">+V</button></td>
+    </tr>`).join('');
+  };
+  $('#chDetail').hidden = false;
+  $('#chDetail').innerHTML = `
+    <h2>${esc(c.underlying)} · ${num(c.underlyingPrice)} <span class="muted">${c.contractsCount} contratos · IV y griegas de Alpaca</span></h2>
+    <div class="row" style="margin-bottom:8px"><label>Vencimiento <select id="chExp">${exps.map((x) => `<option>${x}</option>`).join('')}</select></label></div>
+    <div class="scroll"><table><thead><tr><th>Tipo</th><th class="n">Strike</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">IV</th><th class="n">Delta</th><th class="n">Gamma</th><th class="n">Theta</th><th class="n">Vega</th><th>Estrategia</th></tr></thead><tbody id="chRows"></tbody></table></div>`;
+  $('#chExp').onchange = (e) => render(e.target.value);
+  if (exps[0]) render(exps[0]);
+  window.currentUnderlying = c.underlying;
+}
+
+// ------------------------------------------------------------- 3. estrategias
+let legs = [];
+$('#chDetail').addEventListener('click', (e) => {
+  const side = e.target.dataset.leg;
+  if (!side) return;
+  if (legs.length >= 4) return alert('Máximo 4 piernas');
+  legs.push({ symbol: e.target.dataset.sym, side, ratio_qty: 1 });
+  renderLegs();
+  e.target.textContent = '✓';
+});
+function renderLegs() {
+  $('#legs').innerHTML = legs.length
+    ? legs.map((l, i) => `<span class="chip"><span class="${l.side}">${l.side === 'buy' ? 'COMPRA' : 'VENTA'}</span>&nbsp;${esc(l.symbol)}<button data-i="${i}">×</button></span>`).join('')
+    : '<span class="muted">Sin piernas: ve a “Cadenas de opciones”, pulsa Ver y agrega con +C / +V.</span>';
+}
+$('#legs').onclick = (e) => { if (e.target.dataset.i) { legs.splice(+e.target.dataset.i, 1); renderLegs(); } };
+renderLegs();
+
+$('#stForm').onsubmit = (e) => {
+  e.preventDefault();
+  if (!legs.length) return alert('Agrega al menos una pierna desde una cadena');
+  busy(e.submitter, async () => {
+    const f = formData(e.target);
+    const underlying = legs[0].symbol.match(/^[A-Z.]+/)[0];
+    await api('POST', '/strategies', { ...f, underlying, qty: Number(f.qty), limit_price: f.limit_price ? Number(f.limit_price) : undefined, legs });
+    legs = [];
+    renderLegs();
+    await loadStrategies();
+  })();
+};
+
+async function loadStrategies() {
+  const list = await api('GET', '/strategies');
+  const detailed = await Promise.all(list.map((s) => api('GET', `/strategies/${s.id}`)));
+  const badge = { draft: 'warn', submitted: 'ok', canceled: 'bad' };
+  $('#stList').innerHTML = detailed.length ? detailed.map((s) => `
+    <div class="card" data-id="${s.id}">
+      <h2><span>${esc(s.name)} <span class="badge ${badge[s.status]}">${s.status}</span></span>
+        <span class="row">
+          ${s.status === 'draft' ? '<button class="sm" data-act="submit">Enviar a Alpaca</button><button class="ghost sm" data-act="rename">Renombrar (PUT)</button>' : ''}
+          <button class="danger sm" data-act="delete">Eliminar</button>
+        </span>
+      </h2>
+      <table><tr><th>Lado</th><th>Contrato</th><th class="n">Strike</th><th>Vence</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">Mid</th><th class="n">Delta</th></tr>
+      ${s.legs.map((l) => `<tr><td class="${l.side}">${l.side === 'buy' ? 'Compra' : 'Venta'} ×${l.ratioQty}</td><td>${esc(l.symbol)}</td><td class="n">${num(l.strike)}</td><td>${l.expiration}</td>
+        <td class="n">${num(l.quote?.bid)}</td><td class="n">${num(l.quote?.ask)}</td><td class="n">${num(l.quote?.mid)}</td><td class="n">${num(l.quote?.delta, 3)}</td></tr>`).join('')}
+      </table>
+      <p class="muted" style="margin:8px 0 0">${s.pricing ? `Costo neto por unidad <b>${num(s.pricing.netPerUnit)}</b> · total ${money(s.pricing.netTotal)} (${s.pricing.netPerUnit >= 0 ? 'débito' : 'crédito'})` : 'Sin cotización viva'}
+      · ${s.qty} × ${s.orderType}${s.limitPrice != null ? ' @ ' + s.limitPrice : ''}${s.alpacaOrderId ? ` · orden <code>${s.alpacaOrderId.slice(0, 8)}</code>` : ''}</p>
+    </div>`).join('') : '<div class="card empty">No hay estrategias.</div>';
+}
+$('#stList').onclick = async (e) => {
+  const act = e.target.dataset.act;
+  const card = e.target.closest('[data-id]');
+  if (!act || !card) return;
+  const id = card.dataset.id;
+  e.target.disabled = true;
+  try {
+    if (act === 'submit') await api('POST', `/strategies/${id}/submit`);
+    if (act === 'delete' && confirm('¿Eliminar? Si ya se envió, se cancela la orden.')) await api('DELETE', `/strategies/${id}`);
+    if (act === 'rename') {
+      const s = await api('GET', `/strategies/${id}`);
+      const name = prompt('Nuevo nombre:', s.name);
+      if (name) await api('PUT', `/strategies/${id}`, {
+        name, underlying: s.underlying, qty: s.qty, order_type: s.orderType, limit_price: s.limitPrice ?? undefined, description: s.description ?? undefined,
+        legs: s.legs.map((l) => ({ symbol: l.symbol, side: l.side, ratio_qty: l.ratioQty, position_intent: l.positionIntent })),
+      });
+    }
+    await Promise.all([loadStrategies(), loadOrders()]);
+  } finally { e.target.disabled = false; }
+};
+
+// ------------------------------------------------------------- 4. órdenes
+async function loadOrders() {
+  const list = await api('GET', '/orders?status=all&limit=20');
+  const tone = (s) => ({ filled: 'ok', canceled: 'bad', rejected: 'bad', expired: 'bad', replaced: '' }[s] ?? 'warn');
+  const open = (s) => ['new', 'accepted', 'pending_new', 'partially_filled'].includes(s);
+  $('#orTable').innerHTML = list.length ? `
+    <tr><th>Enviada</th><th>Símbolo</th><th>Clase</th><th>Lado</th><th>Tipo</th><th class="n">Cant.</th><th class="n">Límite</th><th>Estado</th><th></th></tr>
+    ${list.map((o) => `<tr data-id="${o.id}">
+      <td class="muted">${new Date(o.submittedAt).toLocaleString('es-MX')}</td>
+      <td><b>${esc(o.symbol ?? o.legs.map((l) => l.symbol).join(' / '))}</b></td><td>${o.orderClass || 'simple'}</td>
+      <td class="${o.side ?? ''}">${o.side ?? '—'}</td><td>${o.type}</td><td class="n">${o.qty}</td><td class="n">${num(o.limitPrice)}</td>
+      <td><span class="badge ${tone(o.status)}">${o.status}</span></td>
+      <td>${open(o.status) ? `${o.orderClass !== 'mleg' ? '<button class="ghost sm" data-act="patch">Cambiar precio</button> ' : ''}<button class="danger sm" data-act="cancel">Cancelar</button>` : ''}</td>
+    </tr>`).join('')}` : '<tr><td class="empty">No hay órdenes.</td></tr>';
+}
+$('#orForm').onsubmit = (e) => {
+  e.preventDefault();
+  busy(e.submitter, async () => {
+    const f = formData(e.target);
+    f.qty = Number(f.qty);
+    if (f.type === 'market') delete f.limit_price; else f.limit_price = Number(f.limit_price);
+    await api('POST', '/orders', f);
+    await loadOrders();
+  })();
+};
+$('#orTable').onclick = async (e) => {
+  const act = e.target.dataset.act;
+  const id = e.target.closest('[data-id]')?.dataset.id;
+  if (!act || !id) return;
+  if (act === 'patch') {
+    const price = prompt('Nuevo precio límite:');
+    if (!price) return;
+    await api('PATCH', `/orders/${id}`, { limit_price: Number(price) });
+  }
+  if (act === 'cancel') await api('DELETE', `/orders/${id}`);
+  await loadOrders();
+};
+$('#orRefresh').onclick = busy($('#orRefresh'), loadOrders);
+$('#orCancelAll').onclick = async () => {
+  if (!confirm('¿Cancelar todas las órdenes abiertas?')) return;
+  await api('DELETE', '/orders');
+  setTimeout(loadOrders, 800);
+};
+
+connect();
+</script>
+</body>
+</html>

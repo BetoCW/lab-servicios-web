@@ -60,6 +60,12 @@ colección**, así que sus respuestas se pueden poner una al lado de la otra.
 | [`app_restful_express/`](app_restful_express) | Express / JavaScript | REST/JSON + Swagger UI | 3050 |
 | [`app_restful_sap_cds/`](app_restful_sap_cds) | SAP CDS (CAP) / NodeJS | OData V4 **y** REST plano + Swagger UI | 4004 |
 
+### Proyecto final — Quant Core Engine & Market Data (F0)
+
+| Carpeta | Qué es | Puerto |
+|---|---|---|
+| [`quant-core-engine/`](quant-core-engine) | 4 APIs CRUD (REST + GraphQL) conectadas a Alpaca y Supabase, y el motor cuantitativo en Rust/WASM (preparado) | 3060 |
+
 ### Apoyo
 
 | Carpeta | Qué es |

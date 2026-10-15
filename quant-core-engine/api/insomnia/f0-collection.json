@@ -1,0 +1,548 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-10-15T22:17:30.696Z",
+  "__export_source": "quant-core-f0",
+  "resources": [
+    {
+      "_id": "wrk_quant_core_f0",
+      "_type": "workspace",
+      "name": "Quant Core F0 — 4 APIs (Alpaca + Supabase)",
+      "description": "REST + GraphQL del equipo F0. Corre `npm run dev` en quant-core-engine/api antes de probar.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_quant_core_f0",
+      "_type": "environment",
+      "parentId": "wrk_quant_core_f0",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:3060/api/v1",
+        "graphql_url": "http://localhost:3060/graphql",
+        "watchlist_id": "",
+        "order_id": "",
+        "chain_id": "",
+        "strategy_id": "",
+        "gql_watchlist_id": "",
+        "leg_buy": "",
+        "leg_sell": ""
+      }
+    },
+    {
+      "_id": "fld_0_cuenta",
+      "_type": "request_group",
+      "parentId": "wrk_quant_core_f0",
+      "name": "0. Cuenta",
+      "description": "Verifica que las llaves de Alpaca funcionan",
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_002",
+      "_type": "request",
+      "parentId": "fld_0_cuenta",
+      "name": "GET cuenta Alpaca",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/account",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 2
+    },
+    {
+      "_id": "fld_1_watchlists",
+      "_type": "request_group",
+      "parentId": "wrk_quant_core_f0",
+      "name": "1. Watchlists",
+      "description": "Alpaca /v2/watchlists + espejo en Supabase",
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_004",
+      "_type": "request",
+      "parentId": "fld_1_watchlists",
+      "name": "GET listar",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/watchlists",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 4
+    },
+    {
+      "_id": "req_005",
+      "_type": "request",
+      "parentId": "fld_1_watchlists",
+      "name": "POST crear",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/watchlists",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Demo F0\",\n  \"symbols\": [\n    \"AAPL\",\n    \"MSFT\",\n    \"SPY\"\n  ]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.id) insomnia.environment.set('watchlist_id', body.id);",
+      "metaSortKey": 5
+    },
+    {
+      "_id": "req_006",
+      "_type": "request",
+      "parentId": "fld_1_watchlists",
+      "name": "GET detalle",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/watchlists/{{ _.watchlist_id }}",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 6
+    },
+    {
+      "_id": "req_007",
+      "_type": "request",
+      "parentId": "fld_1_watchlists",
+      "name": "PUT reemplazar",
+      "description": "",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/watchlists/{{ _.watchlist_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Demo F0 v2\",\n  \"symbols\": [\n    \"AAPL\",\n    \"NVDA\"\n  ]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "",
+      "metaSortKey": 7
+    },
+    {
+      "_id": "req_008",
+      "_type": "request",
+      "parentId": "fld_1_watchlists",
+      "name": "POST agregar símbolo",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/watchlists/{{ _.watchlist_id }}/symbols",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"symbol\": \"TSLA\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "",
+      "metaSortKey": 8
+    },
+    {
+      "_id": "req_009",
+      "_type": "request",
+      "parentId": "fld_1_watchlists",
+      "name": "DELETE quitar símbolo",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/watchlists/{{ _.watchlist_id }}/symbols/TSLA",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 9
+    },
+    {
+      "_id": "req_010",
+      "_type": "request",
+      "parentId": "fld_1_watchlists",
+      "name": "DELETE borrar",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/watchlists/{{ _.watchlist_id }}",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 10
+    },
+    {
+      "_id": "fld_2_option_chains",
+      "_type": "request_group",
+      "parentId": "wrk_quant_core_f0",
+      "name": "2. Option chains",
+      "description": "Ingesta de contratos + snapshots (IV y griegas) desde Alpaca",
+      "metaSortKey": 11
+    },
+    {
+      "_id": "req_012",
+      "_type": "request",
+      "parentId": "fld_2_option_chains",
+      "name": "GET listar",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/option-chains",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 12
+    },
+    {
+      "_id": "req_013",
+      "_type": "request",
+      "parentId": "fld_2_option_chains",
+      "name": "POST seguir SPY (calls 3 semanas)",
+      "description": "Ajusta las fechas si ya pasaron.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/option-chains",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"underlying\": \"SPY\",\n  \"expiration_from\": \"2026-10-16\",\n  \"expiration_to\": \"2026-11-05\",\n  \"option_type\": \"call\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.id) insomnia.environment.set('chain_id', body.id);\nconst calls = (body.quotes || []).filter(q => q.type === 'call' && q.expiration === (body.quotes[0] || {}).expiration).sort((a, b) => a.strike - b.strike);\nconst i = Math.max(0, calls.findIndex(q => q.strike >= (body.underlyingPrice || 0)));\nif (calls[i]) insomnia.environment.set('leg_buy', calls[i].symbol);\nif (calls[i + 2]) insomnia.environment.set('leg_sell', calls[i + 2].symbol);",
+      "metaSortKey": 13
+    },
+    {
+      "_id": "req_014",
+      "_type": "request",
+      "parentId": "fld_2_option_chains",
+      "name": "GET cadena con cotizaciones",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/option-chains/{{ _.chain_id }}?type=call",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 14
+    },
+    {
+      "_id": "req_015",
+      "_type": "request",
+      "parentId": "fld_2_option_chains",
+      "name": "PUT cambiar filtros",
+      "description": "",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/option-chains/{{ _.chain_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"underlying\": \"SPY\",\n  \"expiration_from\": \"2026-10-16\",\n  \"expiration_to\": \"2026-11-05\",\n  \"option_type\": \"call\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.id) insomnia.environment.set('chain_id', body.id);\nconst calls = (body.quotes || []).filter(q => q.type === 'call' && q.expiration === (body.quotes[0] || {}).expiration).sort((a, b) => a.strike - b.strike);\nconst i = Math.max(0, calls.findIndex(q => q.strike >= (body.underlyingPrice || 0)));\nif (calls[i]) insomnia.environment.set('leg_buy', calls[i].symbol);\nif (calls[i + 2]) insomnia.environment.set('leg_sell', calls[i + 2].symbol);",
+      "metaSortKey": 15
+    },
+    {
+      "_id": "req_016",
+      "_type": "request",
+      "parentId": "fld_2_option_chains",
+      "name": "POST refresh",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/option-chains/{{ _.chain_id }}/refresh",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 16
+    },
+    {
+      "_id": "req_017",
+      "_type": "request",
+      "parentId": "fld_2_option_chains",
+      "name": "DELETE dejar de seguir",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/option-chains/{{ _.chain_id }}",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 17
+    },
+    {
+      "_id": "fld_3_strategies",
+      "_type": "request_group",
+      "parentId": "wrk_quant_core_f0",
+      "name": "3. Strategies",
+      "description": "Multi-leg validadas en Alpaca; usa las piernas que dejó la cadena",
+      "metaSortKey": 18
+    },
+    {
+      "_id": "req_019",
+      "_type": "request",
+      "parentId": "fld_3_strategies",
+      "name": "GET listar",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/strategies",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 19
+    },
+    {
+      "_id": "req_020",
+      "_type": "request",
+      "parentId": "fld_3_strategies",
+      "name": "POST crear bull call spread",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/strategies",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Bull call spread SPY\",\n  \"underlying\": \"SPY\",\n  \"qty\": 1,\n  \"order_type\": \"limit\",\n  \"limit_price\": 0.01,\n  \"legs\": [\n    {\n      \"symbol\": \"{{ _.leg_buy }}\",\n      \"side\": \"buy\",\n      \"ratio_qty\": 1\n    },\n    {\n      \"symbol\": \"{{ _.leg_sell }}\",\n      \"side\": \"sell\",\n      \"ratio_qty\": 1\n    }\n  ]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.id) insomnia.environment.set('strategy_id', body.id);",
+      "metaSortKey": 20
+    },
+    {
+      "_id": "req_021",
+      "_type": "request",
+      "parentId": "fld_3_strategies",
+      "name": "GET detalle valorado",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/strategies/{{ _.strategy_id }}",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 21
+    },
+    {
+      "_id": "req_022",
+      "_type": "request",
+      "parentId": "fld_3_strategies",
+      "name": "PUT editar (draft)",
+      "description": "",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/strategies/{{ _.strategy_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Bull call spread SPY (ajustado)\",\n  \"underlying\": \"SPY\",\n  \"qty\": 1,\n  \"order_type\": \"limit\",\n  \"limit_price\": 0.01,\n  \"legs\": [\n    {\n      \"symbol\": \"{{ _.leg_buy }}\",\n      \"side\": \"buy\",\n      \"ratio_qty\": 1\n    },\n    {\n      \"symbol\": \"{{ _.leg_sell }}\",\n      \"side\": \"sell\",\n      \"ratio_qty\": 1\n    }\n  ]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "",
+      "metaSortKey": 22
+    },
+    {
+      "_id": "req_023",
+      "_type": "request",
+      "parentId": "fld_3_strategies",
+      "name": "POST enviar a Alpaca (mleg)",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/strategies/{{ _.strategy_id }}/submit",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 23
+    },
+    {
+      "_id": "req_024",
+      "_type": "request",
+      "parentId": "fld_3_strategies",
+      "name": "DELETE borrar (cancela orden)",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/strategies/{{ _.strategy_id }}",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 24
+    },
+    {
+      "_id": "fld_4_orders",
+      "_type": "request_group",
+      "parentId": "wrk_quant_core_f0",
+      "name": "4. Orders",
+      "description": "Alpaca /v2/orders (paper). Limit a $1: no se llena",
+      "metaSortKey": 25
+    },
+    {
+      "_id": "req_026",
+      "_type": "request",
+      "parentId": "fld_4_orders",
+      "name": "GET listar",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/orders?status=all&limit=10",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 26
+    },
+    {
+      "_id": "req_027",
+      "_type": "request",
+      "parentId": "fld_4_orders",
+      "name": "POST orden limit AAPL",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/orders",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"symbol\": \"AAPL\",\n  \"qty\": 1,\n  \"side\": \"buy\",\n  \"type\": \"limit\",\n  \"time_in_force\": \"gtc\",\n  \"limit_price\": 1\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.id) insomnia.environment.set('order_id', body.id);",
+      "metaSortKey": 27
+    },
+    {
+      "_id": "req_028",
+      "_type": "request",
+      "parentId": "fld_4_orders",
+      "name": "GET detalle",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/orders/{{ _.order_id }}",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 28
+    },
+    {
+      "_id": "req_029",
+      "_type": "request",
+      "parentId": "fld_4_orders",
+      "name": "PATCH reemplazar precio",
+      "description": "",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/orders/{{ _.order_id }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"limit_price\": 1.05\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.id) insomnia.environment.set('order_id', body.id);",
+      "metaSortKey": 29
+    },
+    {
+      "_id": "req_030",
+      "_type": "request",
+      "parentId": "fld_4_orders",
+      "name": "DELETE cancelar",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/orders/{{ _.order_id }}",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 30
+    },
+    {
+      "_id": "req_031",
+      "_type": "request",
+      "parentId": "fld_4_orders",
+      "name": "DELETE cancelar todas",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/orders",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 31
+    },
+    {
+      "_id": "fld_5_graphql",
+      "_type": "request_group",
+      "parentId": "wrk_quant_core_f0",
+      "name": "5. GraphQL",
+      "description": "Las mismas operaciones por /graphql",
+      "metaSortKey": 32
+    },
+    {
+      "_id": "req_033",
+      "_type": "request",
+      "parentId": "fld_5_graphql",
+      "name": "Query: todo",
+      "method": "POST",
+      "url": "{{ _.graphql_url }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/graphql",
+        "text": "{\"query\":\"{\\n  watchlists { id name symbols }\\n  optionChains { id underlying contractsCount underlyingPrice }\\n  strategies { id name status pricing { netPerUnit netTotal } }\\n  orders(limit: 5) { id symbol status limitPrice }\\n}\"}"
+      },
+      "metaSortKey": 33
+    },
+    {
+      "_id": "req_034",
+      "_type": "request",
+      "parentId": "fld_5_graphql",
+      "name": "Mutation: crear watchlist",
+      "method": "POST",
+      "url": "{{ _.graphql_url }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/graphql",
+        "text": "{\"query\":\"mutation {\\n  createWatchlist(input: { name: \\\"GraphQL F0\\\", symbols: [\\\"QQQ\\\"] }) { id name symbols }\\n}\"}"
+      },
+      "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.data?.createWatchlist?.id) insomnia.environment.set('gql_watchlist_id', body.data?.createWatchlist?.id);",
+      "metaSortKey": 34
+    },
+    {
+      "_id": "req_035",
+      "_type": "request",
+      "parentId": "fld_5_graphql",
+      "name": "Mutation: borrar watchlist",
+      "method": "POST",
+      "url": "{{ _.graphql_url }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/graphql",
+        "text": "{\"query\":\"mutation {\\n  deleteWatchlist(id: \\\"{{ _.gql_watchlist_id }}\\\")\\n}\"}"
+      },
+      "metaSortKey": 35
+    }
+  ]
+}

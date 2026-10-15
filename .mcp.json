@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "f0-api": {
+      "command": "node",
+      "args": ["quant-core-engine/mcp/f0-api-mcp.js"],
+      "env": { "F0_ORIGIN": "http://localhost:3060" }
+    }
+  }
+}

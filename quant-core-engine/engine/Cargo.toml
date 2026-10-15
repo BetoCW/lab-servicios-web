@@ -1,0 +1,22 @@
+[package]
+name = "quant_core"
+version = "0.1.0"
+edition = "2021"
+description = "Quant Core Engine (F0): Black-Scholes, binomial CRR, griegas, IV, margen y Monte Carlo compilados a WebAssembly"
+license = "MIT"
+
+[lib]
+# cdylib -> quant_core.wasm (lo consume @core/quant-engine)
+# rlib   -> permite `cargo test` nativo
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Sin dependencias: el .wasm no necesita imports del host, por eso se puede
+# instanciar de forma síncrona con `new WebAssembly.Instance(...)`.
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

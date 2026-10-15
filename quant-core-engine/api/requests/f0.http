@@ -1,0 +1,137 @@
+### Quant Core F0 — peticiones para la extensión REST Client de VS Code
+@base = http://localhost:3060/api/v1
+@watchlistId = <pega-aqui-un-id>
+@orderId = <pega-aqui-un-id>
+@chainId = <pega-aqui-un-id>
+@strategyId = <pega-aqui-un-id>
+
+### Cuenta (verifica llaves de Alpaca)
+GET {{base}}/account
+
+# =============================================================== 1. WATCHLISTS
+GET {{base}}/watchlists
+
+###
+POST {{base}}/watchlists
+Content-Type: application/json
+
+{ "name": "Tech F0", "symbols": ["AAPL", "MSFT", "SPY"] }
+
+###
+GET {{base}}/watchlists/{{watchlistId}}
+
+###
+PUT {{base}}/watchlists/{{watchlistId}}
+Content-Type: application/json
+
+{ "name": "Tech F0 v2", "symbols": ["AAPL", "NVDA"] }
+
+###
+POST {{base}}/watchlists/{{watchlistId}}/symbols
+Content-Type: application/json
+
+{ "symbol": "TSLA" }
+
+###
+DELETE {{base}}/watchlists/{{watchlistId}}/symbols/TSLA
+
+###
+DELETE {{base}}/watchlists/{{watchlistId}}
+
+# =============================================================== 2. ORDERS
+GET {{base}}/orders?status=all&limit=10
+
+###
+POST {{base}}/orders
+Content-Type: application/json
+
+{ "symbol": "AAPL", "qty": 1, "side": "buy", "type": "limit", "time_in_force": "gtc", "limit_price": 1 }
+
+###
+GET {{base}}/orders/{{orderId}}
+
+### Reemplazo: Alpaca regresa una orden NUEVA con otro id
+PATCH {{base}}/orders/{{orderId}}
+Content-Type: application/json
+
+{ "limit_price": 1.05 }
+
+###
+DELETE {{base}}/orders/{{orderId}}
+
+### Cancela todas las abiertas
+DELETE {{base}}/orders
+
+# =============================================================== 3. OPTION CHAINS
+GET {{base}}/option-chains
+
+###
+POST {{base}}/option-chains
+Content-Type: application/json
+
+{ "underlying": "SPY", "expiration_from": "2026-10-16", "expiration_to": "2026-10-31", "option_type": "call" }
+
+###
+GET {{base}}/option-chains/{{chainId}}?type=call
+
+###
+PUT {{base}}/option-chains/{{chainId}}
+Content-Type: application/json
+
+{ "underlying": "SPY", "expiration_from": "2026-10-16", "expiration_to": "2026-10-31", "strike_min": 650, "strike_max": 700 }
+
+###
+POST {{base}}/option-chains/{{chainId}}/refresh
+
+###
+DELETE {{base}}/option-chains/{{chainId}}
+
+# =============================================================== 4. STRATEGIES
+GET {{base}}/strategies
+
+### Toma dos símbolos reales de GET /option-chains/{id}
+POST {{base}}/strategies
+Content-Type: application/json
+
+{
+  "name": "Bull call spread SPY",
+  "underlying": "SPY",
+  "qty": 1,
+  "order_type": "limit",
+  "limit_price": 1.5,
+  "legs": [
+    { "symbol": "SPY261030C00670000", "side": "buy",  "ratio_qty": 1 },
+    { "symbol": "SPY261030C00680000", "side": "sell", "ratio_qty": 1 }
+  ]
+}
+
+###
+GET {{base}}/strategies/{{strategyId}}
+
+###
+PUT {{base}}/strategies/{{strategyId}}
+Content-Type: application/json
+
+{
+  "name": "Bull call spread SPY (ajustado)",
+  "underlying": "SPY",
+  "qty": 2,
+  "order_type": "limit",
+  "limit_price": 1.4,
+  "legs": [
+    { "symbol": "SPY261030C00670000", "side": "buy",  "ratio_qty": 1 },
+    { "symbol": "SPY261030C00680000", "side": "sell", "ratio_qty": 1 }
+  ]
+}
+
+###
+POST {{base}}/strategies/{{strategyId}}/submit
+
+###
+DELETE {{base}}/strategies/{{strategyId}}
+
+# =============================================================== GraphQL
+POST http://localhost:3060/graphql
+Content-Type: application/json
+
+{ "query": "{ watchlists { id name symbols } optionChains { id underlying contractsCount quotes(type: \"call\") { symbol strike bid ask impliedVolatility delta } } strategies { id name status pricing { netPerUnit } } }" }
