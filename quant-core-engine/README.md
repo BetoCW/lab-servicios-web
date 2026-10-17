@@ -7,8 +7,8 @@ datos de mercado**.
 |---|---|---|
 | [`api/`](api) | 4 APIs CRUD (REST + GraphQL) conectadas a **Alpaca** y persistidas en **Supabase** · puerto 3060 | En uso |
 | [`supabase/migrations/`](supabase/migrations) | Esquema del proyecto Supabase `quant-core-engine-f0` | Aplicado |
-| [`engine/`](engine) | Motor en Rust → WebAssembly: Black-Scholes, binomial americano, griegas, IV, Reg T / SPAN, Monte Carlo | Preparado |
-| [`packages/quant-engine/`](packages/quant-engine) | `@core/quant-engine`: contrato síncrono en JS sobre el `.wasm` | Preparado |
+| [`engine/`](engine) | Motor en Rust → WebAssembly: Black-Scholes, binomial americano, griegas, IV, Reg T / SPAN, Monte Carlo | En uso (riesgo de estrategias) |
+| [`packages/quant-engine/`](packages/quant-engine) | `@core/quant-engine`: contrato síncrono en JS sobre el `.wasm` | En uso |
 | [`openspec/`](openspec) | Contratos OpenSpec de las APIs y del motor | — |
 
 ```mermaid
@@ -20,7 +20,7 @@ flowchart LR
     end
     S -->|watchlists · orders · contracts · snapshots · mleg| A[(Alpaca Paper<br/>Trading + Market Data)]
     S -->|espejo y recursos propios| B[(Supabase<br/>quant-core-engine-f0)]
-    E[engine/ Rust → WASM<br/>@core/quant-engine] -. preparado .-> S
+    S -->|GET /strategies/{id}/risk| E[engine/ Rust → WASM<br/>@core/quant-engine]
 ```
 
 ## Las 4 APIs
@@ -30,7 +30,7 @@ flowchart LR
 | 1 | `/api/v1/watchlists` | `/v2/watchlists` | lista, detalle | crear, agregar símbolo | PUT nombre + símbolos | borrar, quitar símbolo |
 | 2 | `/api/v1/orders` | `/v2/orders` | lista, detalle | enviar orden | PATCH reemplazar | cancelar una / todas |
 | 3 | `/api/v1/option-chains` | `/v2/options/contracts` + `/v1beta1/options/snapshots` | lista, cadena con IV y griegas | seguir + ingestar, `/{id}/refresh` | PUT filtros + re-ingesta | dejar de seguir |
-| 4 | `/api/v1/strategies` | contratos OCC + orden `mleg` | lista, detalle valorado en vivo | crear, `/{id}/submit` | PUT (solo draft) | borrar (cancela si se envió) |
+| 4 | `/api/v1/strategies` | contratos OCC + orden `mleg` | lista, detalle valorado en vivo, **`/{id}/risk` (motor)** | crear, `/{id}/submit` | PUT (solo draft) | borrar (cancela si se envió) |
 
 Todas tienen su equivalente en **GraphQL** (`/graphql`) y están documentadas en **Swagger** (`/api-docs`).
 
@@ -86,10 +86,26 @@ Proyecto **quant-core-engine-f0** (us-east-1, organización CocaCola).
 Tablas: `watchlists`, `orders`, `option_chains`, `option_quotes`, `strategies`, `strategy_legs`,
 todas con RLS (solo el backend con la llave secreta las lee y escribe).
 
-## Motor (preparado, aún sin consumidores)
+## Motor: riesgo con datos reales
+
+`GET /api/v1/strategies/{id}/risk?paths=100000` toma de Alpaca el precio del subyacente y el mid e IV
+de cada pierna, y corre en el motor Rust/WASM:
+
+- **Monte Carlo** del P&L al vencimiento (GBM con variables antitéticas; ~100,000 trayectorias en ~10 ms)
+- **Matriz de P&L** precio × volatilidad y P&L al vencimiento por movimiento del subyacente
+- **Margen Reg T** (reconoce spreads verticales) y **SPAN** (16 escenarios)
+- **Griegas** del portafolio y **precio del motor vs. mid de Alpaca** por pierna
+
+En el front: pestaña *Estrategias* → **Riesgo (motor)**. Tasa libre de riesgo: `RISK_FREE_RATE` (4% por defecto).
+
+> El Monte Carlo usa una sola volatilidad (la IV promedio de las piernas). El mercado tiene *skew*
+> (las puts OTM tienen más IV), por eso el P&L esperado del modelo sale negativo aunque el precio de
+> cada pierna coincida con el mercado: esa diferencia es justo lo que el skew está cobrando.
+
+### Pruebas del motor
 
 ```bash
-cd engine && cargo test --release                      # 14 pruebas
+cd engine && cargo test --release                      # 15 pruebas
 cd ../packages/quant-engine && npm run build && npm test   # compila a WASM + 4 pruebas JS
 ```
 

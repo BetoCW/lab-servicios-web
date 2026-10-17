@@ -60,6 +60,13 @@
   #log { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 220px; overflow: auto; }
   #log div { padding: 2px 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
   #log pre { white-space: pre-wrap; word-break: break-all; margin: 4px 0 6px; color: var(--muted); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; }
+  .kpi { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .kpi span { display: block; color: var(--muted); font-size: 12px; }
+  .kpi b { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+  .heat td { text-align: center; font-variant-numeric: tabular-nums; }
+  svg text { fill: var(--muted); font-size: 11px; }
   .help { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: none; }
   .help code { background: rgba(0,0,0,.08); padding: 1px 4px; border-radius: 4px; }
 </style>
@@ -140,6 +147,7 @@
       </form>
       <div id="legs" style="margin-top:10px"></div>
     </div>
+    <div class="card" id="riskPanel" hidden></div>
     <div id="stList"></div>
   </section>
 
@@ -396,6 +404,7 @@ async function loadStrategies() {
       <h2><span>${esc(s.name)} <span class="badge ${badge[s.status]}">${s.status}</span></span>
         <span class="row">
           ${s.status === 'draft' ? '<button class="sm" data-act="submit">Enviar a Alpaca</button><button class="ghost sm" data-act="rename">Renombrar (PUT)</button>' : ''}
+          <button class="ghost sm" data-act="risk">Riesgo (motor)</button>
           <button class="danger sm" data-act="delete">Eliminar</button>
         </span>
       </h2>
@@ -414,6 +423,7 @@ $('#stList').onclick = async (e) => {
   const id = card.dataset.id;
   e.target.disabled = true;
   try {
+    if (act === 'risk') return await showRisk(id);
     if (act === 'submit') await api('POST', `/strategies/${id}/submit`);
     if (act === 'delete' && confirm('¿Eliminar? Si ya se envió, se cancela la orden.')) await api('DELETE', `/strategies/${id}`);
     if (act === 'rename') {
@@ -427,6 +437,88 @@ $('#stList').onclick = async (e) => {
     await Promise.all([loadStrategies(), loadOrders()]);
   } finally { e.target.disabled = false; }
 };
+
+// ------------------------------------------------------------- riesgo con el motor Rust/WASM
+const signed = (v) => v == null ? '—' : (v >= 0 ? '+' : '') + money(v);
+const heat = (v, max) => {
+  const a = Math.min(Math.abs(v) / (max || 1), 1) * 0.55;
+  return v >= 0 ? `background: rgba(19,128,74,${a})` : `background: rgba(194,50,43,${a})`;
+};
+
+function histogramSvg(bins) {
+  const W = 640, H = 170, pad = 22, max = Math.max(...bins.map((b) => b.count)) || 1, bw = (W - pad * 2) / bins.length;
+  const bars = bins.map((b, i) => {
+    const h = (b.count / max) * (H - pad * 2);
+    const color = (b.from + b.to) / 2 >= 0 ? 'var(--ok)' : 'var(--bad)';
+    return `<rect x="${pad + i * bw + 1}" y="${H - pad - h}" width="${Math.max(bw - 2, 1)}" height="${h}" fill="${color}" rx="2"><title>${money(b.from)} a ${money(b.to)}: ${b.count} trayectorias</title></rect>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Histograma del P&L simulado">${bars}
+    <line x1="${pad}" x2="${W - pad}" y1="${H - pad}" y2="${H - pad}" stroke="var(--line)"/>
+    <text x="${pad}" y="${H - 6}">${money(bins[0].from)}</text>
+    <text x="${W - pad}" y="${H - 6}" text-anchor="end">${money(bins.at(-1).to)}</text></svg>`;
+}
+
+async function showRisk(id, paths = 100000, seed = 42) {
+  const panel = $('#riskPanel');
+  panel.hidden = false;
+  panel.innerHTML = '<span class="muted">Corriendo el motor…</span>';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const r = await api('GET', `/strategies/${id}/risk?paths=${paths}&seed=${seed}`);
+  const mc = r.monteCarlo, m = r.pnlMatrix;
+  const maxAbs = Math.max(...m.values.flat().map(Math.abs));
+  panel.innerHTML = `
+    <h2>Riesgo · ${esc(r.strategy.name)} <span class="muted">GET /strategies/{id}/risk · motor Rust → WASM</span></h2>
+    <p class="muted" style="margin:0">
+      Datos reales de Alpaca: ${esc(r.strategy.underlying)} <b>${num(r.inputs.spot)}</b> · IV media <b>${(r.inputs.underlyingVol * 100).toFixed(1)}%</b> ·
+      horizonte <b>${num(r.inputs.horizonDays, 1)} días</b> (al vencimiento) · tasa ${(r.inputs.rate * 100).toFixed(1)}%
+    </p>
+    <div class="kpis">
+      <div class="kpi"><span>Prob. de ganancia</span><b>${(mc.probProfit * 100).toFixed(1)}%</b></div>
+      <div class="kpi"><span>P&L esperado</span><b>${signed(mc.mean)}</b></div>
+      <div class="kpi"><span>Ganancia máx.</span><b>${signed(mc.max)}</b></div>
+      <div class="kpi"><span>Pérdida máx.</span><b>${signed(mc.min)}</b></div>
+      <div class="kpi"><span>VaR 95%</span><b>${money(mc.var95)}</b></div>
+      <div class="kpi"><span>Margen Reg T / SPAN</span><b>${money(r.margin.regT)}</b><span>${money(r.margin.span)} SPAN</span></div>
+      <div class="kpi"><span>Delta · Theta/día</span><b>${num(r.greeks.delta, 1)}</b><span>${signed(r.greeks.theta)} por día</span></div>
+      <div class="kpi"><span>Velocidad</span><b>${num(r.performance.monteCarloMs, 1)} ms</b><span>${r.inputs.paths.toLocaleString('es-MX')} trayectorias · ${(r.performance.pathsPerSecond / 1e6).toFixed(1)} M/s</span></div>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <label>Trayectorias <select id="mcPaths">${[10000, 100000, 500000].map((p) => `<option ${p === paths ? 'selected' : ''} value="${p}">${p.toLocaleString('es-MX')}</option>`).join('')}</select></label>
+      <button class="ghost sm" id="mcAgain">Simular otra vez (nueva semilla)</button>
+    </div>
+    <div class="grid2">
+      <div>
+        <b>Monte Carlo: distribución del P&L al vencimiento</b>
+        ${histogramSvg(mc.histogram)}
+      </div>
+      <div>
+        <b>P&L al vencimiento según el precio de ${esc(r.strategy.underlying)}</b>
+        <div class="scroll"><table>
+          <tr><th>Movimiento</th><th class="n">Precio</th><th class="n">P&L</th></tr>
+          ${r.pnlAtHorizon.map((p) => `<tr><td>${(p.spotShock * 100).toFixed(1)}%</td><td class="n">${num(p.spot)}</td><td class="n ${p.pnl >= 0 ? 'buy' : 'sell'}">${signed(p.pnl)}</td></tr>`).join('')}
+        </table></div>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <b>Matriz de P&L hoy: precio × volatilidad</b>
+        <div class="scroll"><table class="heat">
+          <tr><th>Spot \\ Vol</th>${m.volShocks.map((v) => `<th class="n">${v > 0 ? '+' : ''}${(v * 100).toFixed(0)} pts</th>`).join('')}</tr>
+          ${m.values.map((row, i) => `<tr><th>${(m.spotShocks[i] * 100).toFixed(1)}%</th>${row.map((v) => `<td style="${heat(v, maxAbs)}">${Math.round(v)}</td>`).join('')}</tr>`).join('')}
+        </table></div>
+      </div>
+      <div>
+        <b>El motor contra el mercado</b>
+        <div class="scroll"><table>
+          <tr><th>Contrato</th><th class="n">IV</th><th class="n">Mid Alpaca</th><th class="n">Precio motor</th><th class="n">Dif.</th></tr>
+          ${r.legs.map((l) => `<tr><td class="${l.side}">${esc(l.symbol)}</td><td class="n">${(l.iv * 100).toFixed(2)}%</td><td class="n">${num(l.marketMid, 3)}</td><td class="n">${num(l.modelPrice, 3)}</td><td class="n">${num(l.diff, 3)}</td></tr>`).join('')}
+        </table></div>
+        <p class="muted">Costo de la estrategia: mercado ${money(r.cost.market)} · motor ${money(r.cost.model)}</p>
+      </div>
+    </div>`;
+  $('#mcAgain').onclick = busy($('#mcAgain'), () => showRisk(id, Number($('#mcPaths').value), Math.floor(Math.random() * 1e6)));
+  $('#mcPaths').onchange = () => showRisk(id, Number($('#mcPaths').value), seed);
+}
 
 // ------------------------------------------------------------- 4. órdenes
 async function loadOrders() {

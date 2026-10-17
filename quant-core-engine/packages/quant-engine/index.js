@@ -1,5 +1,5 @@
 // @core/quant-engine — envoltura síncrona del motor Rust/WASM (contrato OpenSpec).
-// Estado: PREPARADO. Las APIs F0 todavía no lo consumen.
+// Lo consume la API F0 en GET /strategies/{id}/risk (services/risk.service.js).
 // Compilar el .wasm:  npm run build   (cargo build --target wasm32-unknown-unknown)
 import { readFileSync } from 'node:fs';
 

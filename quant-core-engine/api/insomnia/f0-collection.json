@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-10-15T22:17:30.696Z",
+  "__export_date": "2026-10-17T23:18:20.919Z",
   "__export_source": "quant-core-f0",
   "resources": [
     {
@@ -80,7 +80,7 @@
       "url": "{{ _.base_url }}/watchlists",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Demo F0\",\n  \"symbols\": [\n    \"AAPL\",\n    \"MSFT\",\n    \"SPY\"\n  ]\n}"
+        "text": "{\n  \"name\": \"Prueba colección F0\",\n  \"symbols\": [\n    \"AAPL\",\n    \"MSFT\",\n    \"SPY\"\n  ]\n}"
       },
       "headers": [
         {
@@ -114,7 +114,7 @@
       "url": "{{ _.base_url }}/watchlists/{{ _.watchlist_id }}",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Demo F0 v2\",\n  \"symbols\": [\n    \"AAPL\",\n    \"NVDA\"\n  ]\n}"
+        "text": "{\n  \"name\": \"Prueba colección F0 v2\",\n  \"symbols\": [\n    \"AAPL\",\n    \"NVDA\"\n  ]\n}"
       },
       "headers": [
         {
@@ -203,7 +203,7 @@
       "url": "{{ _.base_url }}/option-chains",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"underlying\": \"SPY\",\n  \"expiration_from\": \"2026-10-16\",\n  \"expiration_to\": \"2026-11-05\",\n  \"option_type\": \"call\"\n}"
+        "text": "{\n  \"underlying\": \"SPY\",\n  \"expiration_from\": \"2026-10-18\",\n  \"expiration_to\": \"2026-11-07\",\n  \"option_type\": \"call\"\n}"
       },
       "headers": [
         {
@@ -237,7 +237,7 @@
       "url": "{{ _.base_url }}/option-chains/{{ _.chain_id }}",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"underlying\": \"SPY\",\n  \"expiration_from\": \"2026-10-16\",\n  \"expiration_to\": \"2026-11-05\",\n  \"option_type\": \"call\"\n}"
+        "text": "{\n  \"underlying\": \"SPY\",\n  \"expiration_from\": \"2026-10-18\",\n  \"expiration_to\": \"2026-11-07\",\n  \"option_type\": \"call\"\n}"
       },
       "headers": [
         {
@@ -333,6 +333,19 @@
       "_id": "req_022",
       "_type": "request",
       "parentId": "fld_3_strategies",
+      "name": "GET riesgo con el motor (Monte Carlo)",
+      "description": "Motor Rust/WASM sobre precios e IV reales de Alpaca: Monte Carlo, matriz de P&L, Reg T / SPAN, griegas.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/strategies/{{ _.strategy_id }}/risk?paths=100000",
+      "body": {},
+      "headers": [],
+      "afterResponseScript": "",
+      "metaSortKey": 22
+    },
+    {
+      "_id": "req_023",
+      "_type": "request",
+      "parentId": "fld_3_strategies",
       "name": "PUT editar (draft)",
       "description": "",
       "method": "PUT",
@@ -348,10 +361,10 @@
         }
       ],
       "afterResponseScript": "",
-      "metaSortKey": 22
+      "metaSortKey": 23
     },
     {
-      "_id": "req_023",
+      "_id": "req_024",
       "_type": "request",
       "parentId": "fld_3_strategies",
       "name": "POST enviar a Alpaca (mleg)",
@@ -361,10 +374,10 @@
       "body": {},
       "headers": [],
       "afterResponseScript": "",
-      "metaSortKey": 23
+      "metaSortKey": 24
     },
     {
-      "_id": "req_024",
+      "_id": "req_025",
       "_type": "request",
       "parentId": "fld_3_strategies",
       "name": "DELETE borrar (cancela orden)",
@@ -374,7 +387,7 @@
       "body": {},
       "headers": [],
       "afterResponseScript": "",
-      "metaSortKey": 24
+      "metaSortKey": 25
     },
     {
       "_id": "fld_4_orders",
@@ -382,10 +395,10 @@
       "parentId": "wrk_quant_core_f0",
       "name": "4. Orders",
       "description": "Alpaca /v2/orders (paper). Limit a $1: no se llena",
-      "metaSortKey": 25
+      "metaSortKey": 26
     },
     {
-      "_id": "req_026",
+      "_id": "req_027",
       "_type": "request",
       "parentId": "fld_4_orders",
       "name": "GET listar",
@@ -395,10 +408,10 @@
       "body": {},
       "headers": [],
       "afterResponseScript": "",
-      "metaSortKey": 26
+      "metaSortKey": 27
     },
     {
-      "_id": "req_027",
+      "_id": "req_028",
       "_type": "request",
       "parentId": "fld_4_orders",
       "name": "POST orden limit AAPL",
@@ -416,10 +429,10 @@
         }
       ],
       "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.id) insomnia.environment.set('order_id', body.id);",
-      "metaSortKey": 27
+      "metaSortKey": 28
     },
     {
-      "_id": "req_028",
+      "_id": "req_029",
       "_type": "request",
       "parentId": "fld_4_orders",
       "name": "GET detalle",
@@ -429,10 +442,10 @@
       "body": {},
       "headers": [],
       "afterResponseScript": "",
-      "metaSortKey": 28
+      "metaSortKey": 29
     },
     {
-      "_id": "req_029",
+      "_id": "req_030",
       "_type": "request",
       "parentId": "fld_4_orders",
       "name": "PATCH reemplazar precio",
@@ -450,10 +463,10 @@
         }
       ],
       "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.id) insomnia.environment.set('order_id', body.id);",
-      "metaSortKey": 29
+      "metaSortKey": 30
     },
     {
-      "_id": "req_030",
+      "_id": "req_031",
       "_type": "request",
       "parentId": "fld_4_orders",
       "name": "DELETE cancelar",
@@ -463,10 +476,10 @@
       "body": {},
       "headers": [],
       "afterResponseScript": "",
-      "metaSortKey": 30
+      "metaSortKey": 31
     },
     {
-      "_id": "req_031",
+      "_id": "req_032",
       "_type": "request",
       "parentId": "fld_4_orders",
       "name": "DELETE cancelar todas",
@@ -476,7 +489,7 @@
       "body": {},
       "headers": [],
       "afterResponseScript": "",
-      "metaSortKey": 31
+      "metaSortKey": 32
     },
     {
       "_id": "fld_5_graphql",
@@ -484,10 +497,10 @@
       "parentId": "wrk_quant_core_f0",
       "name": "5. GraphQL",
       "description": "Las mismas operaciones por /graphql",
-      "metaSortKey": 32
+      "metaSortKey": 33
     },
     {
-      "_id": "req_033",
+      "_id": "req_034",
       "_type": "request",
       "parentId": "fld_5_graphql",
       "name": "Query: todo",
@@ -503,10 +516,10 @@
         "mimeType": "application/graphql",
         "text": "{\"query\":\"{\\n  watchlists { id name symbols }\\n  optionChains { id underlying contractsCount underlyingPrice }\\n  strategies { id name status pricing { netPerUnit netTotal } }\\n  orders(limit: 5) { id symbol status limitPrice }\\n}\"}"
       },
-      "metaSortKey": 33
+      "metaSortKey": 34
     },
     {
-      "_id": "req_034",
+      "_id": "req_035",
       "_type": "request",
       "parentId": "fld_5_graphql",
       "name": "Mutation: crear watchlist",
@@ -523,10 +536,10 @@
         "text": "{\"query\":\"mutation {\\n  createWatchlist(input: { name: \\\"GraphQL F0\\\", symbols: [\\\"QQQ\\\"] }) { id name symbols }\\n}\"}"
       },
       "afterResponseScript": "const body = insomnia.response.json();\nif (body && body.data?.createWatchlist?.id) insomnia.environment.set('gql_watchlist_id', body.data?.createWatchlist?.id);",
-      "metaSortKey": 34
+      "metaSortKey": 35
     },
     {
-      "_id": "req_035",
+      "_id": "req_036",
       "_type": "request",
       "parentId": "fld_5_graphql",
       "name": "Mutation: borrar watchlist",
@@ -542,7 +555,7 @@
         "mimeType": "application/graphql",
         "text": "{\"query\":\"mutation {\\n  deleteWatchlist(id: \\\"{{ _.gql_watchlist_id }}\\\")\\n}\"}"
       },
-      "metaSortKey": 35
+      "metaSortKey": 36
     }
   ]
 }

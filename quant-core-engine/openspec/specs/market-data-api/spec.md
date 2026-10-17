@@ -60,6 +60,21 @@ cada pierna con la cotización viva (mid) y el costo neto; `PUT` solo aplica en 
 - **WHEN** se hace `PUT /strategies/{id}` y el estado es `submitted`
 - **THEN** responde `409`
 
+### Requirement: Riesgo de estrategias con el motor
+`GET /strategies/{id}/risk` SHALL tomar el precio del subyacente y el mid e IV de cada pierna de
+Alpaca (si falta la IV, el motor la calcula del mid) y regresar, calculado con `@core/quant-engine`:
+Monte Carlo del P&L al primer vencimiento (`paths`, `seed`), matriz de P&L precio × vol, P&L al
+vencimiento por movimiento del subyacente, márgenes Reg T y SPAN, griegas del portafolio, precio del
+motor vs. mid de mercado por pierna y tiempos de cómputo.
+
+#### Scenario: Pierna vencida
+- **WHEN** alguna pierna ya venció
+- **THEN** responde `400` listando los símbolos vencidos
+
+#### Scenario: Spread vertical
+- **WHEN** se analiza un bull call spread de débito
+- **THEN** el margen Reg T es igual al débito neto (su pérdida máxima)
+
 ### Requirement: Paridad GraphQL
 Cada operación REST SHALL tener su query o mutation equivalente en `/graphql`, resuelta por el
 mismo servicio, y los errores SHALL llevar `extensions.status` con el código HTTP.

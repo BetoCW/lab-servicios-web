@@ -89,7 +89,7 @@ async function validate(body) {
   };
 }
 
-async function load(id) {
+export async function loadStrategy(id) {
   const rows = await q(db().from('strategies').select('*, strategy_legs(*)').eq('id', id).limit(1));
   if (!rows.length) throw notFound(`No existe la estrategia ${id}`);
   const { strategy_legs: legs, ...strategy } = rows[0];
@@ -107,7 +107,7 @@ export const strategiesService = {
 
   /** Detalle con cotización viva de cada pierna y el costo neto (débito > 0, crédito < 0). */
   async get(id) {
-    const { strategy, legs } = await load(id);
+    const { strategy, legs } = await loadStrategy(id);
     const snaps = await alpaca.optionSnapshots(legs.map((l) => l.symbol)).catch(() => ({}));
     let net = 0;
     let complete = legs.length > 0;
@@ -141,7 +141,7 @@ export const strategiesService = {
 
   /** PUT: reemplaza la estrategia completa (solo en borrador). */
   async update(id, body) {
-    const { strategy: current } = await load(id);
+    const { strategy: current } = await loadStrategy(id);
     if (current.status !== 'draft') throw conflict(`La estrategia ya está en estado ${current.status}; solo se edita en draft`);
     const { strategy, legs } = await validate(body);
     await q(db().from('strategies').update(strategy).eq('id', id));
@@ -152,7 +152,7 @@ export const strategiesService = {
 
   /** DELETE: si ya se envió, primero intenta cancelar la orden en Alpaca. */
   async remove(id) {
-    const { strategy } = await load(id);
+    const { strategy } = await loadStrategy(id);
     if (strategy.status === 'submitted' && strategy.alpaca_order_id) {
       await alpaca.cancelOrder(strategy.alpaca_order_id).catch(() => {
         // Ya ejecutada o cancelada: no bloquea el borrado local.
@@ -162,7 +162,7 @@ export const strategiesService = {
   },
 
   async submit(id) {
-    const { strategy, legs } = await load(id);
+    const { strategy, legs } = await loadStrategy(id);
     if (strategy.status !== 'draft') throw conflict(`La estrategia ya está en estado ${strategy.status}`);
     const order = await alpaca.createOrder({
       order_class: 'mleg',

@@ -119,6 +119,18 @@ export const openapi = {
       put: op('Strategies', 'Reemplazar estrategia (solo draft)', { requestBody: json(ref('StrategyInput')), responses: ok(ref('Strategy')) }),
       delete: op('Strategies', 'Eliminar (cancela la orden si ya se envió)', { responses: noContent }),
     },
+    '/strategies/{id}/risk': {
+      parameters: [idParam],
+      get: op('Strategies', 'Riesgo con el motor Rust/WASM sobre datos reales de Alpaca', {
+        description: 'Monte Carlo del P&L al vencimiento, matriz precio × vol, márgenes Reg T / SPAN, griegas del portafolio y precio del motor vs. mid de Alpaca.',
+        parameters: [
+          { name: 'paths', in: 'query', schema: { type: 'integer', default: 50000, minimum: 1000, maximum: 500000 } },
+          { name: 'seed', in: 'query', schema: { type: 'integer', default: 42 } },
+          { name: 'horizon_days', in: 'query', schema: { type: 'number' }, description: 'Por defecto: hasta el primer vencimiento' },
+        ],
+        responses: ok({ type: 'object' }),
+      }),
+    },
     '/strategies/{id}/submit': {
       parameters: [idParam],
       post: op('Strategies', 'Enviar como orden multi-leg a Alpaca', { responses: ok({ type: 'object' }, 201) }),

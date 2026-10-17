@@ -64,9 +64,9 @@ req(acc, 'GET cuenta Alpaca', 'GET', '/account');
 
 const wl = folder('1. Watchlists', 'Alpaca /v2/watchlists + espejo en Supabase');
 req(wl, 'GET listar', 'GET', '/watchlists');
-req(wl, 'POST crear', 'POST', '/watchlists', { body: { name: 'Demo F0', symbols: ['AAPL', 'MSFT', 'SPY'] }, script: saveId('watchlist_id') });
+req(wl, 'POST crear', 'POST', '/watchlists', { body: { name: 'Prueba colección F0', symbols: ['AAPL', 'MSFT', 'SPY'] }, script: saveId('watchlist_id') });
 req(wl, 'GET detalle', 'GET', '/watchlists/{{ _.watchlist_id }}');
-req(wl, 'PUT reemplazar', 'PUT', '/watchlists/{{ _.watchlist_id }}', { body: { name: 'Demo F0 v2', symbols: ['AAPL', 'NVDA'] } });
+req(wl, 'PUT reemplazar', 'PUT', '/watchlists/{{ _.watchlist_id }}', { body: { name: 'Prueba colección F0 v2', symbols: ['AAPL', 'NVDA'] } });
 req(wl, 'POST agregar símbolo', 'POST', '/watchlists/{{ _.watchlist_id }}/symbols', { body: { symbol: 'TSLA' } });
 req(wl, 'DELETE quitar símbolo', 'DELETE', '/watchlists/{{ _.watchlist_id }}/symbols/TSLA');
 req(wl, 'DELETE borrar', 'DELETE', '/watchlists/{{ _.watchlist_id }}');
@@ -109,6 +109,9 @@ const strategyBody = (name) => ({
 req(st, 'GET listar', 'GET', '/strategies');
 req(st, 'POST crear bull call spread', 'POST', '/strategies', { body: strategyBody('Bull call spread SPY'), script: saveId('strategy_id') });
 req(st, 'GET detalle valorado', 'GET', '/strategies/{{ _.strategy_id }}');
+req(st, 'GET riesgo con el motor (Monte Carlo)', 'GET', '/strategies/{{ _.strategy_id }}/risk?paths=100000', {
+  description: 'Motor Rust/WASM sobre precios e IV reales de Alpaca: Monte Carlo, matriz de P&L, Reg T / SPAN, griegas.',
+});
 req(st, 'PUT editar (draft)', 'PUT', '/strategies/{{ _.strategy_id }}', { body: strategyBody('Bull call spread SPY (ajustado)') });
 req(st, 'POST enviar a Alpaca (mleg)', 'POST', '/strategies/{{ _.strategy_id }}/submit');
 req(st, 'DELETE borrar (cancela orden)', 'DELETE', '/strategies/{{ _.strategy_id }}');

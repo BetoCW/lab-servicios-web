@@ -21,4 +21,4 @@ pipeline de datos de mercado que consumen los demás equipos.
 | Spec | Estado |
 |---|---|
 | [`market-data-api`](specs/market-data-api/spec.md) | Implementado (4 APIs CRUD) |
-| [`quant-engine`](specs/quant-engine/spec.md) | Preparado (compila y tiene pruebas; aún sin consumidores) |
+| [`quant-engine`](specs/quant-engine/spec.md) | En uso por `GET /strategies/{id}/risk` |

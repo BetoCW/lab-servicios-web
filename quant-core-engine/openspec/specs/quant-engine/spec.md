@@ -1,7 +1,7 @@
 # quant-engine (`@core/quant-engine`)
 
-Estado: **preparado**. Compila (Rust → WASM), tiene pruebas y API estable, pero ninguna API lo
-consume todavía. Se publica para consumo **síncrono** del resto de los equipos.
+Estado: **en uso** por `GET /strategies/{id}/risk` (market-data-api). Compila (Rust → WASM) y se
+publica para consumo **síncrono** del resto de los equipos.
 
 ## Requirements
 
@@ -31,10 +31,11 @@ Piernas `{ type: 'call'|'put'|'stock', strike, t, qty (con signo), vol, multipli
 - `pnlMatrix(legs, { spot, spotShocks, volShocks, horizonDays })` → matriz filas × columnas.
 - `monteCarlo(legs, { spot, vol, horizonDays, paths, seed, bins })` → media, desviación, VaR95/99,
   CVaR95, probabilidad de ganancia e histograma. Determinista por `seed`.
-- `regTMargin(legs, { spot })` → reglas CBOE para descubiertas, por pierna (no compensa spreads).
+- `regTMargin(legs, { spot })` → reglas CBOE por pierna; reconoce spreads verticales (requerimiento =
+  pérdida máxima del spread). Conservador en iron condors: margina cada lado por separado.
 - `spanMargin(legs, { spot, priceScan, volScan, shortOptionMinimum })` → 16 escenarios SPAN
   (los extremos ±2× ponderan 35%) y margen = max(peor pérdida, mínimo por opción corta).
 
 ### Requirement: Verificación
-`cargo test` (14 pruebas: Hull, paridad put-call, griegas vs. diferencias finitas, IV ida y vuelta,
+`cargo test` (15 pruebas: Hull, paridad put-call, griegas vs. diferencias finitas, IV ida y vuelta,
 convergencia binomial → BS) y `npm test` en `packages/quant-engine` SHALL pasar antes de publicar.

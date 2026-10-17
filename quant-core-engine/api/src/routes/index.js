@@ -3,6 +3,7 @@ import { watchlistsService as watchlists } from '../services/watchlists.service.
 import { ordersService as orders } from '../services/orders.service.js';
 import { optionChainsService as chains } from '../services/optionChains.service.js';
 import { strategiesService as strategies } from '../services/strategies.service.js';
+import { riskService } from '../services/risk.service.js';
 import { assertUuid } from '../lib/errors.js';
 import { alpaca } from '../lib/alpaca.js';
 
@@ -55,6 +56,7 @@ s.delete('/:id', uuid, async (req, res) => {
   await strategies.remove(req.params.id);
   res.status(204).end();
 });
+s.get('/:id/risk', uuid, async (req, res) => res.json(await riskService.analyze(req.params.id, req.query)));
 s.post('/:id/submit', uuid, async (req, res) => res.status(201).json(await strategies.submit(req.params.id)));
 
 // ---------------------------------------------------------------- raíz

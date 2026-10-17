@@ -12,6 +12,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
+    "@core/quant-engine": "file:../packages/quant-engine",
     "@supabase/supabase-js": "^2.118.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.8",

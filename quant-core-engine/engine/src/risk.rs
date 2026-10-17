@@ -117,32 +117,55 @@ pub fn monte_carlo(legs: &[Leg], spot: f64, rate: f64, div: f64, underlying_vol:
     }
 }
 
-/// Margen Reg T por pierna (reglas de margen de CBOE para posiciones descubiertas).
-/// Conservador: no reconoce spreads ni coberturas; cada pierna corta se margina sola.
+/// Margen Reg T por pierna (reglas de margen de CBOE).
+/// - Largas: prima completa. Acción: 50%.
+/// - Cortas cubiertas por una larga del mismo tipo que vence igual o después (spread vertical):
+///   ancho entre strikes (0 si es de débito) menos la prima recibida. Así el total del spread
+///   es su pérdida máxima: el débito neto, o el ancho menos el crédito.
+/// - Cortas sin cubrir: fórmula de opción descubierta.
+///
 /// `out` recibe el requerimiento de cada pierna; regresa el total.
 pub fn reg_t(legs: &[Leg], spot: f64, rate: f64, div: f64, out: &mut [f64]) -> f64 {
+    // Unidades largas aún disponibles para cubrir cortas.
+    let mut free: Vec<f64> = legs.iter().map(|l| if !l.is_stock() && l.qty > 0.0 { l.qty * l.multiplier } else { 0.0 }).collect();
     let mut total = 0.0;
     for (i, l) in legs.iter().enumerate() {
         let units = l.qty.abs() * l.multiplier;
         let req = if l.is_stock() {
             0.5 * spot * units
+        } else if l.qty > 0.0 {
+            l.unit_value(spot, rate, div, 0.0, 0.0) * units
         } else {
+            let kind = Kind::from_f64(l.kind);
             let premium = l.unit_value(spot, rate, div, 0.0, 0.0);
-            if l.qty > 0.0 {
-                premium * units
-            } else {
-                let per_unit = match Kind::from_f64(l.kind) {
-                    Kind::Call => {
-                        let otm = (l.strike - spot).max(0.0);
-                        premium + (0.20 * spot - otm).max(0.10 * spot)
-                    }
-                    Kind::Put => {
-                        let otm = (spot - l.strike).max(0.0);
-                        premium + (0.20 * spot - otm).max(0.10 * l.strike)
-                    }
-                };
-                per_unit * units
+            let mut uncovered = units;
+            let mut req = 0.0;
+            // Primero las largas que dejan el spread en débito (requerimiento 0), luego las de crédito.
+            let mut candidates: Vec<usize> = (0..legs.len())
+                .filter(|&j| free[j] > 0.0 && legs[j].kind == l.kind && legs[j].t >= l.t - 1e-9)
+                .collect();
+            let width = |j: usize| match kind {
+                Kind::Call => (legs[j].strike - l.strike).max(0.0),
+                Kind::Put => (l.strike - legs[j].strike).max(0.0),
+            };
+            candidates.sort_by(|&a, &b| width(a).partial_cmp(&width(b)).unwrap_or(core::cmp::Ordering::Equal));
+            for j in candidates {
+                if uncovered <= 0.0 {
+                    break;
+                }
+                let used = free[j].min(uncovered);
+                free[j] -= used;
+                uncovered -= used;
+                req += (width(j) - premium) * used;
             }
+            if uncovered > 0.0 {
+                let per_unit = match kind {
+                    Kind::Call => premium + (0.20 * spot - (l.strike - spot).max(0.0)).max(0.10 * spot),
+                    Kind::Put => premium + (0.20 * spot - (spot - l.strike).max(0.0)).max(0.10 * l.strike),
+                };
+                req += per_unit * uncovered;
+            }
+            req
         };
         out[i] = req;
         total += req;
@@ -233,6 +256,31 @@ mod tests {
         let total = reg_t(&legs, 100.0, 0.05, 0.0, &mut out);
         let premium = legs[0].unit_value(100.0, 0.05, 0.0, 0.0, 0.0);
         assert!((total - (premium + 10.0) * 200.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn reg_t_recognizes_vertical_spreads() {
+        let t = 30.0 / 365.0;
+        let long = |strike| Leg { kind: 1.0, strike, t, qty: 1.0, vol: 0.2, multiplier: 100.0 };
+        let short = |strike| Leg { kind: 1.0, strike, t, qty: -1.0, vol: 0.2, multiplier: 100.0 };
+        let mut out = [0.0; 2];
+
+        let prem = |l: &Leg| l.unit_value(100.0, 0.05, 0.0, 0.0, 0.0);
+
+        // Bull call spread (débito): requerimiento = débito neto = pérdida máxima.
+        let debit = [long(100.0), short(105.0)];
+        let total = reg_t(&debit, 100.0, 0.05, 0.0, &mut out);
+        assert!((total - (prem(&debit[0]) - prem(&debit[1])) * 100.0).abs() < 1e-9);
+
+        // Bear call spread (crédito): ancho - crédito = pérdida máxima.
+        let credit = [long(110.0), short(105.0)];
+        let total = reg_t(&credit, 100.0, 0.05, 0.0, &mut out);
+        assert!((total - (5.0 - prem(&credit[1]) + prem(&credit[0])) * 100.0).abs() < 1e-9);
+
+        // Una larga que vence antes no cubre a la corta.
+        let calendar = [Leg { t: t / 2.0, ..long(100.0) }, short(105.0)];
+        reg_t(&calendar, 100.0, 0.05, 0.0, &mut out);
+        assert!(out[1] > 1000.0);
     }
 
     #[test]

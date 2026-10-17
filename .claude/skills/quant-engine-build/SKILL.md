@@ -5,10 +5,10 @@ description: Compilar el motor Rust a WebAssembly, copiar el .wasm a @core/quant
 
 # Build y pruebas del Quant Core Engine
 
-Estado: preparado (aún no lo consumen las APIs).
+Lo consume `GET /strategies/{id}/risk` (api/src/services/risk.service.js): tras cambiar el motor, reinicia la API para que cargue el .wasm nuevo.
 
 ```bash
-# 1. Pruebas nativas (14): Hull, paridad, griegas vs. diferencias finitas, IV, binomial, riesgo
+# 1. Pruebas nativas (15): Hull, paridad, griegas vs. diferencias finitas, IV, binomial, riesgo
 cd quant-core-engine/engine && cargo test --release
 
 # 2. WASM + copia al paquete + pruebas JS (4)
