@@ -2,11 +2,10 @@
   "name": "quant-core-f0-api",
   "version": "1.0.0",
   "description": "Quant Core Engine & Market Data (F0): 4 APIs CRUD (REST + GraphQL) conectadas a Alpaca y Supabase",
-  "main": "src/index.js",
+  "main": "src/microservices/start.js",
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js",
-    "smoke": "node scripts/smoke.js"
+    "dev": "node src/microservices/start.js all",
+    "start": "node src/microservices/start.js all"
   },
   "author": "Equipo 4 - Laboratorio de Servicios Web, ITTepic",
   "license": "MIT",

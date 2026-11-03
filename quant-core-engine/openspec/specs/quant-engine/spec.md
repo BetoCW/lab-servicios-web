@@ -38,4 +38,4 @@ Piernas `{ type: 'call'|'put'|'stock', strike, t, qty (con signo), vol, multipli
 
 ### Requirement: Verificación
 `cargo test` (15 pruebas: Hull, paridad put-call, griegas vs. diferencias finitas, IV ida y vuelta,
-convergencia binomial → BS) y `npm test` en `packages/quant-engine` SHALL pasar antes de publicar.
+convergencia binomial → BS) y `npm test` en `pruebas/` SHALL pasar antes de publicar.

@@ -78,7 +78,7 @@ export function monteCarlo(legs, { spot, rate = 0, div = 0, vol, horizonDays, pa
   return { mean, std, var95, cvar95, var99, probProfit, min, max, baseValue, histogram: Array.from(out.subarray(9)) };
 }
 
-/** Margen Reg T por pierna (conservador, sin compensar spreads). */
+/** Margen Reg T por pierna; reconoce spreads verticales (cada lado de un iron condor se cobra por separado). */
 export function regTMargin(legs, { spot, rate = 0, div = 0 }) {
   const { ret, out } = withBuffers([legRows(legs)], legs.length, (l, o) => wasm.qc_reg_t(l, legs.length, spot, rate, div, o));
   return { total: ret, perLeg: Array.from(out) };

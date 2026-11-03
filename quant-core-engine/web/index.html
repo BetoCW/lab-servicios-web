@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quant Core F0</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="templates.js"></script>
 <style>
   :root {
     --bg: #f6f7f9; --panel: #fff; --text: #16181d; --muted: #646b78; --line: #e2e5ea;
@@ -68,6 +70,7 @@
   .heat td { text-align: center; font-variant-numeric: tabular-nums; }
   svg text { fill: var(--muted); font-size: 11px; }
   .help { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: none; }
+  .chart { height: 380px; } .chart.sm { height: 130px; margin-top: 6px; }
   .help code { background: rgba(0,0,0,.08); padding: 1px 4px; border-radius: 4px; }
 </style>
 </head>
@@ -75,7 +78,7 @@
 <header>
   <div class="wrap">
     <div class="top">
-      <h1>Quant Core F0 <small>· Market Data · Alpaca + Supabase</small></h1>
+      <h1>Quant Core F0 <small>· Market Data </small></h1>
       <div class="conn">
         <input id="apiUrl" size="26" aria-label="URL de la API">
         <button id="connect" class="ghost">Conectar</button>
@@ -88,6 +91,7 @@
       <button data-tab="chains">Cadenas de opciones</button>
       <button data-tab="strategies">Estrategias</button>
       <button data-tab="orders">Órdenes</button>
+      <button data-tab="market">Gráfica en vivo</button>
     </nav>
   </div>
 </header>
@@ -145,6 +149,11 @@
         <label>Límite (neto) <input name="limit_price" type="number" step="0.01" value="0.01" size="6"></label>
         <button>Guardar borrador</button>
       </form>
+      <div class="row" style="margin-top:10px">
+        <label>Plantilla <select id="tplName"></select></label>
+        <button type="button" class="ghost" id="tplBuild">Armar desde la cadena abierta</button>
+        <span class="muted">Usa el vencimiento elegido en “Cadenas”; calendar y diagonal toman el último vencimiento como lejano.</span>
+      </div>
       <div id="legs" style="margin-top:10px"></div>
     </div>
     <div class="card" id="riskPanel" hidden></div>
@@ -168,6 +177,25 @@
     <div class="card">
       <h2>Órdenes <span class="row"><button class="ghost sm" id="orRefresh">Actualizar</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></h2>
       <div class="scroll"><table id="orTable"></table></div>
+    </div>
+  </section>
+
+  <!-- 5. MARKET -->
+  <section id="market">
+    <div class="card">
+      <h2>Gráfica en vivo <span class="muted">GET /market/{symbol}/bars · Alpaca</span></h2>
+      <form class="row" id="mkForm">
+        <label>Símbolo <input name="symbol" id="mkSymbol" value="SPY" size="6"></label>
+        <label>Temporalidad <select id="mkTf"><option>1Min</option><option selected>5Min</option><option>15Min</option><option>1Hour</option><option>1Day</option></select></label>
+        <label>Superponer estrategia <select id="mkStrat"><option value="">—</option></select></label>
+        <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="mkLive" checked> En vivo (cada 5 s)</label>
+        <button>Cargar</button>
+      </form>
+      <div class="kpis" id="mkQuote"></div>
+      <div class="chart" id="chPrice"></div>
+      <div class="chart sm" id="chRsi"></div>
+      <div class="chart sm" id="chMacd"></div>
+      <p class="muted" style="margin:8px 0 0">Velas y volumen · SMA20 (amarillo) · EMA9 (azul) · Bandas de Bollinger 20/2 (punteadas) · RSI14 con 70/30 · MACD 12/26/9. Indicadores calculados en el microservicio, no en el navegador.</p>
     </div>
   </section>
 
@@ -251,6 +279,7 @@ $('#tabs').onclick = (e) => {
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b === e.target));
   document.querySelectorAll('main section').forEach((s) => s.classList.toggle('on', s.id === tab));
   store.set('f0.tab', tab);
+  if (tab === 'market') setTimeout(() => loadMarket().catch(() => {}));
 };
 $(`#tabs [data-tab="${store.get('f0.tab', 'watchlists')}"]`)?.click();
 
@@ -361,7 +390,7 @@ function showChain(c) {
     <div class="scroll"><table><thead><tr><th>Tipo</th><th class="n">Strike</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">IV</th><th class="n">Delta</th><th class="n">Gamma</th><th class="n">Theta</th><th class="n">Vega</th><th>Estrategia</th></tr></thead><tbody id="chRows"></tbody></table></div>`;
   $('#chExp').onchange = (e) => render(e.target.value);
   if (exps[0]) render(exps[0]);
-  window.currentUnderlying = c.underlying;
+  window.currentChain = c;
 }
 
 // ------------------------------------------------------------- 3. estrategias
@@ -382,6 +411,22 @@ function renderLegs() {
 $('#legs').onclick = (e) => { if (e.target.dataset.i) { legs.splice(+e.target.dataset.i, 1); renderLegs(); } };
 renderLegs();
 
+// Plantillas (web/templates.js): straddle, strangle, calendar y diagonal sobre la cadena abierta.
+$('#tplName').innerHTML = Object.entries(F0Templates.TEMPLATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('#tplBuild').onclick = () => {
+  const c = window.currentChain;
+  if (!c) return alert('Primero abre una cadena en “Cadenas de opciones” (botón Ver).');
+  if (!c.underlyingPrice) return alert('La cadena no tiene precio del subyacente: pulsa Refresh.');
+  try {
+    const t = F0Templates.build($('#tplName').value, c.quotes, c.underlyingPrice, $('#chExp').value);
+    legs = t.legs;
+    const f = $('#stForm').elements;
+    f.namedItem('name').value = `${t.name} ${c.underlying}`;
+    f.namedItem('order_type').value = 'market';
+    renderLegs();
+  } catch (err) { alert(err.message); }
+};
+
 $('#stForm').onsubmit = (e) => {
   e.preventDefault();
   if (!legs.length) return alert('Agrega al menos una pierna desde una cadena');
@@ -399,6 +444,8 @@ async function loadStrategies() {
   const list = await api('GET', '/strategies');
   const detailed = await Promise.all(list.map((s) => api('GET', `/strategies/${s.id}`)));
   const badge = { draft: 'warn', submitted: 'ok', canceled: 'bad' };
+  window.savedStrategies = detailed;
+  $('#mkStrat').innerHTML = '<option value="">—</option>' + detailed.map((s) => `<option value="${s.id}">${esc(s.name)} · ${esc(s.underlying)}</option>`).join('');
   $('#stList').innerHTML = detailed.length ? detailed.map((s) => `
     <div class="card" data-id="${s.id}">
       <h2><span>${esc(s.name)} <span class="badge ${badge[s.status]}">${s.status}</span></span>
@@ -563,6 +610,108 @@ $('#orCancelAll').onclick = async () => {
   await api('DELETE', '/orders');
   setTimeout(loadOrders, 800);
 };
+
+// ------------------------------------------------------------- 5. gráfica en vivo
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+// lightweight-charts dibuja en UTC: se corre el tiempo a la zona local del navegador.
+const localTime = (t) => t - new Date(t * 1000).getTimezoneOffset() * 60;
+let charts = null, overlay = [];
+
+function makeCharts() {
+  const LC = LightweightCharts;
+  const opts = {
+    autoSize: true,
+    layout: { background: { color: css('--panel') }, textColor: css('--muted') },
+    grid: { vertLines: { color: css('--line') }, horzLines: { color: css('--line') } },
+    timeScale: { timeVisible: true, borderColor: css('--line') },
+    rightPriceScale: { borderColor: css('--line'), minimumWidth: 70 },
+  };
+  const price = LC.createChart($('#chPrice'), opts), rsiC = LC.createChart($('#chRsi'), opts), macdC = LC.createChart($('#chMacd'), opts);
+  const line = (chart, color, title, lineStyle = 0) => chart.addLineSeries({ color, lineWidth: 1, title, lineStyle, priceLineVisible: false, lastValueVisible: !!title });
+  const series = {
+    candles: price.addCandlestickSeries({ upColor: css('--ok'), downColor: css('--bad'), wickUpColor: css('--ok'), wickDownColor: css('--bad'), borderVisible: false }),
+    volume: price.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, priceLineVisible: false, lastValueVisible: false }),
+    sma20: line(price, '#e3b341', 'SMA20'),
+    ema9: line(price, css('--accent'), 'EMA9'),
+    bbUpper: line(price, css('--muted'), '', 2),
+    bbLower: line(price, css('--muted'), '', 2),
+    rsi14: line(rsiC, '#a371f7', 'RSI14'),
+    histogram: macdC.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false }),
+    macd: line(macdC, css('--accent'), 'MACD'),
+    signal: line(macdC, '#e3b341', 'Señal'),
+  };
+  price.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+  series.rsi14.createPriceLine({ price: 70, color: css('--bad'), lineStyle: 2, axisLabelVisible: false });
+  series.rsi14.createPriceLine({ price: 30, color: css('--ok'), lineStyle: 2, axisLabelVisible: false });
+  // Las 3 gráficas se desplazan y hacen zoom juntas.
+  const all = [price, rsiC, macdC];
+  let syncing = false;
+  all.forEach((c) => c.timeScale().subscribeVisibleLogicalRangeChange((r) => {
+    if (!r || syncing) return;
+    syncing = true;
+    all.forEach((o) => o !== c && o.timeScale().setVisibleLogicalRange(r));
+    syncing = false;
+  }));
+  return { price, series };
+}
+
+let lastKey = '';
+async function loadMarket(quiet = false) {
+  const sym = $('#mkSymbol').value.trim().toUpperCase(), tf = $('#mkTf').value;
+  const path = `/market/${encodeURIComponent(sym)}/bars?timeframe=${tf}&limit=300`;
+  // El refresco en vivo no se anota en la bitácora para no llenarla.
+  const d = quiet ? await fetch(`${base()}/api/v1${path}`).then((r) => r.ok ? r.json() : Promise.reject()) : await api('GET', path);
+  charts ??= makeCharts();
+  const { series } = charts;
+  const time = d.bars.map((b) => localTime(b.time));
+  series.candles.setData(d.bars.map((b, i) => ({ time: time[i], open: b.open, high: b.high, low: b.low, close: b.close })));
+  series.volume.setData(d.bars.map((b, i) => ({ time: time[i], value: b.volume, color: b.close >= b.open ? 'rgba(19,128,74,.35)' : 'rgba(194,50,43,.35)' })));
+  for (const k of ['sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram']) {
+    series[k].setData(d.indicators[k].flatMap((v, i) => v == null ? [] : [{ time: time[i], value: v, ...(k === 'histogram' ? { color: v >= 0 ? css('--ok') : css('--bad') } : {}) }]));
+  }
+  const key = `${sym}|${tf}`;
+  if (key !== lastKey) { charts.price.timeScale().fitContent(); lastKey = key; }
+
+  const ind = (k) => d.indicators[k].at(-1);
+  const q = d.quote, chg = q.prevClose ? (q.price / q.prevClose - 1) * 100 : null;
+  const rsiNow = ind('rsi14'), m = ind('macd'), sg = ind('signal');
+  const rsiTxt = rsiNow == null ? '—' : rsiNow > 70 ? 'sobrecompra' : rsiNow < 30 ? 'sobreventa' : 'neutral';
+  const bbTxt = q.price > ind('bbUpper') ? 'sobre banda sup.' : q.price < ind('bbLower') ? 'bajo banda inf.' : 'dentro de bandas';
+  $('#mkQuote').innerHTML = `
+    <div class="kpi"><span>${esc(d.symbol)} · último</span><b>${num(q.price)}</b></div>
+    <div class="kpi"><span>vs. cierre anterior</span><b class="${chg >= 0 ? 'buy' : 'sell'}">${chg == null ? '—' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%'}</b></div>
+    <div class="kpi"><span>Bid / Ask</span><b>${num(q.bid)} / ${num(q.ask)}</b></div>
+    <div class="kpi"><span>RSI14 · ${rsiTxt}</span><b>${num(rsiNow, 1)}</b></div>
+    <div class="kpi"><span>MACD vs señal</span><b class="${m >= sg ? 'buy' : 'sell'}">${m == null ? '—' : m >= sg ? 'alcista' : 'bajista'}</b></div>
+    <div class="kpi"><span>Bollinger</span><b style="font-size:14px">${bbTxt}</b></div>
+    <div class="kpi"><span>Broker · datos</span><b style="font-size:13px">Alpaca Paper<br><span class="muted">${esc(d.source)} · ${q.time ? new Date(q.time).toLocaleTimeString('es-MX') : '—'}</span></b></div>`;
+}
+
+// Strikes de una estrategia guardada como líneas sobre el precio (verde = compra, rojo = venta).
+function drawOverlay() {
+  if (!charts) return;
+  overlay.forEach((l) => charts.series.candles.removePriceLine(l));
+  overlay = [];
+  const s = (window.savedStrategies ?? []).find((x) => x.id === $('#mkStrat').value);
+  if (!s || s.underlying !== $('#mkSymbol').value.trim().toUpperCase()) return;
+  overlay = s.legs.map((l) => charts.series.candles.createPriceLine({
+    price: l.strike, color: l.side === 'buy' ? css('--ok') : css('--bad'), lineWidth: 1, lineStyle: 1, axisLabelVisible: true,
+    title: `${l.side === 'buy' ? 'C' : 'V'} ${l.type} ${l.expiration.slice(5)}`,
+  }));
+}
+$('#mkStrat').onchange = async () => {
+  const s = (window.savedStrategies ?? []).find((x) => x.id === $('#mkStrat').value);
+  if (s) $('#mkSymbol').value = s.underlying;
+  await loadMarket();
+  drawOverlay();
+};
+$('#mkForm').onsubmit = (e) => {
+  e.preventDefault();
+  busy(e.submitter, async () => { await loadMarket(); drawOverlay(); })();
+};
+setInterval(() => {
+  if ($('#market').classList.contains('on') && $('#mkLive').checked && !document.hidden) loadMarket(true).catch(() => {});
+}, 5000);
 
 connect();
 </script>

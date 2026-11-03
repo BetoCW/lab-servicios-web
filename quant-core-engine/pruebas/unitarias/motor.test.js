@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blackScholes, binomial, impliedVol, pnlMatrix, monteCarlo, regTMargin, spanMargin } from './index.js';
+import { blackScholes, binomial, impliedVol, pnlMatrix, monteCarlo, regTMargin, spanMargin } from '../../packages/quant-engine/index.js';
 
 const hull = { type: 'call', spot: 42, strike: 40, t: 0.5, rate: 0.1, vol: 0.2 };
 

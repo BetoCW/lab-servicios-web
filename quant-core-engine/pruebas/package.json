@@ -1,0 +1,15 @@
+{
+  "name": "quant-core-f0-pruebas",
+  "private": true,
+  "description": "Todas las pruebas y verificaciones del backend F0. Requiere `npm install` en ../api.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "motor": "cargo test --release --manifest-path ../engine/Cargo.toml",
+    "smoke": "node e2e/smoke.js",
+    "carga": "docker run --rm -i --network host -e BASE grafana/k6 run - < carga/k6.js",
+    "seguridad": "npm --prefix ../api audit --omit=dev; docker run --rm --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3060/api-docs/ -I",
+    "coleccion": "node colecciones/build.js",
+    "mcp": "node mcp/f0-api-mcp.js"
+  }
+}

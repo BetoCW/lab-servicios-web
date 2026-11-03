@@ -18,3 +18,10 @@ Reglas:
 4. Toda respuesta de Alpaca que represente un recurso persistente se refleja en Supabase (upsert por `alpaca_id`).
 5. Después de cambiar algo corre la skill `f0-smoke-test` y reporta la tabla de resultados tal cual.
 6. Nunca imprimas ni escribas en archivos versionados las llaves `ALPACA_*`; solo viven en `api/.env`.
+
+## Modo ponytail (siempre activo)
+Sigue la skill `ponytail:ponytail` en nivel **full**: el cambio más pequeño que resuelva todo el
+problema. Reutiliza lo que ya existe en el repo (helpers, servicios, patrones) antes que escribir
+código nuevo; nada de abstracciones, opciones ni dependencias que nadie pidió. Nunca recortes
+validación en fronteras, manejo de errores ni seguridad. Termina tu respuesta con una o dos líneas:
+qué no hiciste o no verificaste, y el riesgo que el usuario debe conocer.

@@ -33,3 +33,13 @@ export function check(body, rules) {
 export function assertUuid(id) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw badRequest('El id debe ser un UUID');
 }
+
+// Manejadores finales compartidos por el monolito, cada microservicio y el gateway.
+export const notFoundHandler = (req, res) => res.status(404).json({ status: 404, message: `No existe ${req.method} ${req.path}` });
+
+// Express 5 manda aquí los errores de los handlers async.
+export const errorHandler = (err, _req, res, _next) => {
+  const status = err.status ?? (err.type === 'entity.parse.failed' ? 400 : 500);
+  if (status === 500) console.error(err);
+  res.status(status).json({ status, message: err.message, ...(err.details ? { details: err.details } : {}) });
+};

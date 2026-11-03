@@ -12,7 +12,7 @@ Lo consume `GET /strategies/{id}/risk` (api/src/services/risk.service.js): tras 
 cd quant-core-engine/engine && cargo test --release
 
 # 2. WASM + copia al paquete + pruebas JS (4)
-cd ../packages/quant-engine && npm run build && npm test
+cd ../packages/quant-engine && npm run build && cd ../../pruebas && npm test
 ```
 
 Requiere el target: `rustup target add wasm32-unknown-unknown`.

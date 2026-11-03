@@ -21,6 +21,14 @@ export const config = {
     stocksFeed: env.ALPACA_STOCKS_FEED ?? 'iex',
   },
 
+  // Microservicios (npm run dev / docker compose): a dónde reenvía el gateway.
+  services: {
+    watchlists: env.WATCHLISTS_URL ?? 'http://localhost:3061',
+    orders: env.ORDERS_URL ?? 'http://localhost:3062',
+    'option-chains': env.OPTION_CHAINS_URL ?? 'http://localhost:3063',
+    strategies: env.STRATEGIES_URL ?? 'http://localhost:3064',
+  },
+
   supabase: {
     url: env.SUPABASE_URL ?? '',
     // Llave secreta (sb_secret_...) o service_role: solo vive en el servidor.

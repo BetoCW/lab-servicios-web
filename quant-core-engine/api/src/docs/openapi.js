@@ -24,6 +24,7 @@ export const openapi = {
     { name: 'Orders', description: 'Órdenes de acciones y opciones (Alpaca /v2/orders)' },
     { name: 'Option chains', description: 'Ingesta de cadenas de opciones (contratos + snapshots con IV y griegas)' },
     { name: 'Strategies', description: 'Estrategias multi-leg validadas contra Alpaca y enviadas como orden mleg' },
+    { name: 'Market', description: 'Velas e indicadores técnicos en vivo para la gráfica (Alpaca Market Data)' },
     { name: 'Account', description: 'Estado de la cuenta paper (verifica las llaves)' },
   ],
   paths: {
@@ -134,6 +135,16 @@ export const openapi = {
     '/strategies/{id}/submit': {
       parameters: [idParam],
       post: op('Strategies', 'Enviar como orden multi-leg a Alpaca', { responses: ok({ type: 'object' }, 201) }),
+    },
+    '/market/{symbol}/bars': {
+      get: op('Market', 'Velas en vivo + indicadores (SMA20, EMA9, Bollinger, RSI14, MACD)', {
+        parameters: [
+          { name: 'symbol', in: 'path', required: true, schema: { type: 'string', example: 'SPY' } },
+          { name: 'timeframe', in: 'query', schema: { type: 'string', enum: ['1Min', '5Min', '15Min', '1Hour', '1Day'], default: '5Min' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 300, minimum: 50, maximum: 1000 } },
+        ],
+        responses: ok({ type: 'object' }),
+      }),
     },
   },
   components: {

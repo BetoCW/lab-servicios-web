@@ -4,6 +4,7 @@ import { ordersService as orders } from '../services/orders.service.js';
 import { optionChainsService as chains } from '../services/optionChains.service.js';
 import { strategiesService as strategies } from '../services/strategies.service.js';
 import { riskService } from '../services/risk.service.js';
+import { marketService } from '../services/market.service.js';
 import { assertUuid } from '../lib/errors.js';
 import { alpaca } from '../lib/alpaca.js';
 
@@ -59,13 +60,16 @@ s.delete('/:id', uuid, async (req, res) => {
 s.get('/:id/risk', uuid, async (req, res) => res.json(await riskService.analyze(req.params.id, req.query)));
 s.post('/:id/submit', uuid, async (req, res) => res.status(201).json(await strategies.submit(req.params.id)));
 
-// ---------------------------------------------------------------- raíz
-export const api = Router();
-api.get('/account', async (_req, res) => {
-  const a = await alpaca.account();
-  res.json({ id: a.id, status: a.status, currency: a.currency, cash: a.cash, buyingPower: a.buying_power, optionsLevel: a.options_trading_level });
+// ---------------------------------------------------------------- datos de mercado (gráfica)
+const m = Router();
+m.get('/:symbol/bars', async (req, res) => res.json(await marketService.bars(req.params.symbol, req.query)));
+
+// ---------------------------------------------------------------- cuenta
+const a = Router();
+a.get('/', async (_req, res) => {
+  const acc = await alpaca.account();
+  res.json({ id: acc.id, status: acc.status, currency: acc.currency, cash: acc.cash, buyingPower: acc.buying_power, optionsLevel: acc.options_trading_level });
 });
-api.use('/watchlists', w);
-api.use('/orders', o);
-api.use('/option-chains', c);
-api.use('/strategies', s);
+
+// Un router por ruta: cada microservicio monta solo los suyos.
+export const routers = { account: a, watchlists: w, orders: o, 'option-chains': c, strategies: s, market: m };

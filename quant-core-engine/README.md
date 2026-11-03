@@ -40,8 +40,8 @@ Todas tienen su equivalente en **GraphQL** (`/graphql`) y están documentadas en
 cd quant-core-engine/api
 npm install
 cp .env.example .env     # y llena las 4 variables de abajo
-npm run dev              # http://localhost:3060
-npm run smoke            # en otra terminal: recorre todo el CRUD de las 4 APIs
+npm run dev              # 4 microservicios + gateway en http://localhost:3060
+cd ../pruebas && npm run smoke   # en otra terminal: recorre todo el CRUD de las 4 APIs
 ```
 
 | Variable | De dónde sale |
@@ -61,9 +61,9 @@ Con `npm run dev` corriendo:
 | **Front F0** | https://betocw.github.io/lab-servicios-web/ · o local en http://localhost:3060/app | Demo visual de las 4 APIs: watchlists, cadena con IV/griegas, armar spreads y órdenes |
 | **Swagger UI** | http://localhost:3060/api-docs | Probar cada endpoint REST con *Try it out* |
 | **GraphiQL** | http://localhost:3060/graphql | Escribir queries/mutations con autocompletado |
-| Colección (Insomnia v4) | [`api/insomnia/f0-collection.json`](api/insomnia/f0-collection.json) | 28 peticiones con ids encadenados; se importa en Insomnia, Postman, Bruno, Hoppscotch o Yaak |
-| REST Client | [`api/requests/f0.http`](api/requests/f0.http) | Extensión de VS Code |
-| MCP `f0-api` | [`mcp/f0-api-mcp.js`](mcp/f0-api-mcp.js) (registrado en `.mcp.json`) | Claude Code ejecuta la misma colección |
+| Colección (Insomnia v4) | [`pruebas/colecciones/f0-collection.json`](pruebas/colecciones/f0-collection.json) | 28 peticiones con ids encadenados; se importa en Insomnia, Postman, Bruno, Hoppscotch o Yaak |
+| REST Client | [`pruebas/colecciones/f0.http`](pruebas/colecciones/f0.http) | Extensión de VS Code |
+| MCP `f0-api` | [`pruebas/mcp/f0-api-mcp.js`](pruebas/mcp/f0-api-mcp.js) (registrado en `.mcp.json`) | Claude Code ejecuta la misma colección |
 
 El front ([`web/index.html`](web/index.html), un solo archivo sin dependencias) se publica solo en
 GitHub Pages con cada push a `main` que toque `quant-core-engine/web/` (workflow
@@ -71,7 +71,7 @@ GitHub Pages con cada push a `main` que toque `quant-core-engine/web/` (workflow
 tu máquina y el front le habla a `http://localhost:3060` (editable arriba a la derecha). Si Chrome
 pregunta por *acceso a la red local*, permítelo.
 
-La colección se regenera con `node scripts/buildCollection.js` (fechas de vencimiento relativas a hoy).
+La colección se regenera con `npm run coleccion` en `pruebas/` (fechas de vencimiento relativas a hoy).
 Al importarla, ejecuta las carpetas en orden: el *POST crear* de cada una guarda el id en el
 environment y las demás peticiones lo reutilizan.
 
@@ -105,14 +105,60 @@ En el front: pestaña *Estrategias* → **Riesgo (motor)**. Tasa libre de riesgo
 ### Pruebas del motor
 
 ```bash
-cd engine && cargo test --release                      # 15 pruebas
-cd ../packages/quant-engine && npm run build && npm test   # compila a WASM + 4 pruebas JS
+cd packages/quant-engine && npm run build   # compila a WASM
+cd ../../pruebas && npm run motor && npm test   # 15 pruebas Rust + pruebas JS (motor incluido)
 ```
 
 ```js
 import { blackScholes, binomial, impliedVol, spanMargin } from '@core/quant-engine';
 blackScholes([{ type: 'call', spot: 42, strike: 40, t: 0.5, rate: 0.1, vol: 0.2 }]); // price ≈ 4.7594
 ```
+
+## Gráfica en vivo y plantillas de estrategias
+
+- Pestaña **Gráfica en vivo** del front: velas de Alpaca (feed IEX, tiempo real) que se refrescan cada 5 s,
+  con SMA20, EMA9, Bollinger, RSI14 y MACD calculados en el microservicio (`GET /api/v1/market/{symbol}/bars`).
+  *Superponer estrategia* dibuja los strikes de una estrategia guardada sobre el precio.
+- Pestaña **Estrategias** → *Plantilla*: arma **straddle, strangle (long/short), calendar y diagonal** desde
+  la cadena abierta ([`web/templates.js`](web/templates.js)): ATM por strike, OTM por delta 0.25 / 0.30. Para
+  calendar y diagonal la cadena necesita al menos dos vencimientos con strikes cerca del spot (rango de strikes angosto).
+
+## Microservicios, pruebas y monitoreo (T3-Act 2)
+
+```bash
+cd api && npm run dev            # 4 microservicios + gateway (sin Docker)
+docker compose up -d --build     # lo mismo + Prometheus :9090 + Grafana :3000 (admin/admin)
+```
+
+| Proceso | Puerto | Rutas |
+|---|---|---|
+| **gateway** | 3060 | proxy `/api/v1/*`, `/graphql`, `/api-docs`, `/app` |
+| watchlists | 3061 | `/api/v1/watchlists` |
+| orders | 3062 | `/api/v1/orders`, `/api/v1/account` |
+| option-chains | 3063 | `/api/v1/option-chains`, `/api/v1/market/{symbol}/bars` |
+| strategies | 3064 | `/api/v1/strategies` (motor WASM) |
+
+Todos exponen `GET /health` y `GET /metrics` (Prometheus). El `/health` del gateway agrega el de los 4.
+Diseño y spec: [`openspec/changes/microservicios`](openspec/changes/microservicios);
+qué API se hizo con IA y cuál se optimizó a mano: [`openspec/config.yaml`](openspec/config.yaml).
+
+| Tipo | Cómo | Estado |
+|---|---|---|
+Todas las pruebas y verificaciones viven en [`pruebas/`](pruebas) y se corren desde ahí (`cd pruebas`):
+
+| Tipo | Cómo | Estado |
+|---|---|---|
+| Unitarias | `npm test` → `unitarias/` (API, indicadores, plantillas, motor WASM) · `npm run motor` (Rust) | ✅ |
+| Integración | `npm test` → `integracion/gateway.test.js` (gateway ↔ servicio, servicio caído → 503) | ✅ |
+| Contrato | `npm test` → `contrato/openapi.test.js` (OpenAPI ↔ rutas, contrato `/health`) | ✅ (Pact: pendiente) |
+| E2E / smoke | `npm run smoke` → `e2e/smoke.js` (26 pasos contra Alpaca + Supabase reales) | ✅ |
+| Carga | `npm run carga` → `carga/k6.js` (k6 en Docker, p95 < 800 ms) | script listo |
+| Seguridad | `npm run seguridad` (`npm audit` + OWASP ZAP baseline en Docker) | script listo |
+| Manuales | `colecciones/` (Insomnia/Postman, REST Client) · `mcp/` (Claude Code) | ✅ |
+| Regresión | `.github/workflows/quant-ci.yml` (`npm test` + `cargo test` en cada push) | ✅ |
+| Health checks | `/health` → apuntar UptimeRobot a la URL pública del gateway | endpoint listo |
+| Métricas | Prometheus + Grafana (dashboard *F0 microservicios*) | ✅ |
+| Logs | `morgan` por servicio (`docker compose logs -f`) | ELK / Sentry / APM: no implementado |
 
 ## Agentes y skills de Claude Code
 

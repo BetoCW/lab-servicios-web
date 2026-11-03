@@ -13,10 +13,10 @@ npm install            # solo la primera vez
 npm run dev &          # puerto 3060
 sleep 2
 curl -s localhost:3060/ | jq .missingConfig   # debe ser []
-npm run smoke
+cd ../pruebas && npm run smoke
 ```
 
-`scripts/smoke.js` crea, edita y borra: una watchlist, una cadena de SPY (calls, 3 semanas),
+`pruebas/e2e/smoke.js` crea, edita y borra: una watchlist, una cadena de SPY (calls, 3 semanas),
 un bull call spread (lo envía como mleg limit 0.01 y lo cancela al borrar) y una orden limit
 de AAPL a $1 (la reemplaza y la cancela). Imprime una tabla `ok | method | path | status | note`.
 

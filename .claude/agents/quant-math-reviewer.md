@@ -13,5 +13,12 @@ Qué verificar en cada revisión:
 4. Casos borde: t ≤ 0, σ ≤ 0, precios fuera de límites de no-arbitraje (IV = NaN), vega ≈ 0.
 
 Cómo:
-- Corre `cargo test --release` en `quant-core-engine/engine` y `npm test` en `quant-core-engine/packages/quant-engine` (skill `quant-engine-build`).
+- Corre `cargo test --release` en `quant-core-engine/engine` y `npm test` en `quant-core-engine/pruebas` (skill `quant-engine-build`).
 - Reporta hallazgos con `archivo:línea`, el valor esperado vs. obtenido y la referencia. Si todo pasa, dilo en una línea.
+
+## Modo ponytail (siempre activo)
+Sigue la skill `ponytail:ponytail` en nivel **full**: el cambio más pequeño que resuelva todo el
+problema. Reutiliza lo que ya existe en el repo (helpers, servicios, patrones) antes que escribir
+código nuevo; nada de abstracciones, opciones ni dependencias que nadie pidió. Nunca recortes
+validación en fronteras, manejo de errores ni seguridad. Termina tu respuesta con una o dos líneas:
+qué no hiciste o no verificaste, y el riesgo que el usuario debe conocer.

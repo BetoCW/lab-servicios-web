@@ -1,7 +1,7 @@
 // Genera la colección de las 4 APIs en formato Insomnia v4 (también la importan Postman,
 // Bruno, Hoppscotch y Yaak). Los ids se encadenan solos con after-response scripts:
 // al crear un recurso se guarda su id en el environment y las demás peticiones lo usan.
-// Uso: node scripts/buildCollection.js  ->  insomnia/f0-collection.json
+// Uso: npm run coleccion (en pruebas/)  ->  colecciones/f0-collection.json
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const W = 'wrk_quant_core_f0';
@@ -175,10 +175,10 @@ resources.push({
   metaSortKey: n,
 });
 
-const out = new URL('../insomnia/', import.meta.url);
+const out = new URL('./', import.meta.url);
 mkdirSync(out, { recursive: true });
 writeFileSync(
   new URL('f0-collection.json', out),
   JSON.stringify({ _type: 'export', __export_format: 4, __export_date: new Date().toISOString(), __export_source: 'quant-core-f0', resources }, null, 2) + '\n',
 );
-console.log(`insomnia/f0-collection.json: ${resources.filter((r) => r._type === 'request').length} peticiones`);
+console.log(`colecciones/f0-collection.json: ${resources.filter((r) => r._type === 'request').length} peticiones`);

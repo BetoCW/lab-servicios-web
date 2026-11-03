@@ -1,6 +1,6 @@
 // Prueba de punta a punta: recorre GET/POST/PUT/PATCH/DELETE de las 4 APIs + GraphQL
 // contra el servidor corriendo (npm run dev) y contra Alpaca Paper + Supabase reales.
-// Uso: npm run smoke            (BASE=http://localhost:3060 por defecto)
+// Uso: npm run smoke (en pruebas/)   (BASE=http://localhost:3060 por defecto)
 // Todo lo que crea lo borra al final; las órdenes son paper y con precio lejano al mercado.
 const BASE = process.env.BASE ?? 'http://localhost:3060';
 const API = `${BASE}/api/v1`;

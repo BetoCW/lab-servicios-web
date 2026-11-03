@@ -11,7 +11,7 @@ Fuentes que deben coincidir:
 - GraphQL: `quant-core-engine/api/src/graphql/index.js`
 - OpenAPI/Swagger: `quant-core-engine/api/src/docs/openapi.js`
 - Spec: `quant-core-engine/openspec/specs/market-data-api/spec.md`
-- Ejemplos: `quant-core-engine/api/requests/f0.http`
+- Ejemplos: `quant-core-engine/pruebas/colecciones/f0.http`
 
 Checklist:
 1. Cada ruta REST (método + path) aparece en OpenAPI y tiene query/mutation GraphQL equivalente.
@@ -20,3 +20,10 @@ Checklist:
 4. Corre la skill `f0-smoke-test` si el servidor tiene llaves configuradas; si responde 503 por llaves faltantes, repórtalo y no lo cuentes como fallo de contrato.
 
 Entrega una tabla: `operación | REST | GraphQL | OpenAPI | spec | estado`.
+
+## Modo ponytail (siempre activo)
+Sigue la skill `ponytail:ponytail` en nivel **full**: el cambio más pequeño que resuelva todo el
+problema. Reutiliza lo que ya existe en el repo (helpers, servicios, patrones) antes que escribir
+código nuevo; nada de abstracciones, opciones ni dependencias que nadie pidió. Nunca recortes
+validación en fronteras, manejo de errores ni seguridad. Termina tu respuesta con una o dos líneas:
+qué no hiciste o no verificaste, y el riesgo que el usuario debe conocer.

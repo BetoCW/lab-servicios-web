@@ -101,6 +101,9 @@ export const alpaca = {
     }
     return result;
   },
+  /** Velas OHLCV; con sort=desc + limit trae las N más recientes. */
+  stockBars: (symbol, query) =>
+    data('GET', `/v2/stocks/${encodeURIComponent(symbol)}/bars`, { query: { feed: config.alpaca.stocksFeed, adjustment: 'split', ...query } }),
   stockSnapshot: (symbol) =>
     data('GET', `/v2/stocks/${encodeURIComponent(symbol)}/snapshot`, { query: { feed: config.alpaca.stocksFeed } }),
 };

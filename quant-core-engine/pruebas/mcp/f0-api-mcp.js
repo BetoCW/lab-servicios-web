@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // Servidor MCP (stdio, sin dependencias) para que Claude Code pruebe las 4 APIs F0.
-// Ejecuta las peticiones de la colección insomnia/f0-collection.json con el mismo
+// Ejecuta las peticiones de la colección colecciones/f0-collection.json con el mismo
 // environment y los mismos after-response scripts que usaría Insomnia, así que lo que
 // Claude prueba es exactamente lo que se muestra en la colección.
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import vm from 'node:vm';
 
-const COLLECTION = new URL('../api/insomnia/f0-collection.json', import.meta.url);
+const COLLECTION = new URL('../colecciones/f0-collection.json', import.meta.url);
 const ORIGIN = process.env.F0_ORIGIN ?? 'http://localhost:3060';
 
 function loadCollection() {
@@ -153,7 +153,7 @@ const tools = {
     run: async ({ query, variables }) => summarize(await http('POST', `${ORIGIN}/graphql`, JSON.stringify({ query, variables }))),
   },
   f0_reload_collection: {
-    description: 'Vuelve a leer insomnia/f0-collection.json (después de regenerarla) y reinicia el environment.',
+    description: 'Vuelve a leer colecciones/f0-collection.json (después de regenerarla) y reinicia el environment.',
     inputSchema: { type: 'object', properties: {} },
     run: async () => {
       ({ env, requests } = loadCollection());

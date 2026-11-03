@@ -22,3 +22,6 @@ pipeline de datos de mercado que consumen los demás equipos.
 |---|---|
 | [`market-data-api`](specs/market-data-api/spec.md) | Implementado (4 APIs CRUD) |
 | [`quant-engine`](specs/quant-engine/spec.md) | En uso por `GET /strategies/{id}/risk` |
+| [`microservices`](changes/microservicios/specs/microservices/spec.md) | Implementado (cambio `microservicios`, por archivar) |
+
+Origen de cada API (IA con SDD vs. optimizada a mano): [`config.yaml`](config.yaml).

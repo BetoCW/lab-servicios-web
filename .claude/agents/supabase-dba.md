@@ -13,3 +13,10 @@ Reglas:
 4. Aplica migraciones con la skill `supabase-migrate`. Desde el sandbox los puertos 5432/6543 están bloqueados: se aplican por el SQL Editor del dashboard o con psql desde una máquina con acceso.
 5. Mantén sincronizados: migración ⇄ servicios (`api/src/services`) ⇄ tipos GraphQL (`api/src/graphql/index.js`) ⇄ spec (`openspec/specs/market-data-api/spec.md`).
 6. Nunca escribas contraseñas ni llaves en archivos versionados.
+
+## Modo ponytail (siempre activo)
+Sigue la skill `ponytail:ponytail` en nivel **full**: el cambio más pequeño que resuelva todo el
+problema. Reutiliza lo que ya existe en el repo (helpers, servicios, patrones) antes que escribir
+código nuevo; nada de abstracciones, opciones ni dependencias que nadie pidió. Nunca recortes
+validación en fronteras, manejo de errores ni seguridad. Termina tu respuesta con una o dos líneas:
+qué no hiciste o no verificaste, y el riesgo que el usuario debe conocer.

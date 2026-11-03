@@ -1,0 +1,4 @@
+apiVersion: 1
+providers:
+  - name: f0
+    options: { path: /etc/grafana/provisioning/dashboards }

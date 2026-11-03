@@ -1,0 +1,16 @@
+{
+  "title": "F0 microservicios",
+  "uid": "f0-micro",
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    { "type": "timeseries", "title": "Peticiones/s por servicio", "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (service) (rate(http_requests_total[1m]))", "legendFormat": "{{service}}" }] },
+    { "type": "timeseries", "title": "Latencia promedio (s)", "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (service) (rate(http_request_duration_seconds_sum[1m])) / sum by (service) (rate(http_request_duration_seconds_count[1m]))", "legendFormat": "{{service}}" }] },
+    { "type": "timeseries", "title": "Errores 5xx/s", "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (service) (rate(http_requests_total{status=~\"5..\"}[1m]))", "legendFormat": "{{service}}" }] },
+    { "type": "stat", "title": "Servicios arriba", "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [{ "expr": "up", "legendFormat": "{{instance}}" }] }
+  ]
+}

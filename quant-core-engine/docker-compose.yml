@@ -1,0 +1,52 @@
+# Microservicios F0 + monitoreo.   docker compose up -d --build
+#   gateway     http://localhost:3060   (REST, GraphQL, Swagger, front, /health, /metrics)
+#   prometheus  http://localhost:9090
+#   grafana     http://localhost:3000   (admin / admin, dashboard "F0 microservicios")
+x-service: &service
+  build: { context: ., dockerfile: api/Dockerfile }
+  env_file: api/.env
+  restart: unless-stopped
+
+services:
+  watchlists:
+    <<: *service
+    command: [node, src/microservices/start.js, watchlists]
+    environment: { HOST: 0.0.0.0 }
+    healthcheck: &hc { test: [CMD, wget, -qO-, http://localhost:3061/health], interval: 15s, timeout: 3s, retries: 3 }
+  orders:
+    <<: *service
+    command: [node, src/microservices/start.js, orders]
+    environment: { HOST: 0.0.0.0 }
+    healthcheck: { <<: *hc, test: [CMD, wget, -qO-, http://localhost:3062/health] }
+  option-chains:
+    <<: *service
+    command: [node, src/microservices/start.js, option-chains]
+    environment: { HOST: 0.0.0.0 }
+    healthcheck: { <<: *hc, test: [CMD, wget, -qO-, http://localhost:3063/health] }
+  strategies:
+    <<: *service
+    command: [node, src/microservices/start.js, strategies]
+    environment: { HOST: 0.0.0.0 }
+    healthcheck: { <<: *hc, test: [CMD, wget, -qO-, http://localhost:3064/health] }
+  gateway:
+    <<: *service
+    command: [node, src/microservices/start.js, gateway]
+    environment:
+      HOST: 0.0.0.0
+      WATCHLISTS_URL: http://watchlists:3061
+      ORDERS_URL: http://orders:3062
+      OPTION_CHAINS_URL: http://option-chains:3063
+      STRATEGIES_URL: http://strategies:3064
+    ports: ['3060:3060']
+    depends_on: [watchlists, orders, option-chains, strategies]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes: ['./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro']
+    ports: ['9090:9090']
+  grafana:
+    image: grafana/grafana:12.1.0
+    environment: { GF_SECURITY_ADMIN_PASSWORD: admin }
+    volumes: ['./monitoring/grafana:/etc/grafana/provisioning:ro']
+    ports: ['3000:3000']
+    depends_on: [prometheus]

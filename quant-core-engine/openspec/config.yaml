@@ -1,0 +1,44 @@
+# OpenSpec · Quant Core Engine & Market Data (F0)
+# Spec Driven Development: el contrato (specs/) se escribe primero; el código se genera o ajusta después.
+schema: spec-driven
+context: project.md
+
+# Qué partes salieron de la spec con IA (Claude Code + OpenSpec) y cuáles se optimizaron a mano.
+# CONFIRMAR con el equipo antes de entregar: cambia `origen` si alguna API se hizo distinto.
+apis:
+  watchlists:
+    servicio: watchlists :3061
+    spec: specs/market-data-api/spec.md#watchlists-crud
+    origen: ia-sdd
+    estructura: ruta -> servicio -> Alpaca -> upsert espejo en Supabase (patrón genérico generado)
+  orders:
+    servicio: orders :3062 (+ /account)
+    spec: specs/market-data-api/spec.md#orders-crud
+    origen: ia-sdd
+    estructura: igual a watchlists; replace con fallback cancel+resubmit generado desde el escenario de la spec
+  option-chains:
+    servicio: option-chains :3063
+    spec: specs/market-data-api/spec.md#option-chains-crud-ingesta
+    origen: manual-optimizado
+    optimizaciones:
+      - snapshots de Alpaca pedidos por lotes en vez de uno por contrato
+      - tope de 300 contratos por cadena (límite de la spec)
+      - rollback de la fila option_chains si la ingesta falla
+  strategies:
+    servicio: strategies :3064
+    spec: specs/market-data-api/spec.md#strategies-crud
+    origen: manual-optimizado
+    optimizaciones:
+      - riesgo calculado en el motor Rust/WASM cruzando la frontera una vez por lote (no por pierna)
+      - Monte Carlo con variables antitéticas (~100k trayectorias en ~10 ms)
+      - validación de piernas OCC contra Alpaca antes de guardar
+  microservicios:
+    spec: changes/microservicios/specs/microservices/spec.md
+    origen: ia-sdd
+    estructura: gateway + 4 procesos que reutilizan los mismos routers del monolito
+
+# Diferencia entre ambas estructuras (para la exposición):
+#   ia-sdd            -> sigue al pie de la letra los escenarios de la spec; código uniforme y
+#                        predecible, pero sin atajos de rendimiento.
+#   manual-optimizado -> mismo contrato (las pruebas de contrato lo vigilan), pero con decisiones de
+#                        rendimiento y consistencia que la spec no pedía.
