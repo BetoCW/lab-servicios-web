@@ -7,6 +7,7 @@ import { yoga } from './graphql/index.js';
 import { openapi } from './docs/openapi.js';
 import { errorHandler, notFoundHandler } from './lib/errors.js';
 import { monitoring } from './lib/metrics.js';
+import { fileURLToPath } from 'node:url';
 
 // Shell HTTP del gateway: CORS, GraphQL, Swagger y el front; `apiHandler` reenvía /api/v1 a los microservicios.
 export function createApp({ service, apiHandler, health }) {
@@ -45,7 +46,7 @@ export function createApp({ service, apiHandler, health }) {
       missingConfig: missingConfig(),
     }),
   );
-  app.use('/app', express.static(new URL('../../web/', import.meta.url).pathname));
+  app.use('/app', express.static(fileURLToPath(new URL('../../web/', import.meta.url))));
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapi));
   app.use(config.apiUrl, apiHandler);
 

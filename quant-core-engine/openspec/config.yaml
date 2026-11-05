@@ -1,10 +1,63 @@
 # OpenSpec · Quant Core Engine & Market Data (F0)
-# Spec Driven Development: el contrato (specs/) se escribe primero; el código se genera o ajusta después.
+# Spec Driven Development: specifications in specs/ govern code generation and validation.
 schema: spec-driven
-context: project.md
 
-# Qué partes salieron de la spec con IA (Claude Code + OpenSpec) y cuáles se optimizaron a mano.
-# CONFIRMAR con el equipo antes de entregar: cambia `origen` si alguna API se hizo distinto.
+context: |
+  Technology Stack & Runtime:
+    - Runtime: Node.js (>=20, ESM) and Rust (2021 edition) targeting wasm32-unknown-unknown.
+    - Engine: Rust WebAssembly math engine (engine/), exposed as @core/quant-engine (packages/quant-engine/).
+    - APIs: Node.js Express 5 REST services (gateway + microservices on ports 3060-3064) and GraphQL Yoga (api/).
+    - Market Data & Execution: Alpaca Paper Trading & Market Data REST/WebSocket APIs.
+    - Persistence: Supabase (PostgreSQL), schema migrations in supabase/migrations/.
+    - Verification Suites: Focused unit tests (npm --prefix pruebas test), Rust engine tests (cargo test --release --manifest-path engine/Cargo.toml), Contract tests (node pruebas/contrato/openapi.test.js), E2E smoke tests (node pruebas/e2e/smoke.js).
+
+  Architectural Invariants & Domain Boundaries:
+    - Language Policy: Código y documentación técnica en español; campos JSON en camelCase en respuestas y snake_case en bodies enviados a Alpaca.
+    - Source of Truth & Mirroring: Alpaca is authoritative for watchlists and orders; Supabase stores synchronized read mirrors. Option chains and strategies are proprietary Supabase entities hydrated by Alpaca market data.
+    - Casing Conventions: REST/GraphQL JSON responses use camelCase; outbound payloads dispatched to Alpaca use snake_case.
+    - Composition Over Inheritance: Favor pipeline composition and decoupled dependency injection over class hierarchies.
+    - Vertical Slicing: Changes proceed end-to-end (Contracts -> WASM/Logic -> Services -> DB Mirror -> Tests).
+    - Zero Magic Literals: Prohibit arbitrary constants (ports, iteration bounds, HTTP codes, OCC regex); declare in centralized constants.
+    - Just-in-Time Persistence: Limit database migrations strictly to what the active slice requires.
+
+rules:
+  proposal:
+    - "Redactar propuestas, descripciones de capacidad y documentación en español."
+    - "Structure the proposal as an end-to-end vertical slice (Contract -> Core/WASM -> API -> DB Mirror)."
+    - "Respect source-of-truth boundaries: Alpaca for watchlists/orders (Supabase mirror), Supabase for option chains/strategies."
+    - "Validate and document composition over inheritance for any domain entities."
+    - "Reject speculative persistence schemas and anticipatory abstractions."
+  specs:
+    - "Redactar especificaciones de comportamiento en español con escenarios estructurados (Dado/Cuando/Entonces o Given/When/Then)."
+    - "Enforce camelCase for external API response properties and snake_case for Alpaca upstream bodies."
+    - "Specify OCC symbology formats and batch request constraints explicitly."
+    - "Define decoupled service boundaries testable in isolation without live external network dependencies."
+    - "Reference declarative constant identifiers rather than magic numbers or hardcoded literals."
+  design:
+    - "Design WASM FFI boundaries to cross memory buffers once per batch (no per-leg WASM crossing in loops)."
+    - "Document service composition, Express 5 routing, and Supabase client abstractions."
+    - "Specify minimal PostgreSQL schema definitions with idempotent migrations (supabase/migrations/)."
+    - "Centralize ports (3060-3064), Alpaca endpoints, and Monte Carlo simulation parameters in configuration modules."
+  tasks:
+    - "Organize tasks chronologically by vertical slice layers (Specs/Contracts -> WASM -> Services -> DB Mirror -> Tests)."
+    - "Mandatory verification criterion: Each task must specify an automated test target (e.g., node --test, cargo test, smoke.js)."
+    - "Mandatory pre-completion validation: Explicitly include automated test execution before task completion."
+
+operations:
+  apply:
+    guidance:
+      - "Implement features end-to-end by vertical slice rather than broad horizontal layers."
+      - "Transform casing at integration boundaries: camelCase in API responses, snake_case in Alpaca payloads."
+      - "Avoid crossing WASM FFI boundaries per item; optimize calculations in batch buffers."
+      - "Centralize arbitrary numbers, ports, and token literals into declarative constants immediately."
+      - "Run focused automated tests (npm --prefix pruebas test, cargo test --release --manifest-path engine/Cargo.toml) before declaring tasks complete."
+  archive:
+    guidance:
+      - "Document the completion summary of all deliverables and automated test execution results."
+      - "Merge delta specifications from openspec/changes/<id>/specs/ into main openspec/specs/."
+      - "Verify contract and integration test suites: node pruebas/contrato/openapi.test.js and node pruebas/e2e/smoke.js."
+
+# Provenance mapping for microservices and optimization strategies (IA SDD vs. manual)
 apis:
   watchlists:
     servicio: watchlists :3061
@@ -36,9 +89,3 @@ apis:
     spec: changes/microservicios/specs/microservices/spec.md
     origen: ia-sdd
     estructura: gateway + 4 procesos que reutilizan los mismos routers del monolito
-
-# Diferencia entre ambas estructuras (para la exposición):
-#   ia-sdd            -> sigue al pie de la letra los escenarios de la spec; código uniforme y
-#                        predecible, pero sin atajos de rendimiento.
-#   manual-optimizado -> mismo contrato (las pruebas de contrato lo vigilan), pero con decisiones de
-#                        rendimiento y consistencia que la spec no pedía.
