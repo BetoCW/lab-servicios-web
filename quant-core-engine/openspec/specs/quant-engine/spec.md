@@ -1,7 +1,8 @@
 # quant-engine (`@core/quant-engine`)
 
-Estado: **en uso** por `GET /strategies/{id}/risk` (market-data-api). Compila (Rust → WASM) y se
-publica para consumo **síncrono** del resto de los equipos.
+## Purpose
+
+Proveer un motor matemático de alto rendimiento compilado de Rust a WebAssembly con interfaz síncrona para valoración de derivados financieros, cálculo de griegas analíticas, volatilidad implícita, simulación Monte Carlo y márgenes regulatorios Reg T y SPAN.
 
 ## Requirements
 
@@ -9,6 +10,10 @@ publica para consumo **síncrono** del resto de los equipos.
 `import { blackScholes } from '@core/quant-engine'` SHALL dejar el motor listo sin `await`: el
 `.wasm` no tiene imports y se instancia con `new WebAssembly.Instance`. El módulo SHALL fallar al
 cargar si `qc_abi_version()` no es `100`.
+
+#### Scenario: Carga exitosa
+- **WHEN** se importa cualquier función de `@core/quant-engine`
+- **THEN** el módulo se expone de forma síncrona y utilizable de inmediato
 
 ### Requirement: Pricing vectorizado
 - `blackScholes(contracts[])` → `{ price, delta, gamma, vega, theta, rho }[]` (BSM con dividendo continuo).
@@ -27,15 +32,16 @@ Convenciones: `vega` y `rho` por 1 punto (0.01); `theta` por día calendario (36
 - **THEN** `price ≈ 4.28` y `earlyExercisePremium > 0`
 
 ### Requirement: Riesgo de portafolio
-Piernas `{ type: 'call'|'put'|'stock', strike, t, qty (con signo), vol, multiplier }`:
-- `pnlMatrix(legs, { spot, spotShocks, volShocks, horizonDays })` → matriz filas × columnas.
-- `monteCarlo(legs, { spot, vol, horizonDays, paths, seed, bins })` → media, desviación, VaR95/99,
-  CVaR95, probabilidad de ganancia e histograma. Determinista por `seed`.
-- `regTMargin(legs, { spot })` → reglas CBOE por pierna; reconoce spreads verticales (requerimiento =
-  pérdida máxima del spread). Conservador en iron condors: margina cada lado por separado.
-- `spanMargin(legs, { spot, priceScan, volScan, shortOptionMinimum })` → 16 escenarios SPAN
-  (los extremos ±2× ponderan 35%) y margen = max(peor pérdida, mínimo por opción corta).
+El motor SHALL calcular métricas de riesgo para piernas `{ type: 'call'|'put'|'stock', strike, t, qty, vol, multiplier }`:
+matriz de P&L spot x vol, simulación Monte Carlo determinista por semilla, y márgenes regulatorios Reg T y SPAN.
+
+#### Scenario: Simulación Monte Carlo determinista
+- **WHEN** se ejecuta `monteCarlo` con una semilla dada
+- **THEN** regresa resultados deterministas de media, desviación, VaR y CVaR
 
 ### Requirement: Verificación
-`cargo test` (15 pruebas: Hull, paridad put-call, griegas vs. diferencias finitas, IV ida y vuelta,
-convergencia binomial → BS) y `npm test` en `pruebas/` SHALL pasar antes de publicar.
+La suite de pruebas SHALL verificar la exactitud matemática y compatibilidad ABI del motor.
+
+#### Scenario: Ejecución de suite de pruebas
+- **WHEN** se ejecutan las pruebas de unidad y contrato
+- **THEN** todas las pruebas numéricas pasan satisfactoriamente
