@@ -22,17 +22,23 @@ export const SERVICES = {
 };
 
 // Ruta pública (/orders, /account...) -> microservicio dueño.
-const owner = Object.fromEntries(Object.entries(SERVICES).flatMap(([name, s]) => s.paths.map((p) => [p, name])));
+const serviceOwnerByPath = Object.fromEntries(
+  Object.entries(SERVICES).flatMap(([serviceName, serviceConfig]) =>
+    serviceConfig.paths.map((routePath) => [routePath, serviceName]),
+  ),
+);
 
 export function serviceApp(name) {
   const app = express();
-  const mon = monitoring(name);
+  const serviceMonitoring = monitoring(name);
   app.use(morgan('dev'));
-  app.use(mon.track);
+  app.use(serviceMonitoring.track);
   app.use(express.json());
-  app.get('/health', mon.health);
-  app.get('/metrics', mon.metrics);
-  for (const p of SERVICES[name].paths) app.use(`${config.apiUrl}/${p}`, routers[p]);
+  app.get('/health', serviceMonitoring.health);
+  app.get('/metrics', serviceMonitoring.metrics);
+  for (const routePath of SERVICES[name].paths) {
+    app.use(`${config.apiUrl}/${routePath}`, routers[routePath]);
+  }
   app.use(notFoundHandler);
   app.use(errorHandler);
   return app;
@@ -40,38 +46,48 @@ export function serviceApp(name) {
 
 export function gatewayApp(urls = config.services) {
   const proxy = async (req, res, next) => {
-    const path = req.path.split('/')[1];
-    const target = urls[owner[path]];
-    if (!target) return next();
-    req.metricRoute = `/${path}`;
-    let r;
+    const routePrefix = req.path.split('/')[1];
+    const targetService = serviceOwnerByPath[routePrefix];
+    const targetUrl = urls[targetService];
+    if (!targetUrl) return next();
+
+    req.metricRoute = `/${routePrefix}`;
+    let upstreamResponse;
     try {
-      r = await fetch(`${target}${req.originalUrl}`, {
+      upstreamResponse = await fetch(`${targetUrl}${req.originalUrl}`, {
         method: req.method,
         headers: { 'content-type': 'application/json' },
         body: ['GET', 'HEAD', 'DELETE'].includes(req.method) ? undefined : JSON.stringify(req.body ?? {}),
         signal: AbortSignal.timeout(30_000),
       });
     } catch {
-      throw new HttpError(503, `El microservicio ${owner[path]} no responde`);
+      throw new HttpError(503, `El microservicio ${targetService} no responde`);
     }
-    res.status(r.status).type(r.headers.get('content-type') ?? 'application/json').send(Buffer.from(await r.arrayBuffer()));
+
+    const contentType = upstreamResponse.headers.get('content-type') ?? 'application/json';
+    const responseBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
+    res.status(upstreamResponse.status).type(contentType).send(responseBuffer);
   };
 
   // Salud agregada: 200 solo si los 4 microservicios responden "ok".
   const health = async (_req, res) => {
-    const checks = await Promise.all(
-      Object.entries(urls).map(async ([name, url]) => {
+    const healthChecks = await Promise.all(
+      Object.entries(urls).map(async ([serviceName, serviceUrl]) => {
         try {
-          const r = await fetch(`${url}/health`, { signal: AbortSignal.timeout(3000) });
-          return [name, (await r.json()).status];
+          const checkResponse = await fetch(`${serviceUrl}/health`, { signal: AbortSignal.timeout(3000) });
+          const checkData = await checkResponse.json();
+          return [serviceName, checkData.status];
         } catch {
-          return [name, 'down'];
+          return [serviceName, 'down'];
         }
       }),
     );
-    const ok = checks.every(([, s]) => s === 'ok');
-    res.status(ok ? 200 : 503).json({ status: ok ? 'ok' : 'degraded', service: 'gateway', services: Object.fromEntries(checks) });
+    const isHealthy = healthChecks.every(([, status]) => status === 'ok');
+    res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'ok' : 'degraded',
+      service: 'gateway',
+      services: Object.fromEntries(healthChecks),
+    });
   };
 
   // shortcut: GraphQL corre dentro del gateway llamando a los servicios en proceso; si GraphQL

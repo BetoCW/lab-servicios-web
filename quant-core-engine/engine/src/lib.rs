@@ -23,8 +23,25 @@ pub const CONTRACT_STRIDE: usize = 7;
 pub const GREEKS_STRIDE: usize = 6;
 pub const TREE_STRIDE: usize = 5;
 
+// Offsets en el buffer lineal de 7 elementos por contrato
+pub const OFFSET_KIND: usize = 0;
+pub const OFFSET_SPOT: usize = 1;
+pub const OFFSET_STRIKE: usize = 2;
+pub const OFFSET_T: usize = 3;
+pub const OFFSET_RATE: usize = 4;
+pub const OFFSET_DIV: usize = 5;
+pub const OFFSET_PARAM: usize = 6; // Volatilidad para pricing/árbol, o precio para cálculo de IV
+
 fn contract_from(row: &[f64]) -> Contract {
-    Contract { kind: Kind::from_f64(row[0]), spot: row[1], strike: row[2], t: row[3], rate: row[4], div: row[5], vol: row[6] }
+    Contract {
+        kind: Kind::from_f64(row[OFFSET_KIND]),
+        spot: row[OFFSET_SPOT],
+        strike: row[OFFSET_STRIKE],
+        t: row[OFFSET_T],
+        rate: row[OFFSET_RATE],
+        div: row[OFFSET_DIV],
+        vol: row[OFFSET_PARAM],
+    }
 }
 
 unsafe fn legs_from(ptr: *const f64, n: usize) -> Vec<Leg> {
@@ -97,7 +114,15 @@ pub unsafe extern "C" fn qc_iv_batch(inp: *const f64, n: usize, out: *mut f64) {
     let inp = slice::from_raw_parts(inp, n * CONTRACT_STRIDE);
     let out = slice::from_raw_parts_mut(out, n);
     for (row, o) in inp.chunks_exact(CONTRACT_STRIDE).zip(out.iter_mut()) {
-        *o = bs::implied_vol(Kind::from_f64(row[0]), row[1], row[2], row[3], row[4], row[5], row[6]);
+        *o = bs::implied_vol(
+            Kind::from_f64(row[OFFSET_KIND]),
+            row[OFFSET_SPOT],
+            row[OFFSET_STRIKE],
+            row[OFFSET_T],
+            row[OFFSET_RATE],
+            row[OFFSET_DIV],
+            row[OFFSET_PARAM],
+        );
     }
 }
 

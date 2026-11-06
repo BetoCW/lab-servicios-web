@@ -24,85 +24,141 @@ export const riskService = {
     const { strategy, legs } = await loadStrategy(id);
     const now = Date.now();
 
-    const contracts = legs.map((l) => ({ ...l, ...parseOcc(l.symbol) }));
-    const expired = contracts.filter((c) => yearsTo(c.expiration, now) <= 0);
-    if (expired.length) throw badRequest(`Piernas vencidas: ${expired.map((c) => c.symbol).join(', ')}. Arma la estrategia con un vencimiento futuro.`);
+    const contracts = legs.map((leg) => ({ ...leg, ...parseOcc(leg.symbol) }));
+    const expired = contracts.filter((contract) => yearsTo(contract.expiration, now) <= 0);
+    if (expired.length) {
+      throw badRequest(`Piernas vencidas: ${expired.map((c) => c.symbol).join(', ')}. Arma la estrategia con un vencimiento futuro.`);
+    }
 
     // ---------------------------------------------------- datos reales de Alpaca
     const [stock, snaps] = await Promise.all([
       alpaca.stockSnapshot(strategy.underlying),
-      alpaca.optionSnapshots(contracts.map((c) => c.symbol)),
+      alpaca.optionSnapshots(contracts.map((contract) => contract.symbol)),
     ]);
     const spot = stock?.latestTrade?.p ?? stock?.dailyBar?.c;
     if (!spot) throw badRequest(`Alpaca no tiene precio para ${strategy.underlying}`);
 
-    const nearest = Math.min(...contracts.map((c) => yearsTo(c.expiration, now)));
+    const nearest = Math.min(...contracts.map((contract) => yearsTo(contract.expiration, now)));
     // Por defecto se simula hasta el primer vencimiento: el P&L al expirar.
     const horizonDays = Math.min(Number(query.horizon_days ?? nearest * 365), nearest * 365);
 
-    const legsIn = contracts.map((c) => {
-      const s = snaps[c.symbol] ?? {};
-      const q = s.latestQuote ?? {};
-      const mid = q.bp != null && q.ap != null && q.ap > 0 ? (q.bp + q.ap) / 2 : (s.latestTrade?.p ?? null);
-      const t = yearsTo(c.expiration, now);
-      // IV de Alpaca; si no viene, el motor la calcula del mid.
-      let vol = s.impliedVolatility ?? null;
+    const legsIn = contracts.map((contract) => {
+      const snapshot = snaps[contract.symbol] ?? {};
+      const quote = snapshot.latestQuote ?? {};
+      const mid = quote.bp != null && quote.ap != null && quote.ap > 0 ? (quote.bp + quote.ap) / 2 : (snapshot.latestTrade?.p ?? null);
+      const timeToExpiryYears = yearsTo(contract.expiration, now);
+
+      // IV de Alpaca; si no viene, el motor la calcula del precio mid.
+      let vol = snapshot.impliedVolatility ?? null;
       let ivSource = 'alpaca';
       if (vol == null && mid != null) {
-        vol = impliedVol([{ type: c.type, spot, strike: c.strike, t, rate: RATE, price: mid }])[0];
+        vol = impliedVol([{ type: contract.type, spot, strike: contract.strike, t: timeToExpiryYears, rate: RATE, price: mid }])[0];
         ivSource = 'motor';
       }
-      if (!Number.isFinite(vol)) throw badRequest(`Sin cotización ni IV para ${c.symbol}`);
-      const sign = c.side === 'buy' ? 1 : -1;
-      return { ...c, t, vol, ivSource, mid, qty: sign * c.ratio_qty * strategy.qty, multiplier: 100 };
-    });
-
-    // ---------------------------------------------------- motor
-    const t0 = performance.now();
-    const greeks = blackScholes(legsIn.map((l) => ({ type: l.type, spot, strike: l.strike, t: l.t, rate: RATE, vol: l.vol })));
-    const engineLegs = legsIn.map((l) => ({ type: l.type, strike: l.strike, t: l.t, qty: l.qty, vol: l.vol, multiplier: l.multiplier }));
-    // Vol del subyacente para la simulación: IV promedio de las piernas.
-    const underlyingVol = legsIn.reduce((a, l) => a + l.vol, 0) / legsIn.length;
-    const mc = monteCarlo(engineLegs, { spot, rate: RATE, vol: underlyingVol, horizonDays, paths, seed, bins: 40 });
-    const tMc = performance.now() - t0;
-    const matrix = pnlMatrix(engineLegs, { spot, rate: RATE, horizonDays: 0, spotShocks: SPOT_SHOCKS, volShocks: VOL_SHOCKS });
-    const atExpiry = pnlMatrix(engineLegs, { spot, rate: RATE, horizonDays, spotShocks: SPOT_SHOCKS, volShocks: [0] }).map((r) => r[0]);
-    const regT = regTMargin(engineLegs, { spot, rate: RATE });
-    const span = spanMargin(engineLegs, { spot, rate: RATE, priceScan: 0.15, volScan: 0.04, shortOptionMinimum: 25 });
-    const engineMs = performance.now() - t0;
-
-    const portfolio = { delta: 0, gamma: 0, vega: 0, theta: 0, rho: 0 };
-    const legRows = legsIn.map((l, i) => {
-      const g = greeks[i];
-      for (const k of Object.keys(portfolio)) portfolio[k] += g[k] * l.qty * l.multiplier;
+      if (!Number.isFinite(vol)) throw badRequest(`Sin cotización ni IV para ${contract.symbol}`);
+      const positionSign = contract.side === 'buy' ? 1 : -1;
       return {
-        symbol: l.symbol, side: l.side, qty: l.qty, type: l.type, strike: l.strike, expiration: l.expiration,
-        daysToExpiry: round(l.t * 365, 2), iv: round(l.vol), ivSource: l.ivSource,
-        marketMid: round(l.mid), modelPrice: round(g.price), diff: l.mid == null ? null : round(g.price - l.mid),
-        delta: round(g.delta), gamma: round(g.gamma, 5), theta: round(g.theta), vega: round(g.vega),
+        ...contract,
+        t: timeToExpiryYears,
+        vol,
+        ivSource,
+        mid,
+        qty: positionSign * contract.ratio_qty * strategy.qty,
+        multiplier: 100,
       };
     });
-    const marketCost = legsIn.every((l) => l.mid != null) ? legsIn.reduce((a, l) => a + l.qty * l.multiplier * l.mid, 0) : null;
 
-    const width = (mc.max - mc.min) / mc.histogram.length;
+    // ---------------------------------------------------- motor WASM (@core/quant-engine)
+    const startTime = performance.now();
+    const greeks = blackScholes(
+      legsIn.map((leg) => ({ type: leg.type, spot, strike: leg.strike, t: leg.t, rate: RATE, vol: leg.vol })),
+    );
+    const engineLegs = legsIn.map((leg) => ({
+      type: leg.type,
+      strike: leg.strike,
+      t: leg.t,
+      qty: leg.qty,
+      vol: leg.vol,
+      multiplier: leg.multiplier,
+    }));
+    // Volatilidad del subyacente para la simulación: IV promedio ponderado de las piernas.
+    const underlyingVol = legsIn.reduce((accum, leg) => accum + leg.vol, 0) / legsIn.length;
+    const mc = monteCarlo(engineLegs, { spot, rate: RATE, vol: underlyingVol, horizonDays, paths, seed, bins: 40 });
+    const monteCarloDurationMs = performance.now() - startTime;
+    const matrix = pnlMatrix(engineLegs, { spot, rate: RATE, horizonDays: 0, spotShocks: SPOT_SHOCKS, volShocks: VOL_SHOCKS });
+    const atExpiry = pnlMatrix(engineLegs, { spot, rate: RATE, horizonDays, spotShocks: SPOT_SHOCKS, volShocks: [0] }).map((row) => row[0]);
+    const regT = regTMargin(engineLegs, { spot, rate: RATE });
+    const span = spanMargin(engineLegs, { spot, rate: RATE, priceScan: 0.15, volScan: 0.04, shortOptionMinimum: 25 });
+    const totalEngineDurationMs = performance.now() - startTime;
+
+    const portfolio = { delta: 0, gamma: 0, vega: 0, theta: 0, rho: 0 };
+    const legRows = legsIn.map((leg, index) => {
+      const legGreeks = greeks[index];
+      for (const greekMetric of Object.keys(portfolio)) {
+        portfolio[greekMetric] += legGreeks[greekMetric] * leg.qty * leg.multiplier;
+      }
+      return {
+        symbol: leg.symbol,
+        side: leg.side,
+        qty: leg.qty,
+        type: leg.type,
+        strike: leg.strike,
+        expiration: leg.expiration,
+        daysToExpiry: round(leg.t * 365, 2),
+        iv: round(leg.vol),
+        ivSource: leg.ivSource,
+        marketMid: round(leg.mid),
+        modelPrice: round(legGreeks.price),
+        diff: leg.mid == null ? null : round(legGreeks.price - leg.mid),
+        delta: round(legGreeks.delta),
+        gamma: round(legGreeks.gamma, 5),
+        theta: round(legGreeks.theta),
+        vega: round(legGreeks.vega),
+      };
+    });
+    const marketCost = legsIn.every((leg) => leg.mid != null)
+      ? legsIn.reduce((accum, leg) => accum + leg.qty * leg.multiplier * leg.mid, 0)
+      : null;
+
+    const binWidth = (mc.max - mc.min) / mc.histogram.length;
     return {
       strategy: { id: strategy.id, name: strategy.name, underlying: strategy.underlying, qty: strategy.qty },
       inputs: {
-        source: 'Alpaca (snapshots en vivo)', spot, rate: RATE, underlyingVol: round(underlyingVol),
-        horizonDays: round(horizonDays, 2), paths, seed, asOf: new Date(now).toISOString(),
+        source: 'Alpaca (snapshots en vivo)',
+        spot,
+        rate: RATE,
+        underlyingVol: round(underlyingVol),
+        horizonDays: round(horizonDays, 2),
+        paths,
+        seed,
+        asOf: new Date(now).toISOString(),
       },
       legs: legRows,
       cost: { model: round(mc.baseValue, 2), market: round(marketCost, 2) },
       monteCarlo: {
-        mean: round(mc.mean, 2), std: round(mc.std, 2), var95: round(mc.var95, 2), cvar95: round(mc.cvar95, 2),
-        var99: round(mc.var99, 2), probProfit: round(mc.probProfit), min: round(mc.min, 2), max: round(mc.max, 2),
-        histogram: mc.histogram.map((count, i) => ({ from: round(mc.min + i * width, 2), to: round(mc.min + (i + 1) * width, 2), count })),
+        mean: round(mc.mean, 2),
+        std: round(mc.std, 2),
+        var95: round(mc.var95, 2),
+        cvar95: round(mc.cvar95, 2),
+        var99: round(mc.var99, 2),
+        probProfit: round(mc.probProfit),
+        min: round(mc.min, 2),
+        max: round(mc.max, 2),
+        histogram: mc.histogram.map((count, i) => ({
+          from: round(mc.min + i * binWidth, 2),
+          to: round(mc.min + (i + 1) * binWidth, 2),
+          count,
+        })),
       },
-      pnlMatrix: { spotShocks: SPOT_SHOCKS, volShocks: VOL_SHOCKS, values: matrix.map((r) => r.map((v) => round(v, 2))) },
-      pnlAtHorizon: SPOT_SHOCKS.map((s, i) => ({ spotShock: s, spot: round(spot * (1 + s), 2), pnl: round(atExpiry[i], 2) })),
-      greeks: Object.fromEntries(Object.entries(portfolio).map(([k, v]) => [k, round(v, 2)])),
+      pnlMatrix: { spotShocks: SPOT_SHOCKS, volShocks: VOL_SHOCKS, values: matrix.map((row) => row.map((val) => round(val, 2))) },
+      pnlAtHorizon: SPOT_SHOCKS.map((shock, i) => ({ spotShock: shock, spot: round(spot * (1 + shock), 2), pnl: round(atExpiry[i], 2) })),
+      greeks: Object.fromEntries(Object.entries(portfolio).map(([metric, val]) => [metric, round(val, 2)])),
       margin: { regT: round(regT.total, 2), span: round(span.margin, 2), spanWorstScenario: span.worstScenario },
-      performance: { monteCarloMs: round(tMc, 1), engineMs: round(engineMs, 1), pathsPerSecond: Math.round(paths / (tMc / 1000)) },
+      performance: {
+        monteCarloMs: round(monteCarloDurationMs, 1),
+        engineMs: round(totalEngineDurationMs, 1),
+        pathsPerSecond: Math.round(paths / (monteCarloDurationMs / 1000)),
+      },
     };
   },
 };

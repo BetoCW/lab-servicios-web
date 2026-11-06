@@ -3,45 +3,50 @@ import { alpaca } from '../lib/alpaca.js';
 import { db, q } from '../lib/supabase.js';
 import { check, badRequest } from '../lib/errors.js';
 
-const num = (v) => (v === null || v === undefined ? null : Number(v));
+const parseOptionalNumber = (value) => (value === null || value === undefined ? null : Number(value));
 
-const toRow = (o) => ({
-  alpaca_id: o.id,
-  client_order_id: o.client_order_id,
-  symbol: o.symbol || null,
-  asset_class: o.asset_class,
-  order_class: o.order_class,
-  side: o.side,
-  type: o.type ?? o.order_type,
-  time_in_force: o.time_in_force,
-  qty: num(o.qty),
-  filled_qty: num(o.filled_qty),
-  limit_price: num(o.limit_price),
-  stop_price: num(o.stop_price),
-  filled_avg_price: num(o.filled_avg_price),
-  status: o.status,
-  legs: o.legs ?? null,
-  raw: o,
-  submitted_at: o.submitted_at,
+const toRow = (order) => ({
+  alpaca_id: order.id,
+  client_order_id: order.client_order_id,
+  symbol: order.symbol || null,
+  asset_class: order.asset_class,
+  order_class: order.order_class,
+  side: order.side,
+  type: order.type ?? order.order_type,
+  time_in_force: order.time_in_force,
+  qty: parseOptionalNumber(order.qty),
+  filled_qty: parseOptionalNumber(order.filled_qty),
+  limit_price: parseOptionalNumber(order.limit_price),
+  stop_price: parseOptionalNumber(order.stop_price),
+  filled_avg_price: parseOptionalNumber(order.filled_avg_price),
+  status: order.status,
+  legs: order.legs ?? null,
+  raw: order,
+  submitted_at: order.submitted_at,
 });
 
-export const toOrderDto = (o) => ({
-  id: o.id,
-  clientOrderId: o.client_order_id,
-  symbol: o.symbol || null,
-  assetClass: o.asset_class,
-  orderClass: o.order_class,
-  side: o.side,
-  type: o.type ?? o.order_type,
-  timeInForce: o.time_in_force,
-  qty: num(o.qty),
-  filledQty: num(o.filled_qty),
-  limitPrice: num(o.limit_price),
-  stopPrice: num(o.stop_price),
-  filledAvgPrice: num(o.filled_avg_price),
-  status: o.status,
-  legs: (o.legs ?? []).map((l) => ({ symbol: l.symbol, side: l.side, ratioQty: num(l.ratio_qty), status: l.status })),
-  submittedAt: o.submitted_at,
+export const toOrderDto = (order) => ({
+  id: order.id,
+  clientOrderId: order.client_order_id,
+  symbol: order.symbol || null,
+  assetClass: order.asset_class,
+  orderClass: order.order_class,
+  side: order.side,
+  type: order.type ?? order.order_type,
+  timeInForce: order.time_in_force,
+  qty: parseOptionalNumber(order.qty),
+  filledQty: parseOptionalNumber(order.filled_qty),
+  limitPrice: parseOptionalNumber(order.limit_price),
+  stopPrice: parseOptionalNumber(order.stop_price),
+  filledAvgPrice: parseOptionalNumber(order.filled_avg_price),
+  status: order.status,
+  legs: (order.legs ?? []).map((leg) => ({
+    symbol: leg.symbol,
+    side: leg.side,
+    ratioQty: parseOptionalNumber(leg.ratio_qty),
+    status: leg.status,
+  })),
+  submittedAt: order.submitted_at,
 });
 
 export async function mirrorOrders(orders) {

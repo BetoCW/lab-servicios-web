@@ -8,39 +8,40 @@ import { db, q } from '../lib/supabase.js';
 import { check, notFound } from '../lib/errors.js';
 
 const MAX_CONTRACTS = 300;
+const DB_INSERT_BATCH_SIZE = 500;
 
-const toChainDto = (c) => ({
-  id: c.id,
-  underlying: c.underlying,
-  expirationFrom: c.expiration_from,
-  expirationTo: c.expiration_to,
-  optionType: c.option_type,
-  strikeMin: c.strike_min,
-  strikeMax: c.strike_max,
-  underlyingPrice: c.underlying_price,
-  contractsCount: c.contracts_count,
-  lastRefreshedAt: c.last_refreshed_at,
-  createdAt: c.created_at,
-  updatedAt: c.updated_at,
+const toChainDto = (chainRow) => ({
+  id: chainRow.id,
+  underlying: chainRow.underlying,
+  expirationFrom: chainRow.expiration_from,
+  expirationTo: chainRow.expiration_to,
+  optionType: chainRow.option_type,
+  strikeMin: chainRow.strike_min,
+  strikeMax: chainRow.strike_max,
+  underlyingPrice: chainRow.underlying_price,
+  contractsCount: chainRow.contracts_count,
+  lastRefreshedAt: chainRow.last_refreshed_at,
+  createdAt: chainRow.created_at,
+  updatedAt: chainRow.updated_at,
 });
 
-const toQuoteDto = (r) => ({
-  symbol: r.symbol,
-  type: r.option_type,
-  strike: Number(r.strike),
-  expiration: r.expiration,
-  openInterest: r.open_interest,
-  bid: r.bid,
-  ask: r.ask,
-  mid: r.bid != null && r.ask != null ? Math.round(((Number(r.bid) + Number(r.ask)) / 2) * 10000) / 10000 : null,
-  last: r.last,
-  impliedVolatility: r.implied_volatility,
-  delta: r.delta,
-  gamma: r.gamma,
-  theta: r.theta,
-  vega: r.vega,
-  rho: r.rho,
-  quoteTime: r.quote_time,
+const toQuoteDto = (quoteRow) => ({
+  symbol: quoteRow.symbol,
+  type: quoteRow.option_type,
+  strike: Number(quoteRow.strike),
+  expiration: quoteRow.expiration,
+  openInterest: quoteRow.open_interest,
+  bid: quoteRow.bid,
+  ask: quoteRow.ask,
+  mid: quoteRow.bid != null && quoteRow.ask != null ? Math.round(((Number(quoteRow.bid) + Number(quoteRow.ask)) / 2) * 10000) / 10000 : null,
+  last: quoteRow.last,
+  impliedVolatility: quoteRow.implied_volatility,
+  delta: quoteRow.delta,
+  gamma: quoteRow.gamma,
+  theta: quoteRow.theta,
+  vega: quoteRow.vega,
+  rho: quoteRow.rho,
+  quoteTime: quoteRow.quote_time,
 });
 
 const FILTER_RULES = {
@@ -91,33 +92,33 @@ async function ingest(chain) {
     // Subyacente sin datos (p. ej. índice): la cadena se guarda igual.
   }
 
-  const rows = contracts.map((c) => {
-    const snap = snapshots[c.symbol] ?? {};
-    const quote = snap.latestQuote ?? {};
-    const g = snap.greeks ?? {};
+  const rows = contracts.map((contract) => {
+    const snapshot = snapshots[contract.symbol] ?? {};
+    const quote = snapshot.latestQuote ?? {};
+    const greeks = snapshot.greeks ?? {};
     return {
       chain_id: chain.id,
-      symbol: c.symbol,
-      option_type: c.type,
-      strike: Number(c.strike_price),
-      expiration: c.expiration_date,
-      open_interest: c.open_interest != null ? Number(c.open_interest) : null,
+      symbol: contract.symbol,
+      option_type: contract.type,
+      strike: Number(contract.strike_price),
+      expiration: contract.expiration_date,
+      open_interest: contract.open_interest != null ? Number(contract.open_interest) : null,
       bid: quote.bp ?? null,
       ask: quote.ap ?? null,
-      last: snap.latestTrade?.p ?? null,
-      implied_volatility: snap.impliedVolatility ?? null,
-      delta: g.delta ?? null,
-      gamma: g.gamma ?? null,
-      theta: g.theta ?? null,
-      vega: g.vega ?? null,
-      rho: g.rho ?? null,
-      quote_time: quote.t ?? snap.latestTrade?.t ?? null,
+      last: snapshot.latestTrade?.p ?? null,
+      implied_volatility: snapshot.impliedVolatility ?? null,
+      delta: greeks.delta ?? null,
+      gamma: greeks.gamma ?? null,
+      theta: greeks.theta ?? null,
+      vega: greeks.vega ?? null,
+      rho: greeks.rho ?? null,
+      quote_time: quote.t ?? snapshot.latestTrade?.t ?? null,
     };
   });
 
   await q(db().from('option_quotes').delete().eq('chain_id', chain.id));
-  for (let i = 0; i < rows.length; i += 500) {
-    await q(db().from('option_quotes').insert(rows.slice(i, i + 500)));
+  for (let offset = 0; offset < rows.length; offset += DB_INSERT_BATCH_SIZE) {
+    await q(db().from('option_quotes').insert(rows.slice(offset, offset + DB_INSERT_BATCH_SIZE)));
   }
   const [updated] = await q(
     db()

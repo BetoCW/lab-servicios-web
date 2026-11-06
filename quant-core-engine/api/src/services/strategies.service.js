@@ -11,27 +11,27 @@ import { mirrorOrders, toOrderDto } from './orders.service.js';
 const MAX_LEGS = 4; // límite de Alpaca para órdenes mleg
 const INTENTS = ['buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close'];
 
-const toDto = (s, legs = []) => ({
-  id: s.id,
-  name: s.name,
-  underlying: s.underlying,
-  description: s.description,
-  qty: s.qty,
-  orderType: s.order_type,
-  limitPrice: s.limit_price,
-  status: s.status,
-  alpacaOrderId: s.alpaca_order_id,
-  legs: legs.map((l) => ({
-    id: l.id,
-    symbol: l.symbol,
-    side: l.side,
-    ratioQty: l.ratio_qty,
-    positionIntent: l.position_intent,
-    ...parseOcc(l.symbol),
-    ...(l.quote ? { quote: l.quote } : {}),
+const toDto = (strategyRow, legs = []) => ({
+  id: strategyRow.id,
+  name: strategyRow.name,
+  underlying: strategyRow.underlying,
+  description: strategyRow.description,
+  qty: strategyRow.qty,
+  orderType: strategyRow.order_type,
+  limitPrice: strategyRow.limit_price,
+  status: strategyRow.status,
+  alpacaOrderId: strategyRow.alpaca_order_id,
+  legs: legs.map((leg) => ({
+    id: leg.id,
+    symbol: leg.symbol,
+    side: leg.side,
+    ratioQty: leg.ratio_qty,
+    positionIntent: leg.position_intent,
+    ...parseOcc(leg.symbol),
+    ...(leg.quote ? { quote: leg.quote } : {}),
   })),
-  createdAt: s.created_at,
-  updatedAt: s.updated_at,
+  createdAt: strategyRow.created_at,
+  updatedAt: strategyRow.updated_at,
 });
 
 async function validate(body) {
@@ -102,24 +102,33 @@ export const strategiesService = {
     let req = db().from('strategies').select('*, strategy_legs(*)').order('created_at', { ascending: false });
     if (query.status) req = req.eq('status', query.status);
     if (query.underlying) req = req.eq('underlying', String(query.underlying).toUpperCase());
-    return (await q(req)).map(({ strategy_legs, ...s }) => toDto(s, strategy_legs));
+    return (await q(req)).map(({ strategy_legs, ...strategyRow }) => toDto(strategyRow, strategy_legs));
   },
 
   /** Detalle con cotización viva de cada pierna y el costo neto (débito > 0, crédito < 0). */
   async get(id) {
     const { strategy, legs } = await loadStrategy(id);
-    const snaps = await alpaca.optionSnapshots(legs.map((l) => l.symbol)).catch(() => ({}));
+    const snapshots = await alpaca.optionSnapshots(legs.map((leg) => leg.symbol)).catch(() => ({}));
     let net = 0;
     let complete = legs.length > 0;
-    const priced = legs.map((l) => {
-      const qt = snaps[l.symbol]?.latestQuote;
-      if (!qt?.bp && !qt?.ap) {
+    const priced = legs.map((leg) => {
+      const quote = snapshots[leg.symbol]?.latestQuote;
+      if (!quote?.bp && !quote?.ap) {
         complete = false;
-        return l;
+        return leg;
       }
-      const mid = (qt.bp + qt.ap) / 2;
-      net += (l.side === 'buy' ? 1 : -1) * mid * l.ratio_qty;
-      return { ...l, quote: { bid: qt.bp, ask: qt.ap, mid, iv: snaps[l.symbol].impliedVolatility ?? null, delta: snaps[l.symbol].greeks?.delta ?? null } };
+      const mid = (quote.bp + quote.ap) / 2;
+      net += (leg.side === 'buy' ? 1 : -1) * mid * leg.ratio_qty;
+      return {
+        ...leg,
+        quote: {
+          bid: quote.bp,
+          ask: quote.ap,
+          mid,
+          iv: snapshots[leg.symbol].impliedVolatility ?? null,
+          delta: snapshots[leg.symbol].greeks?.delta ?? null,
+        },
+      };
     });
     return {
       ...toDto(strategy, priced),

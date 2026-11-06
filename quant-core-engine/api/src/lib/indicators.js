@@ -1,66 +1,102 @@
 // Indicadores técnicos sobre una serie de cierres. Cada función regresa un arreglo alineado con
 // la entrada; las posiciones sin datos suficientes (calentamiento) son null.
 
-export function sma(values, n) {
-  let sum = 0;
-  return values.map((v, i) => {
-    sum += v - (i >= n ? values[i - n] : 0);
-    return i >= n - 1 ? sum / n : null;
+/**
+ * Media Móvil Simple (SMA).
+ * @param {number[]} values - Serie de precios
+ * @param {number} period - Ventana de periodos
+ * @returns {(number|null)[]}
+ */
+export function sma(values, period) {
+  let rollingSum = 0;
+  return values.map((price, index) => {
+    rollingSum += price - (index >= period ? values[index - period] : 0);
+    return index >= period - 1 ? rollingSum / period : null;
   });
 }
 
-// EMA sembrada con la SMA de las primeras n velas (convención de TradingView).
-export function ema(values, n) {
-  const k = 2 / (n + 1);
-  let prev = null;
-  return values.map((v, i) => {
-    if (v == null) return null;
-    if (prev == null) {
-      const window = values.slice(i - n + 1, i + 1);
-      if (i < n - 1 || window.some((x) => x == null)) return null;
-      prev = window.reduce((a, b) => a + b, 0) / n;
-      return prev;
+/**
+ * Media Móvil Exponencial (EMA) sembrada con la SMA de las primeras N velas (convención TradingView).
+ * @param {number[]} values - Serie de precios
+ * @param {number} period - Ventana de periodos
+ * @returns {(number|null)[]}
+ */
+export function ema(values, period) {
+  const smoothingMultiplier = 2 / (period + 1);
+  let previousEma = null;
+  return values.map((price, index) => {
+    if (price == null) return null;
+    if (previousEma == null) {
+      const windowSlice = values.slice(index - period + 1, index + 1);
+      if (index < period - 1 || windowSlice.some((val) => val == null)) return null;
+      previousEma = windowSlice.reduce((accumulator, val) => accumulator + val, 0) / period;
+      return previousEma;
     }
-    prev = v * k + prev * (1 - k);
-    return prev;
+    previousEma = price * smoothingMultiplier + previousEma * (1 - smoothingMultiplier);
+    return previousEma;
   });
 }
 
-export function bollinger(values, n = 20, mult = 2) {
-  const mid = sma(values, n);
-  const band = (sign) =>
-    values.map((_, i) => {
-      if (mid[i] == null) return null;
-      const w = values.slice(i - n + 1, i + 1);
-      const sd = Math.sqrt(w.reduce((a, v) => a + (v - mid[i]) ** 2, 0) / n);
-      return mid[i] + sign * mult * sd;
+/**
+ * Bandas de Bollinger.
+ * @param {number[]} values - Serie de precios
+ * @param {number} period - Ventana de la media móvil
+ * @param {number} multiplier - Desviaciones estándar para las bandas
+ * @returns {{ middle: (number|null)[], upper: (number|null)[], lower: (number|null)[] }}
+ */
+export function bollinger(values, period = 20, multiplier = 2) {
+  const middle = sma(values, period);
+  const computeBand = (sign) =>
+    values.map((_, index) => {
+      if (middle[index] == null) return null;
+      const windowSlice = values.slice(index - period + 1, index + 1);
+      const variance = windowSlice.reduce((accum, val) => accum + (val - middle[index]) ** 2, 0) / period;
+      const standardDeviation = Math.sqrt(variance);
+      return middle[index] + sign * multiplier * standardDeviation;
     });
-  return { middle: mid, upper: band(1), lower: band(-1) };
+  return { middle, upper: computeBand(1), lower: computeBand(-1) };
 }
 
-// RSI de Wilder: promedios suavizados de subidas y bajadas.
-export function rsi(values, n = 14) {
-  const out = values.map(() => null);
-  let gain = 0, loss = 0;
-  for (let i = 1; i < values.length; i++) {
-    const d = values[i] - values[i - 1];
-    const up = Math.max(d, 0), down = Math.max(-d, 0);
-    if (i <= n) {
-      gain += up / n;
-      loss += down / n;
-      if (i < n) continue;
+/**
+ * Índice de Fuerza Relativa (RSI de Wilder) con promedios suavizados.
+ * @param {number[]} values - Serie de precios
+ * @param {number} period - Periodo de observación
+ * @returns {(number|null)[]}
+ */
+export function rsi(values, period = 14) {
+  const rsiOutput = values.map(() => null);
+  let averageGain = 0;
+  let averageLoss = 0;
+  for (let index = 1; index < values.length; index++) {
+    const priceDifference = values[index] - values[index - 1];
+    const upwardChange = Math.max(priceDifference, 0);
+    const downwardChange = Math.max(-priceDifference, 0);
+    if (index <= period) {
+      averageGain += upwardChange / period;
+      averageLoss += downwardChange / period;
+      if (index < period) continue;
     } else {
-      gain = (gain * (n - 1) + up) / n;
-      loss = (loss * (n - 1) + down) / n;
+      averageGain = (averageGain * (period - 1) + upwardChange) / period;
+      averageLoss = (averageLoss * (period - 1) + downwardChange) / period;
     }
-    out[i] = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+    rsiOutput[index] = averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss);
   }
-  return out;
+  return rsiOutput;
 }
 
-export function macd(values, fast = 12, slow = 26, signal = 9) {
-  const f = ema(values, fast), s = ema(values, slow);
-  const line = values.map((_, i) => (f[i] == null || s[i] == null ? null : f[i] - s[i]));
-  const sig = ema(line, signal);
-  return { macd: line, signal: sig, histogram: line.map((v, i) => (v == null || sig[i] == null ? null : v - sig[i])) };
+/**
+ * Convergencia/Divergencia de Medias Móviles (MACD).
+ * @param {number[]} values - Serie de precios
+ * @param {number} fastPeriod - Periodo de EMA rápida
+ * @param {number} slowPeriod - Periodo de EMA lenta
+ * @param {number} signalPeriod - Periodo de línea de señal
+ * @returns {{ macd: (number|null)[], signal: (number|null)[], histogram: (number|null)[] }}
+ */
+export function macd(values, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+  const fastEma = ema(values, fastPeriod);
+  const slowEma = ema(values, slowPeriod);
+  const macdLine = values.map((_, index) => (fastEma[index] == null || slowEma[index] == null ? null : fastEma[index] - slowEma[index]));
+  const signalLine = ema(macdLine, signalPeriod);
+  const histogram = macdLine.map((macdVal, index) => (macdVal == null || signalLine[index] == null ? null : macdVal - signalLine[index]));
+  return { macd: macdLine, signal: signalLine, histogram };
 }
