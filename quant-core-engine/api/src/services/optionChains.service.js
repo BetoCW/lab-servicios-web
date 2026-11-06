@@ -82,12 +82,13 @@ async function ingest(chain) {
     },
     MAX_CONTRACTS,
   );
-  const snapshots = contracts.length ? await alpaca.optionSnapshots(contracts.map((c) => c.symbol)) : {};
+  const snapshots = contracts.length ? await alpaca.optionSnapshots(contracts.map((contract) => contract.symbol)) : {};
 
   let underlyingPrice = null;
   try {
-    const s = await alpaca.stockSnapshot(chain.underlying);
-    underlyingPrice = s?.latestTrade?.p ?? s?.dailyBar?.c ?? null;
+    const stockSnapshot = await alpaca.stockSnapshot(chain.underlying);
+    // Alpaca shorthand keys: 'p' = latest trade price, 'c' = daily bar close price
+    underlyingPrice = stockSnapshot?.latestTrade?.p ?? stockSnapshot?.dailyBar?.c ?? null;
   } catch {
     // Subyacente sin datos (p. ej. índice): la cadena se guarda igual.
   }
@@ -103,6 +104,7 @@ async function ingest(chain) {
       strike: Number(contract.strike_price),
       expiration: contract.expiration_date,
       open_interest: contract.open_interest != null ? Number(contract.open_interest) : null,
+      // Alpaca quote shorthand keys: 'bp' = bid price, 'ap' = ask price, 't' = timestamp
       bid: quote.bp ?? null,
       ask: quote.ap ?? null,
       last: snapshot.latestTrade?.p ?? null,

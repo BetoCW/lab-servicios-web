@@ -52,8 +52,18 @@ El codebase inicial presentaba variables crípticas en bucles de cálculo y dese
 ### 5. Documentación y constantes en el motor Rust
 - **Decisión**:
   - Declarar `OFFSET_LEG_KIND = 0` hasta `OFFSET_LEG_MULTIPLIER = 5` en `engine/src/risk.rs` para desempaquetar la memoria compartida FFI sin números mágicos.
+  - En `engine/src/lib.rs`, renombrar parámetros de dimensión FFI (`num_spot_shocks`, `num_vol_shocks`) y reemplazar tamaños mágicos por `risk::SPAN_SCENARIOS.len()`.
+  - En `engine/src/bs.rs`, documentar que `df_q` y `df_r` representan los factores de descuento continuo ($e^{-q \cdot t}$ y $e^{-r \cdot t}$) y la aproximación de semilla de Brenner-Subrahmanyam para la volatilidad implícita.
   - En `engine/src/binomial.rs`, documentar que `v0` es la raíz, `v1` son los dos nodos del paso 1 (down, up) y `v2[1]` es el nodo central del paso 2 con el mismo spot de la raíz.
   - En `engine/src/math.rs`, documentar la aproximación racional Chebyshev minimax de Hart/West (2005) para `norm_cdf`.
+
+### 6. Refactorización declarativa en bootstrap de procesos y diagnóstico
+- **Decisión**: En `api/src/app.js`, `api/src/config.js` y `api/src/microservices/start.js`, expandir nombres en variables de proceso e iteradores de diagnóstico (`serviceMonitoring`, `routePath`, `envValue`, `configKey`, `serviceName`).
+- **Razón**: Mejora la claridad del ciclo de vida del servidor y reduce ambigüedad en terminales al levantar microservicios.
+
+### 7. Clarificación en infraestructura de pruebas y servidor MCP
+- **Decisión**: Renombrar servidores y responses en `pruebas/integracion/gateway.test.js`, utilerías en `pruebas/mcp/f0-api-mcp.js`, `pruebas/colecciones/build.js` y `pruebas/carga/k6.js`.
+- **Razón**: Permite que cualquier integrante del equipo ejecute, diagnostique y amplíe las pruebas sin descifrar abreviaturas locales.
 
 ## Risks / Trade-offs
 

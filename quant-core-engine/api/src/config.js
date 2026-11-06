@@ -43,5 +43,5 @@ export const missingConfig = () =>
     ['SUPABASE_URL', config.supabase.url],
     ['SUPABASE_SECRET_KEY', config.supabase.secretKey],
   ]
-    .filter(([, v]) => !v)
-    .map(([k]) => k);
+    .filter(([, envValue]) => !envValue)
+    .map(([configKey]) => configKey);

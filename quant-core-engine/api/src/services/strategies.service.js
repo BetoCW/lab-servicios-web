@@ -9,6 +9,7 @@ import { parseOcc } from '../lib/occ.js';
 import { mirrorOrders, toOrderDto } from './orders.service.js';
 
 const MAX_LEGS = 4; // límite de Alpaca para órdenes mleg
+const CONTRACT_SIZE = 100; // Multiplicador estándar por contrato de opciones
 const INTENTS = ['buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close'];
 
 const toDto = (strategyRow, legs = []) => ({
@@ -132,7 +133,7 @@ export const strategiesService = {
     });
     return {
       ...toDto(strategy, priced),
-      pricing: complete ? { netPerUnit: Math.round(net * 10000) / 10000, netTotal: Math.round(net * 100 * strategy.qty * 100) / 100 } : null,
+      pricing: complete ? { netPerUnit: Math.round(net * 10000) / 10000, netTotal: Math.round(net * CONTRACT_SIZE * strategy.qty * 100) / 100 } : null,
     };
   },
 
@@ -140,7 +141,7 @@ export const strategiesService = {
     const { strategy, legs } = await validate(body);
     const [row] = await q(db().from('strategies').insert(strategy).select());
     try {
-      await q(db().from('strategy_legs').insert(legs.map((l) => ({ ...l, strategy_id: row.id }))));
+      await q(db().from('strategy_legs').insert(legs.map((leg) => ({ ...leg, strategy_id: row.id }))));
     } catch (err) {
       await q(db().from('strategies').delete().eq('id', row.id));
       throw err;
@@ -155,7 +156,7 @@ export const strategiesService = {
     const { strategy, legs } = await validate(body);
     await q(db().from('strategies').update(strategy).eq('id', id));
     await q(db().from('strategy_legs').delete().eq('strategy_id', id));
-    await q(db().from('strategy_legs').insert(legs.map((l) => ({ ...l, strategy_id: id }))));
+    await q(db().from('strategy_legs').insert(legs.map((leg) => ({ ...leg, strategy_id: id }))));
     return this.get(id);
   },
 
@@ -179,11 +180,11 @@ export const strategiesService = {
       type: strategy.order_type,
       limit_price: strategy.order_type === 'limit' ? String(strategy.limit_price) : undefined,
       time_in_force: 'day', // Alpaca solo acepta 'day' en opciones
-      legs: legs.map((l) => ({
-        symbol: l.symbol,
-        side: l.side,
-        ratio_qty: String(l.ratio_qty),
-        position_intent: l.position_intent,
+      legs: legs.map((leg) => ({
+        symbol: leg.symbol,
+        side: leg.side,
+        ratio_qty: String(leg.ratio_qty),
+        position_intent: leg.position_intent,
       })),
     });
     await mirrorOrders([order]);

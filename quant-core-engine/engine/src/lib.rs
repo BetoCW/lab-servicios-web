@@ -84,9 +84,9 @@ pub extern "C" fn qc_abi_version() -> u32 {
 pub unsafe extern "C" fn qc_bs_batch(inp: *const f64, n: usize, out: *mut f64) {
     let inp = slice::from_raw_parts(inp, n * CONTRACT_STRIDE);
     let out = slice::from_raw_parts_mut(out, n * GREEKS_STRIDE);
-    for (row, o) in inp.chunks_exact(CONTRACT_STRIDE).zip(out.chunks_exact_mut(GREEKS_STRIDE)) {
+    for (row, out_row) in inp.chunks_exact(CONTRACT_STRIDE).zip(out.chunks_exact_mut(GREEKS_STRIDE)) {
         let g = bs::greeks(&contract_from(row));
-        o.copy_from_slice(&[g.price, g.delta, g.gamma, g.vega, g.theta, g.rho]);
+        out_row.copy_from_slice(&[g.price, g.delta, g.gamma, g.vega, g.theta, g.rho]);
     }
 }
 
@@ -99,9 +99,9 @@ pub unsafe extern "C" fn qc_binomial_batch(inp: *const f64, n: usize, steps: u32
     let inp = slice::from_raw_parts(inp, n * CONTRACT_STRIDE);
     let out = slice::from_raw_parts_mut(out, n * TREE_STRIDE);
     let mut buf = Vec::with_capacity(steps as usize + 1);
-    for (row, o) in inp.chunks_exact(CONTRACT_STRIDE).zip(out.chunks_exact_mut(TREE_STRIDE)) {
+    for (row, out_row) in inp.chunks_exact(CONTRACT_STRIDE).zip(out.chunks_exact_mut(TREE_STRIDE)) {
         let r = binomial::price_tree(&contract_from(row), steps as usize, american != 0, &mut buf);
-        o.copy_from_slice(&[r.price, r.delta, r.gamma, r.theta, r.early_exercise_premium]);
+        out_row.copy_from_slice(&[r.price, r.delta, r.gamma, r.theta, r.early_exercise_premium]);
     }
 }
 
@@ -113,8 +113,8 @@ pub unsafe extern "C" fn qc_binomial_batch(inp: *const f64, n: usize, steps: u32
 pub unsafe extern "C" fn qc_iv_batch(inp: *const f64, n: usize, out: *mut f64) {
     let inp = slice::from_raw_parts(inp, n * CONTRACT_STRIDE);
     let out = slice::from_raw_parts_mut(out, n);
-    for (row, o) in inp.chunks_exact(CONTRACT_STRIDE).zip(out.iter_mut()) {
-        *o = bs::implied_vol(
+    for (row, out_iv) in inp.chunks_exact(CONTRACT_STRIDE).zip(out.iter_mut()) {
+        *out_iv = bs::implied_vol(
             Kind::from_f64(row[OFFSET_KIND]),
             row[OFFSET_SPOT],
             row[OFFSET_STRIKE],
@@ -129,23 +129,23 @@ pub unsafe extern "C" fn qc_iv_batch(inp: *const f64, n: usize, out: *mut f64) {
 // ---------------------------------------------------------------- riesgo
 
 /// # Safety
-/// `out` debe tener n_s * n_v posiciones.
+/// `out` debe tener num_spot_shocks * num_vol_shocks posiciones.
 #[no_mangle]
 pub unsafe extern "C" fn qc_pnl_matrix(
     legs: *const f64, n_legs: usize, spot: f64, rate: f64, div: f64, horizon: f64,
-    spot_shocks: *const f64, n_s: usize, vol_shocks: *const f64, n_v: usize, out: *mut f64,
+    spot_shocks: *const f64, num_spot_shocks: usize, vol_shocks: *const f64, num_vol_shocks: usize, out: *mut f64,
 ) {
     let legs = legs_from(legs, n_legs);
     risk::pnl_matrix(
         &legs, spot, rate, div, horizon,
-        slice::from_raw_parts(spot_shocks, n_s),
-        slice::from_raw_parts(vol_shocks, n_v),
-        slice::from_raw_parts_mut(out, n_s * n_v),
+        slice::from_raw_parts(spot_shocks, num_spot_shocks),
+        slice::from_raw_parts(vol_shocks, num_vol_shocks),
+        slice::from_raw_parts_mut(out, num_spot_shocks * num_vol_shocks),
     );
 }
 
 /// # Safety
-/// `out` debe tener `out_len` >= 9 posiciones (9 estadísticas + histograma).
+/// `out` debe tener `out_len` >= risk::MC_STATS posiciones (9 estadísticas + histograma).
 #[no_mangle]
 pub unsafe extern "C" fn qc_monte_carlo(
     legs: *const f64, n_legs: usize, spot: f64, rate: f64, div: f64, underlying_vol: f64,
@@ -175,5 +175,5 @@ pub unsafe extern "C" fn qc_span(
     price_scan: f64, vol_scan: f64, som_per_contract: f64, out: *mut f64,
 ) -> f64 {
     let legs = legs_from(legs, n_legs);
-    risk::span(&legs, spot, rate, div, price_scan, vol_scan, som_per_contract, slice::from_raw_parts_mut(out, risk::SPAN_HEADER + 16))
+    risk::span(&legs, spot, rate, div, price_scan, vol_scan, som_per_contract, slice::from_raw_parts_mut(out, risk::SPAN_HEADER + risk::SPAN_SCENARIOS.len()))
 }

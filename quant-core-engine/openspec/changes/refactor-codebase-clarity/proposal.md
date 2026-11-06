@@ -24,10 +24,24 @@ Diversos módulos del motor cuantitativo, los servicios de mercado y las utiler�
   - En `api/src/lib/occ.js`, documentar las partes de la expresión regular OCC.
   - En `web/templates.js`, renombrar parámetros abstractos en selectores funcionales (`closest`, `byDelta`, `covers`).
 - **Constantes de offset y precisión nodal en motor Rust**:
-  - En `engine/src/lib.rs`, declarar constantes simbólicas de stride por contrato (`OFFSET_KIND`, `OFFSET_SPOT`, etc.).
+  - En `engine/src/lib.rs`, declarar constantes simbólicas de stride por contrato (`OFFSET_KIND`, `OFFSET_SPOT`, etc.), renombrar variables de dimensión FFI (`n_s`, `n_v` -> `num_spot_shocks`, `num_vol_shocks`) y sustituir literales por `risk::SPAN_SCENARIOS.len()`.
+  - En `engine/src/bs.rs`, documentar factores analíticos de descuento continuo (`df_q`, `df_r`) y el algoritmo híbrido Newton-Raphson/bisección con semilla de Brenner-Subrahmanyam.
   - En `engine/src/risk.rs`, declarar constantes simbólicas para la estructura `Leg` (`OFFSET_LEG_KIND` a `OFFSET_LEG_MULTIPLIER`), clarificar la prioridad de spreads en `reg_t` y desestructurar escenarios en `span`.
   - En `engine/src/binomial.rs`, documentar los niveles del árbol binomial (`v0`, `v1`, `v2`) y la deducción de griegas por diferencias finitas en la raíz.
   - En `engine/src/math.rs`, documentar la aproximación racional Chebyshev de Hart/West en `norm_cdf`.
+- **Gateway, arranque y configuración (Tercera Pasada)**:
+  - En `api/src/app.js`, clarificar variables de monitoreo y rutas (`serviceMonitoring`, `routePath`).
+  - En `api/src/config.js`, clarificar desestructuraciones en diagnóstico (`missingConfig`: `envValue`, `configKey`).
+  - En `api/src/microservices/start.js`, expandir variables de proceso y rutas (`serviceName`, `routePath`).
+- **Nomenclatura uniforme en servicios de negocio (Tercera Pasada)**:
+  - En `api/src/services/orders.service.js`, renombrar instancias de orden (`fetchedOrder`, `createdOrder`, `paramKey`, `cancelResult`).
+  - En `api/src/services/strategies.service.js`, renombrar iteradores (`leg`), extraer la constante de multiplicador `CONTRACT_SIZE = 100` y documentar redondeos.
+  - En `api/src/services/optionChains.service.js`, documentar claves de feed Alpaca (`bp`, `ap`, `p`, `c`) y expandir nombres en lambdas.
+- **Estandarización en infraestructura de pruebas y servidor MCP (Tercera Pasada)**:
+  - En `pruebas/integracion/gateway.test.js`, expandir variables de servidor y respuestas (`app`, `server`, `gatewayUrl`, `response`).
+  - En `pruebas/mcp/f0-api-mcp.js`, clarificar peticiones y variables de entorno (`targetRequest`, `httpResponse`, `envKey`, `reqItem`).
+  - En `pruebas/colecciones/build.js`, usar constantes declarativas (`WORKSPACE_ID`, `BASE_ENVIRONMENT_ID`) y nombres legibles de carpetas.
+  - En `pruebas/carga/k6.js`, renombrar respuestas en verificaciones (`response`).
 
 ## Capabilities
 
@@ -40,6 +54,9 @@ Diversos módulos del motor cuantitativo, los servicios de mercado y las utiler�
 ## Impact
 
 - **Código afectado**:
+  - `api/src/app.js`
+  - `api/src/config.js`
+  - `api/src/microservices/start.js`
   - `api/src/routes/index.js`
   - `api/src/services/risk.service.js`
   - `api/src/services/optionChains.service.js`
@@ -57,9 +74,14 @@ Diversos módulos del motor cuantitativo, los servicios de mercado y las utiler�
   - `packages/quant-engine/index.js`
   - `web/templates.js`
   - `engine/src/lib.rs`
+  - `engine/src/bs.rs`
   - `engine/src/risk.rs`
   - `engine/src/binomial.rs`
   - `engine/src/math.rs`
+  - `pruebas/integracion/gateway.test.js`
+  - `pruebas/mcp/f0-api-mcp.js`
+  - `pruebas/colecciones/build.js`
+  - `pruebas/carga/k6.js`
 - **APIs y Contratos**: Cero cambios en contratos JSON REST, GraphQL SDL ni firmas de endpoints.
 - **Base de datos**: Cero modificaciones de esquemas o migraciones en Supabase.
 - **Dependencias**: Cero dependencias npm o cargo añadidas.

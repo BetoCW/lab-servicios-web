@@ -73,9 +73,9 @@ export const ordersService = {
   },
 
   async get(id) {
-    const o = await alpaca.getOrder(id);
-    await mirrorOrders([o]);
-    return toOrderDto(o);
+    const fetchedOrder = await alpaca.getOrder(id);
+    await mirrorOrders([fetchedOrder]);
+    return toOrderDto(fetchedOrder);
   },
 
   async create(body) {
@@ -91,7 +91,7 @@ export const ordersService = {
     if (['limit', 'stop_limit'].includes(body.type) && body.limit_price == null) {
       throw badRequest('limit_price es obligatorio para órdenes limit / stop_limit');
     }
-    const o = await alpaca.createOrder({
+    const createdOrder = await alpaca.createOrder({
       symbol: body.symbol.trim().toUpperCase(),
       qty: String(body.qty),
       side: body.side,
@@ -102,8 +102,8 @@ export const ordersService = {
       position_intent: body.position_intent,
       client_order_id: body.client_order_id,
     });
-    await mirrorOrders([o]);
-    return toOrderDto(o);
+    await mirrorOrders([createdOrder]);
+    return toOrderDto(createdOrder);
   },
 
   /** PATCH: Alpaca reemplaza la orden y regresa una NUEVA orden (nuevo id). */
@@ -116,8 +116,8 @@ export const ordersService = {
     });
     const patch = Object.fromEntries(
       ['qty', 'limit_price', 'stop_price', 'time_in_force']
-        .filter((k) => body[k] != null)
-        .map((k) => [k, k === 'time_in_force' ? body[k] : String(body[k])]),
+        .filter((paramKey) => body[paramKey] != null)
+        .map((paramKey) => [paramKey, paramKey === 'time_in_force' ? body[paramKey] : String(body[paramKey])]),
     );
     if (!Object.keys(patch).length) throw badRequest('Envía al menos uno: qty, limit_price, stop_price, time_in_force');
 
@@ -148,13 +148,13 @@ export const ordersService = {
 
   async cancel(id) {
     await alpaca.cancelOrder(id);
-    const o = await alpaca.getOrder(id);
-    await mirrorOrders([o]);
-    return toOrderDto(o);
+    const canceledOrder = await alpaca.getOrder(id);
+    await mirrorOrders([canceledOrder]);
+    return toOrderDto(canceledOrder);
   },
 
   async cancelAll() {
     const results = (await alpaca.cancelAllOrders()) ?? [];
-    return results.map((r) => ({ id: r.id, status: r.status }));
+    return results.map((cancelResult) => ({ id: cancelResult.id, status: cancelResult.status }));
   },
 };

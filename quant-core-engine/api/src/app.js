@@ -22,10 +22,10 @@ export function createApp({ service, apiHandler, health }) {
   app.use(cors());
   app.use(morgan('dev'));
 
-  const mon = monitoring(service);
-  app.use(mon.track);
-  app.get('/health', health ?? mon.health);
-  app.get('/metrics', mon.metrics);
+  const serviceMonitoring = monitoring(service);
+  app.use(serviceMonitoring.track);
+  app.get('/health', health ?? serviceMonitoring.health);
+  app.get('/metrics', serviceMonitoring.metrics);
 
   // GraphQL va antes de express.json(): Yoga lee el body por su cuenta.
   app.use(yoga.graphqlEndpoint, yoga);
@@ -42,7 +42,7 @@ export function createApp({ service, apiHandler, health }) {
       app: '/app',
       health: '/health',
       metrics: '/metrics',
-      apis: ['watchlists', 'orders', 'option-chains', 'strategies'].map((r) => `${config.apiUrl}/${r}`),
+      apis: ['watchlists', 'orders', 'option-chains', 'strategies'].map((routePath) => `${config.apiUrl}/${routePath}`),
       missingConfig: missingConfig(),
     }),
   );

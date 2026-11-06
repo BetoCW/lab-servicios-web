@@ -44,3 +44,24 @@
 ## 8. Verificación Final de Regresión (Segunda Pasada)
 
 - [x] 8.1 Ejecutar la suite completa de 27 pruebas unitarias (`npm --prefix pruebas test`) y confirmar 100% pass sin regresiones.
+
+## 9. Capa FFI y Matemáticas Analíticas (Tercera Pasada)
+
+- [x] 9.1 Refactorizar `engine/src/lib.rs` renombrando parámetros de dimensión (`n_s`, `n_v` -> `num_spot_shocks`, `num_vol_shocks`), iteradores (`out_row`, `out_iv`) y sustituyendo el literal 16 por `risk::SPAN_SCENARIOS.len()`.
+- [x] 9.2 Refactorizar `engine/src/bs.rs` documentando los factores de descuento (`df_q`, `df_r`) y el algoritmo híbrido Newton-Raphson/bisección con semilla de Brenner-Subrahmanyam.
+
+## 10. Gateway, Arranque y Configuración (Tercera Pasada)
+
+- [x] 10.1 Refactorizar `api/src/app.js` (`serviceMonitoring`, `routePath`) y `api/src/config.js` (`missingConfig`: `envValue`, `configKey`).
+- [x] 10.2 Refactorizar `api/src/microservices/start.js` (`serviceName`, `routePath`).
+
+## 11. Servicios de Negocio y Dominio (Tercera Pasada)
+
+- [x] 11.1 Refactorizar `api/src/services/orders.service.js` (`fetchedOrder`, `createdOrder`, `paramKey`, `cancelResult`).
+- [x] 11.2 Refactorizar `api/src/services/strategies.service.js` (`leg`, constante `CONTRACT_SIZE = 100`) y documentar campos compactos en `api/src/services/optionChains.service.js`.
+
+## 12. Infraestructura de Pruebas y Verificación (Tercera Pasada)
+
+- [x] 12.1 Refactorizar `pruebas/integracion/gateway.test.js` (`app`, `server`, `gatewayUrl`, `response`).
+- [x] 12.2 Refactorizar `pruebas/mcp/f0-api-mcp.js` (`targetRequest`, `httpResponse`, `envKey`, `reqItem`), `pruebas/colecciones/build.js` (`WORKSPACE_ID`, etc.) y `pruebas/carga/k6.js`.
+- [x] 12.3 Ejecutar la suite completa de 27 pruebas unitarias (`npm --prefix pruebas test`) y pruebas de contrato (`node pruebas/contrato/openapi.test.js`) para confirmar cero regresiones.

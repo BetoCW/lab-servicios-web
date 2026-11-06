@@ -48,6 +48,7 @@ pub struct Greeks {
 
 /// Solo precio (camino rápido para IV, margen y Monte Carlo).
 pub fn price(c: &Contract) -> f64 {
+    // Continuous dividend discount factor exp(-q*t) and risk-free discount factor exp(-r*t)
     let df_q = (-c.div * c.t).exp();
     let df_r = (-c.rate * c.t).exp();
     if c.t <= 0.0 || c.vol <= 0.0 {
@@ -122,6 +123,12 @@ pub fn greeks(c: &Contract) -> Greeks {
 
 /// Volatilidad implícita: Newton-Raphson protegido por bisección.
 /// Regresa NaN si el precio está fuera de los límites de no-arbitraje.
+///
+/// Algoritmo:
+/// 1. Comprueba cotas de no-arbitraje (intrinsic <= target < spot*df_q).
+/// 2. Inicializa con aproximación analítica de Brenner-Subrahmanyam: sigma_0 = sqrt(2*pi/t) * (C / S).
+/// 3. Itera Newton-Raphson (vol - diff / vega); si vega < 1e-10 o el paso sale de [lo, hi],
+///    conmuta a bisección garantizando convergencia incondicional.
 pub fn implied_vol(kind: Kind, spot: f64, strike: f64, t: f64, rate: f64, div: f64, target: f64) -> f64 {
     if !(target.is_finite() && spot > 0.0 && strike > 0.0 && t > 0.0) {
         return f64::NAN;

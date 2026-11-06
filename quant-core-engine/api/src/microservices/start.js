@@ -8,7 +8,7 @@ import { SERVICES, gatewayApp, serviceApp } from './index.js';
 const name = process.argv[2] ?? 'all';
 
 if (name === 'all') {
-  for (const n of [...Object.keys(SERVICES), 'gateway']) fork(fileURLToPath(import.meta.url), [n]);
+  for (const serviceName of [...Object.keys(SERVICES), 'gateway']) fork(fileURLToPath(import.meta.url), [serviceName]);
 } else if (name === 'gateway') {
   gatewayApp().listen(config.port, config.host, () => {
     console.log(`[gateway] http://${config.host}:${config.port}  (REST ${config.apiUrl} · /graphql · /api-docs · /app · /health · /metrics)`);
@@ -17,7 +17,9 @@ if (name === 'all') {
   });
 } else if (SERVICES[name]) {
   const { port, paths } = SERVICES[name];
-  serviceApp(name).listen(port, config.host, () => console.log(`[${name}] http://${config.host}:${port}  (${paths.map((p) => config.apiUrl + '/' + p).join(', ')})`));
+  serviceApp(name).listen(port, config.host, () =>
+    console.log(`[${name}] http://${config.host}:${port}  (${paths.map((routePath) => `${config.apiUrl}/${routePath}`).join(', ')})`),
+  );
 } else {
   console.error(`Servicio desconocido: ${name}. Usa: ${Object.keys(SERVICES).join(', ')}, gateway o all`);
   process.exitCode = 1;
