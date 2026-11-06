@@ -105,15 +105,20 @@ const typeDefs = /* GraphQL */ `
   }
 `;
 
-// Los errores HTTP de los servicios salen como errores GraphQL con su código.
-const wrap = (fn) => async (...args) => {
+// Los errores HTTP de los servicios salen como errores GraphQL con su código de estado.
+const wrap = (resolverFn) => async (...args) => {
   try {
-    return await fn(...args);
+    return await resolverFn(...args);
   } catch (err) {
     throw new GraphQLError(err.message, { extensions: { status: err.status ?? 500, details: err.details } });
   }
 };
-const done = (fn) => wrap(async (...a) => (await fn(...a), true));
+
+const done = (actionFn) =>
+  wrap(async (...args) => {
+    await actionFn(...args);
+    return true;
+  });
 
 const resolvers = {
   Query: {
@@ -126,10 +131,15 @@ const resolvers = {
     strategies: wrap((_, args) => strategies.list(args)),
     strategy: wrap((_, { id }) => strategies.get(id)),
     strategyRisk: wrap(async (_, { id, paths, seed }) => {
-      const r = await riskService.analyze(id, { paths, seed });
+      const riskAnalysisResult = await riskService.analyze(id, { paths, seed });
       return {
-        ...r.inputs, ...r.monteCarlo, ...r.margin, ...r.greeks,
-        marketCost: r.cost.market, modelCost: r.cost.model, monteCarloMs: r.performance.monteCarloMs,
+        ...riskAnalysisResult.inputs,
+        ...riskAnalysisResult.monteCarlo,
+        ...riskAnalysisResult.margin,
+        ...riskAnalysisResult.greeks,
+        marketCost: riskAnalysisResult.cost.market,
+        modelCost: riskAnalysisResult.cost.model,
+        monteCarloMs: riskAnalysisResult.performance.monteCarloMs,
       };
     }),
   },
@@ -158,8 +168,8 @@ const resolvers = {
   OptionChain: {
     // Si el padre ya trae quotes (optionChain) se filtran ahí; si no, se piden.
     quotes: wrap(async (parent, { expiration, type }) => {
-      const all = parent.quotes ?? (await chains.get(parent.id)).quotes;
-      return all.filter((qt) => (!expiration || qt.expiration === expiration) && (!type || qt.type === type));
+      const allQuotes = parent.quotes ?? (await chains.get(parent.id)).quotes;
+      return allQuotes.filter((quote) => (!expiration || quote.expiration === expiration) && (!type || quote.type === type));
     }),
   },
 };

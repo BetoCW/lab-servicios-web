@@ -22,8 +22,13 @@ fn payoff(kind: Kind, s: f64, k: f64) -> f64 {
     }
 }
 
-/// Recorre el árbol hacia atrás. `buf` se reutiliza entre llamadas del lote para no
-/// pedir memoria por contrato. Regresa (v0, [v1_down, v1_up], [v2_dd, v2_ud, v2_uu]).
+/// Rolls the binomial tree backward from expiration to t=0.
+///
+/// `buf` is reused across batch invocations to eliminate heap allocations per contract.
+/// Returns a tuple representing nodal values at early steps:
+/// - `v0`: root option price at t=0
+/// - `level1`: `[v1_down, v1_up]` option prices at step 1 (t = dt)
+/// - `level2`: `[v2_dd, v2_ud, v2_uu]` option prices at step 2 (t = 2*dt)
 fn roll_back(c: &Contract, steps: usize, american: bool, buf: &mut Vec<f64>) -> (f64, [f64; 2], [f64; 3]) {
     let dt = c.t / steps as f64;
     let u = (c.vol * dt.sqrt()).exp();
@@ -73,12 +78,16 @@ pub fn price_tree(c: &Contract, steps: usize, american: bool, buf: &mut Vec<f64>
     let d = 1.0 / u;
 
     let (s_d, s_u) = (c.spot * d, c.spot * u);
+    // Delta: central finite difference using step-1 nodal option prices over spot interval (s_u - s_d).
     let delta = (v1[1] - v1[0]) / (s_u - s_d);
+
     let (s_dd, s_uu) = (c.spot * d * d, c.spot * u * u);
     let delta_up = (v2[2] - v2[1]) / (s_uu - c.spot);
     let delta_dn = (v2[1] - v2[0]) / (c.spot - s_dd);
+    // Gamma: second-order finite difference between up/down slopes over midpoint spot span.
     let gamma = (delta_up - delta_dn) / (0.5 * (s_uu - s_dd));
-    // El nodo central del paso 2 tiene el mismo spot que la raíz, 2*dt después.
+
+    // Theta: time decay per calendar day. Center node v2[1] shares spot S with root v0 at 2*dt forward.
     let theta = (v2[1] - v0) / (2.0 * dt) / 365.0;
 
     let early_exercise_premium = if american {

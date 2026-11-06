@@ -14,9 +14,16 @@ export function db() {
   return client;
 }
 
-/** Desenvuelve { data, error } de supabase-js y convierte el error en HttpError. */
-export async function q(promise) {
-  const { data, error } = await promise;
+/**
+ * Desenvuelve { data, error } retornado por supabase-js y convierte el error en HttpError (500).
+ * @param {Promise<{ data: any, error: any }>} queryPromise
+ * @returns {Promise<any>}
+ */
+export async function unwrapQuery(queryPromise) {
+  const { data, error } = await queryPromise;
   if (error) throw new HttpError(500, `Supabase: ${error.message}`, { code: error.code, hint: error.hint });
   return data;
 }
+
+// Alias retrocompatible para servicios y pruebas existentes
+export const q = unwrapQuery;

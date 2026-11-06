@@ -10,6 +10,8 @@ pub fn norm_pdf(x: f64) -> f64 {
 
 /// Acumulada de la normal estándar N(x).
 /// Algoritmo de Hart (1968) en la forma de West (2005): error < 1e-14 en doble precisión.
+/// - For |z| < 7.071: minimax rational Chebyshev polynomial approximation evaluated via Horner's rule.
+/// - For |z| >= 7.071: continued fraction expansion for the asymptotic tail.
 pub fn norm_cdf(x: f64) -> f64 {
     let z = x.abs();
     let c = if z > 37.0 {
@@ -17,20 +19,24 @@ pub fn norm_cdf(x: f64) -> f64 {
     } else {
         let e = (-z * z / 2.0).exp();
         if z < 7.071_067_811_865_47 {
-            let mut n = 3.526_249_659_989_11e-2 * z + 0.700_383_064_443_688;
-            n = n * z + 6.373_962_203_531_65;
-            n = n * z + 33.912_866_078_383;
-            n = n * z + 112.079_291_497_871;
-            n = n * z + 221.213_596_169_931;
-            n = n * z + 220.206_867_912_376;
-            let mut d = 8.838_834_764_831_84e-2 * z + 1.755_667_163_182_64;
-            d = d * z + 16.064_177_579_207;
-            d = d * z + 86.780_732_202_946_1;
-            d = d * z + 296.564_248_779_674;
-            d = d * z + 637.333_633_378_831;
-            d = d * z + 793.826_512_519_948;
-            d = d * z + 440.413_735_824_752;
-            e * n / d
+            // Numerator polynomial evaluation via Horner's rule
+            let mut numerator_poly = 3.526_249_659_989_11e-2 * z + 0.700_383_064_443_688;
+            numerator_poly = numerator_poly * z + 6.373_962_203_531_65;
+            numerator_poly = numerator_poly * z + 33.912_866_078_383;
+            numerator_poly = numerator_poly * z + 112.079_291_497_871;
+            numerator_poly = numerator_poly * z + 221.213_596_169_931;
+            numerator_poly = numerator_poly * z + 220.206_867_912_376;
+
+            // Denominator polynomial evaluation via Horner's rule
+            let mut denominator_poly = 8.838_834_764_831_84e-2 * z + 1.755_667_163_182_64;
+            denominator_poly = denominator_poly * z + 16.064_177_579_207;
+            denominator_poly = denominator_poly * z + 86.780_732_202_946_1;
+            denominator_poly = denominator_poly * z + 296.564_248_779_674;
+            denominator_poly = denominator_poly * z + 637.333_633_378_831;
+            denominator_poly = denominator_poly * z + 793.826_512_519_948;
+            denominator_poly = denominator_poly * z + 440.413_735_824_752;
+
+            e * numerator_poly / denominator_poly
         } else {
             let mut b = z + 0.65;
             b = z + 4.0 / b;
@@ -51,6 +57,8 @@ pub fn norm_cdf(x: f64) -> f64 {
 /// sean reproducibles entre corridas (y entre equipos que consumen el contrato).
 pub struct Rng {
     state: u64,
+    /// Box-Muller produces a pair of independent standard normals (r*cos(theta), r*sin(theta)).
+    /// The second variate is cached here to avoid redundant transcendental evaluations.
     spare: Option<f64>,
 }
 

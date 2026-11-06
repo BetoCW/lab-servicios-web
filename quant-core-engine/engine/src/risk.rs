@@ -21,10 +21,23 @@ pub struct Leg {
 }
 
 pub const LEG_STRIDE: usize = 6;
+pub const OFFSET_LEG_KIND: usize = 0;
+pub const OFFSET_LEG_STRIKE: usize = 1;
+pub const OFFSET_LEG_T: usize = 2;
+pub const OFFSET_LEG_QTY: usize = 3;
+pub const OFFSET_LEG_VOL: usize = 4;
+pub const OFFSET_LEG_MULTIPLIER: usize = 5;
 
 impl Leg {
     pub fn from_slice(s: &[f64]) -> Leg {
-        Leg { kind: s[0], strike: s[1], t: s[2], qty: s[3], vol: s[4], multiplier: s[5] }
+        Leg {
+            kind: s[OFFSET_LEG_KIND],
+            strike: s[OFFSET_LEG_STRIKE],
+            t: s[OFFSET_LEG_T],
+            qty: s[OFFSET_LEG_QTY],
+            vol: s[OFFSET_LEG_VOL],
+            multiplier: s[OFFSET_LEG_MULTIPLIER],
+        }
     }
 
     fn is_stock(&self) -> bool {
@@ -127,48 +140,48 @@ pub fn monte_carlo(legs: &[Leg], spot: f64, rate: f64, div: f64, underlying_vol:
 /// `out` recibe el requerimiento de cada pierna; regresa el total.
 pub fn reg_t(legs: &[Leg], spot: f64, rate: f64, div: f64, out: &mut [f64]) -> f64 {
     // Unidades largas aún disponibles para cubrir cortas.
-    let mut free: Vec<f64> = legs.iter().map(|l| if !l.is_stock() && l.qty > 0.0 { l.qty * l.multiplier } else { 0.0 }).collect();
+    let mut free: Vec<f64> = legs.iter().map(|leg| if !leg.is_stock() && leg.qty > 0.0 { leg.qty * leg.multiplier } else { 0.0 }).collect();
     let mut total = 0.0;
-    for (i, l) in legs.iter().enumerate() {
-        let units = l.qty.abs() * l.multiplier;
-        let req = if l.is_stock() {
+    for (i, leg) in legs.iter().enumerate() {
+        let units = leg.qty.abs() * leg.multiplier;
+        let margin_requirement = if leg.is_stock() {
             0.5 * spot * units
-        } else if l.qty > 0.0 {
-            l.unit_value(spot, rate, div, 0.0, 0.0) * units
+        } else if leg.qty > 0.0 {
+            leg.unit_value(spot, rate, div, 0.0, 0.0) * units
         } else {
-            let kind = Kind::from_f64(l.kind);
-            let premium = l.unit_value(spot, rate, div, 0.0, 0.0);
+            let kind = Kind::from_f64(leg.kind);
+            let premium = leg.unit_value(spot, rate, div, 0.0, 0.0);
             let mut uncovered = units;
-            let mut req = 0.0;
+            let mut short_req = 0.0;
             // Primero las largas que dejan el spread en débito (requerimiento 0), luego las de crédito.
             let mut candidates: Vec<usize> = (0..legs.len())
-                .filter(|&j| free[j] > 0.0 && legs[j].kind == l.kind && legs[j].t >= l.t - 1e-9)
+                .filter(|&candidate_idx| free[candidate_idx] > 0.0 && legs[candidate_idx].kind == leg.kind && legs[candidate_idx].t >= leg.t - 1e-9)
                 .collect();
-            let width = |j: usize| match kind {
-                Kind::Call => (legs[j].strike - l.strike).max(0.0),
-                Kind::Put => (l.strike - legs[j].strike).max(0.0),
+            let width = |candidate_idx: usize| match kind {
+                Kind::Call => (legs[candidate_idx].strike - leg.strike).max(0.0),
+                Kind::Put => (leg.strike - legs[candidate_idx].strike).max(0.0),
             };
             candidates.sort_by(|&a, &b| width(a).partial_cmp(&width(b)).unwrap_or(core::cmp::Ordering::Equal));
-            for j in candidates {
+            for candidate_idx in candidates {
                 if uncovered <= 0.0 {
                     break;
                 }
-                let used = free[j].min(uncovered);
-                free[j] -= used;
+                let used = free[candidate_idx].min(uncovered);
+                free[candidate_idx] -= used;
                 uncovered -= used;
-                req += (width(j) - premium) * used;
+                short_req += (width(candidate_idx) - premium) * used;
             }
             if uncovered > 0.0 {
                 let per_unit = match kind {
-                    Kind::Call => premium + (0.20 * spot - (l.strike - spot).max(0.0)).max(0.10 * spot),
-                    Kind::Put => premium + (0.20 * spot - (spot - l.strike).max(0.0)).max(0.10 * l.strike),
+                    Kind::Call => premium + (0.20 * spot - (leg.strike - spot).max(0.0)).max(0.10 * spot),
+                    Kind::Put => premium + (0.20 * spot - (spot - leg.strike).max(0.0)).max(0.10 * leg.strike),
                 };
-                req += per_unit * uncovered;
+                short_req += per_unit * uncovered;
             }
-            req
+            short_req
         };
-        out[i] = req;
-        total += req;
+        out[i] = margin_requirement;
+        total += margin_requirement;
     }
     total
 }
@@ -200,16 +213,16 @@ pub fn span(legs: &[Leg], spot: f64, rate: f64, div: f64, price_scan: f64, vol_s
     let base = portfolio_value(legs, spot, rate, div, 0.0, 0.0);
     let one_day = 1.0 / 365.0;
     let (mut scan_risk, mut worst) = (0.0_f64, 0usize);
-    for (i, (dp, dv, w)) in SPAN_SCENARIOS.iter().enumerate() {
-        let s = spot * (1.0 + dp * price_scan);
-        let loss = (base - portfolio_value(legs, s, rate, div, dv * vol_scan, one_day)) * w;
+    for (i, (price_shift_fraction, vol_shift_direction, scenario_weight)) in SPAN_SCENARIOS.iter().enumerate() {
+        let s = spot * (1.0 + price_shift_fraction * price_scan);
+        let loss = (base - portfolio_value(legs, s, rate, div, vol_shift_direction * vol_scan, one_day)) * scenario_weight;
         out[SPAN_HEADER + i] = loss;
         if loss > scan_risk {
             scan_risk = loss;
             worst = i;
         }
     }
-    let short_contracts: f64 = legs.iter().filter(|l| !l.is_stock() && l.qty < 0.0).map(|l| -l.qty).sum();
+    let short_contracts: f64 = legs.iter().filter(|leg| !leg.is_stock() && leg.qty < 0.0).map(|leg| -leg.qty).sum();
     let som = short_contracts * som_per_contract;
     let margin = scan_risk.max(som);
     out[..SPAN_HEADER].copy_from_slice(&[margin, scan_risk, som, worst as f64]);

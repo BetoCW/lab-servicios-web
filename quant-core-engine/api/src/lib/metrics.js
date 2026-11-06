@@ -4,19 +4,21 @@
 import { missingConfig } from '../config.js';
 
 export function monitoring(service) {
-  const series = new Map(); // 'method|route|status' -> { count, seconds }
+  // In-memory request metric counters keyed by 'method|route|status'.
+  // Counters reset upon process restart; suitable for single-instance or sidecar scraping.
+  const series = new Map();
   const started = Date.now();
 
   const track = (req, res, next) => {
-    const t0 = process.hrtime.bigint();
+    const startTimeNs = process.hrtime.bigint();
     res.on('finish', () => {
-      // Ruta como patrón (/:id) y no como URL real, para no crear una serie por cada id.
+      // Use route pattern (e.g., /:id) rather than concrete path to prevent cardinality explosion.
       const route = req.metricRoute ?? req.route?.path ?? (res.statusCode === 404 ? 'not_found' : 'other');
       const key = `${req.method}|${route}|${res.statusCode}`;
-      const s = series.get(key) ?? { count: 0, seconds: 0 };
-      s.count++;
-      s.seconds += Number(process.hrtime.bigint() - t0) / 1e9;
-      series.set(key, s);
+      const metricStat = series.get(key) ?? { count: 0, seconds: 0 };
+      metricStat.count++;
+      metricStat.seconds += Number(process.hrtime.bigint() - startTimeNs) / 1e9;
+      series.set(key, metricStat);
     });
     next();
   };
@@ -38,12 +40,12 @@ export function monitoring(service) {
       '# HELP http_request_duration_seconds Tiempo de respuesta.',
       '# TYPE http_request_duration_seconds summary',
     ];
-    for (const [key, s] of series) {
+    for (const [key, metricStat] of series) {
       const [method, route, status] = key.split('|');
       const labels = `service="${service}",method="${method}",route="${route}",status="${status}"`;
-      lines.push(`http_requests_total{${labels}} ${s.count}`);
-      lines.push(`http_request_duration_seconds_sum{${labels}} ${s.seconds.toFixed(6)}`);
-      lines.push(`http_request_duration_seconds_count{${labels}} ${s.count}`);
+      lines.push(`http_requests_total{${labels}} ${metricStat.count}`);
+      lines.push(`http_request_duration_seconds_sum{${labels}} ${metricStat.seconds.toFixed(6)}`);
+      lines.push(`http_request_duration_seconds_count{${labels}} ${metricStat.count}`);
     }
     lines.push('# TYPE process_resident_memory_bytes gauge', `process_resident_memory_bytes{service="${service}"} ${process.memoryUsage().rss}`);
     lines.push('# TYPE process_uptime_seconds gauge', `process_uptime_seconds{service="${service}"} ${(Date.now() - started) / 1000}`);

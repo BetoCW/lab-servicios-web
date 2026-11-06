@@ -15,12 +15,14 @@ function headers() {
 }
 
 function toQuery(params = {}) {
-  const q = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== '') q.set(k, Array.isArray(v) ? v.join(',') : String(v));
+  const searchParams = new URLSearchParams();
+  for (const [paramKey, paramValue] of Object.entries(params)) {
+    if (paramValue !== undefined && paramValue !== null && paramValue !== '') {
+      searchParams.set(paramKey, Array.isArray(paramValue) ? paramValue.join(',') : String(paramValue));
+    }
   }
-  const s = q.toString();
-  return s ? `?${s}` : '';
+  const queryString = searchParams.toString();
+  return queryString ? `?${queryString}` : '';
 }
 
 async function request(base, method, path, { query, body } = {}) {
