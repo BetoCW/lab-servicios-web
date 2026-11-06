@@ -16,9 +16,26 @@ const TIMEFRAMES = {
   '1Hour': [3600, 120],
   '1Day': [86400, 730],
 };
+
+/**
+ * Redondea un valor a cuatro decimales para salida de indicadores numéricos.
+ * @param {number|null} val - Valor a redondear.
+ * @returns {number|null} Valor redondeado o null si es nulo.
+ */
 const round = (val) => (val == null ? null : Math.round(val * 10000) / 10000);
 
 export const marketService = {
+  /**
+   * Obtiene velas históricas de Alpaca y calcula indicadores técnicos asociados (SMA, EMA, Bollinger, RSI, MACD).
+   * La última vela se ajusta en tiempo real con el trade más reciente del snapshot si corresponde a su ventana temporal.
+   *
+   * @param {string} symbol - Símbolo del activo (ej. 'AAPL').
+   * @param {object} [query={}] - Parámetros de consulta opcionales.
+   * @param {string} [query.timeframe='5Min'] - Intervalo de vela ('1Min', '5Min', '15Min', '1Hour', '1Day').
+   * @param {number} [query.limit=300] - Cantidad máxima de velas solicitadas (50 a 1000).
+   * @returns {Promise<object>} Objeto con símbolo, temporalidad, cotización actual, velas e indicadores técnicos.
+   * @throws {import('../lib/errors.js').HttpError} Si el símbolo o timeframe son inválidos o no hay datos disponibles.
+   */
   async bars(symbol, query = {}) {
     const normalizedSymbol = String(symbol).toUpperCase();
     if (!/^[A-Z][A-Z.]{0,9}$/.test(normalizedSymbol)) throw badRequest('Símbolo inválido');

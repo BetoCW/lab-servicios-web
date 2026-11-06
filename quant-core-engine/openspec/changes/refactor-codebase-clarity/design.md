@@ -65,6 +65,14 @@ El codebase inicial presentaba variables crípticas en bucles de cálculo y dese
 - **Decisión**: Renombrar servidores y responses en `pruebas/integracion/gateway.test.js`, utilerías en `pruebas/mcp/f0-api-mcp.js`, `pruebas/colecciones/build.js` y `pruebas/carga/k6.js`.
 - **Razón**: Permite que cualquier integrante del equipo ejecute, diagnostique y amplíe las pruebas sin descifrar abreviaturas locales.
 
+### 8. Estándar JSDoc en Servicios y Tipado WASM
+- **Decisión**: Todos los métodos públicos y helpers de los servicios de negocio (`services/*.js`) y la envoltura WASM (`packages/quant-engine/index.js`) deben contar con documentación formal JSDoc (`@param`, `@returns`) indicando tipos y convenciones de dominio.
+- **Razón**: Mejora sustancialmente el autocompletado en IDEs, documenta explícitamente contratos de datos y previene errores de tipo sin requerir TypeScript.
+
+### 9. Documentación Técnica en Inglés
+- **Decisión**: Traducir comentarios legacy y docstrings en español a inglés técnico en todas las librerías base, utilerías de red y módulos Rust. Las cadenas de error que forman parte de aserciones de prueba en `plantillas.test.js` o `api.test.js` se mantienen intactas para no causar regresiones de prueba.
+- **Razón**: Cumple estrictamente con la Regla 8 del proyecto manteniendo coherencia global en el repositorio.
+
 ## Risks / Trade-offs
 
 - **[Riesgo de error tipográfico en variables renombradas]** → Mitigación: Ejecutar la suite completa de 27 pruebas unitarias (`npm --prefix pruebas test`) tras cada archivo modificado para atrapar inmediatamente cualquier `ReferenceError`.

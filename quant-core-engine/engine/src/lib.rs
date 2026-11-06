@@ -32,6 +32,7 @@ pub const OFFSET_RATE: usize = 4;
 pub const OFFSET_DIV: usize = 5;
 pub const OFFSET_PARAM: usize = 6; // Volatilidad para pricing/árbol, o precio para cálculo de IV
 
+/// Construye una estructura `Contract` a partir de un segmento de 7 elementos en memoria plana.
 fn contract_from(row: &[f64]) -> Contract {
     Contract {
         kind: Kind::from_f64(row[OFFSET_KIND]),
@@ -44,6 +45,10 @@ fn contract_from(row: &[f64]) -> Contract {
     }
 }
 
+/// Reconstruye un vector de estructuras `Leg` a partir de un puntero crudo f64 y cantidad `n`.
+///
+/// # Safety
+/// El puntero `ptr` debe apuntar a un bloque contiguo válido y legible de `n * LEG_STRIDE` elementos f64.
 unsafe fn legs_from(ptr: *const f64, n: usize) -> Vec<Leg> {
     slice::from_raw_parts(ptr, n * LEG_STRIDE).chunks_exact(LEG_STRIDE).map(Leg::from_slice).collect()
 }

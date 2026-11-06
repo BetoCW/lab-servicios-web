@@ -1,10 +1,20 @@
-// API 2 — Órdenes (acciones y opciones) en Alpaca Paper Trading, con bitácora en Supabase.
+// Servicio 2 — Órdenes de acciones y opciones en Alpaca Paper Trading, sincronizadas a Supabase.
 import { alpaca } from '../lib/alpaca.js';
 import { db, q } from '../lib/supabase.js';
 import { check, badRequest } from '../lib/errors.js';
 
+/**
+ * Convierte de forma segura un valor numérico opcional a número o null.
+ * @param {*} value - Valor de entrada.
+ * @returns {number|null}
+ */
 const parseOptionalNumber = (value) => (value === null || value === undefined ? null : Number(value));
 
+/**
+ * Transforma una orden de Alpaca en formato de fila para la base de datos.
+ * @param {object} order - Orden original de Alpaca.
+ * @returns {object} Objeto de fila para Supabase.
+ */
 const toRow = (order) => ({
   alpaca_id: order.id,
   client_order_id: order.client_order_id,
@@ -25,6 +35,11 @@ const toRow = (order) => ({
   submitted_at: order.submitted_at,
 });
 
+/**
+ * Transforma una entidad de orden de Alpaca en DTO para el cliente de la API.
+ * @param {object} order - Entidad de orden de Alpaca.
+ * @returns {object} DTO normalizado de la orden.
+ */
 export const toOrderDto = (order) => ({
   id: order.id,
   clientOrderId: order.client_order_id,
@@ -49,6 +64,11 @@ export const toOrderDto = (order) => ({
   submittedAt: order.submitted_at,
 });
 
+/**
+ * Inserta o actualiza registros de órdenes en la tabla espejo de Supabase.
+ * @param {object[]} orders - Arreglo de órdenes de Alpaca.
+ * @returns {Promise<void>}
+ */
 export async function mirrorOrders(orders) {
   if (!orders.length) return;
   await q(db().from('orders').upsert(orders.map(toRow), { onConflict: 'alpaca_id' }));
@@ -57,10 +77,15 @@ export async function mirrorOrders(orders) {
 const SIDES = ['buy', 'sell'];
 const TYPES = ['market', 'limit', 'stop', 'stop_limit', 'trailing_stop'];
 const TIFS = ['day', 'gtc', 'opg', 'cls', 'ioc', 'fok'];
-// Estados en los que Alpaca rechaza PATCH aunque la orden siga viva.
+// Estados de orden donde Alpaca rechaza modificaciones directas PATCH estando aún activa.
 const RESUBMIT_STATUSES = ['accepted', 'pending_new'];
 
 export const ordersService = {
+  /**
+   * Obtiene órdenes que cumplan con los filtros y las sincroniza localmente.
+   * @param {{ status?: string, limit?: number, symbols?: string }} [query={}] - Filtros de búsqueda.
+   * @returns {Promise<object[]>} Lista de DTOs de órdenes.
+   */
   async list(query = {}) {
     const orders = await alpaca.listOrders({
       status: query.status ?? 'all',
@@ -72,12 +97,22 @@ export const ordersService = {
     return orders.map(toOrderDto);
   },
 
+  /**
+   * Obtiene una orden individual por su identificador de Alpaca.
+   * @param {string} id - Identificador de orden en Alpaca.
+   * @returns {Promise<object>} DTO de la orden.
+   */
   async get(id) {
     const fetchedOrder = await alpaca.getOrder(id);
     await mirrorOrders([fetchedOrder]);
     return toOrderDto(fetchedOrder);
   },
 
+  /**
+   * Envía una orden simple de acciones u opciones a Alpaca.
+   * @param {object} body - Datos de la orden.
+   * @returns {Promise<object>} DTO de la orden creada.
+   */
   async create(body) {
     check(body, {
       symbol: { required: true, type: 'string' },
@@ -106,7 +141,12 @@ export const ordersService = {
     return toOrderDto(createdOrder);
   },
 
-  /** PATCH: Alpaca reemplaza la orden y regresa una NUEVA orden (nuevo id). */
+  /**
+   * Modifica una orden activa con nuevos parámetros (crea una orden de reemplazo en Alpaca).
+   * @param {string} id - Identificador de la orden a reemplazar.
+   * @param {{ qty?: number, limit_price?: number, stop_price?: number, time_in_force?: string }} body - Parámetros modificados.
+   * @returns {Promise<object>} DTO de la orden de reemplazo.
+   */
   async replace(id, body) {
     check(body, {
       qty: { type: 'number', positive: true },
@@ -124,8 +164,8 @@ export const ordersService = {
     const current = await alpaca.getOrder(id);
     let replacement;
     if (RESUBMIT_STATUSES.includes(current.status)) {
-      // Con el mercado cerrado la orden queda en 'accepted' y Alpaca no la deja reemplazar
-      // (422). Se emula el replace: cancelar y volver a enviar con los campos cambiados.
+      // Fuera de horario de mercado, las órdenes en 'accepted' rechazan PATCH (HTTP 422).
+      // Se utiliza la estrategia de cancelar y reenviar con los campos modificados.
       await alpaca.cancelOrder(id);
       replacement = await alpaca.createOrder({
         symbol: current.symbol,
@@ -146,6 +186,11 @@ export const ordersService = {
     return { ...toOrderDto(replacement), replaces: id, replaceMode: RESUBMIT_STATUSES.includes(current.status) ? 'cancel_resubmit' : 'alpaca_replace' };
   },
 
+  /**
+   * Cancela una orden abierta por su identificador.
+   * @param {string} id - Identificador de la orden.
+   * @returns {Promise<object>} DTO actualizado de la orden.
+   */
   async cancel(id) {
     await alpaca.cancelOrder(id);
     const canceledOrder = await alpaca.getOrder(id);
@@ -153,6 +198,10 @@ export const ordersService = {
     return toOrderDto(canceledOrder);
   },
 
+  /**
+   * Cancela todas las órdenes abiertas de la cuenta.
+   * @returns {Promise<Array<{ id: string, status: number }>>} Resultado de la operación.
+   */
   async cancelAll() {
     const results = (await alpaca.cancelAllOrders()) ?? [];
     return results.map((cancelResult) => ({ id: cancelResult.id, status: cancelResult.status }));

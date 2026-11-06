@@ -28,6 +28,12 @@ const serviceOwnerByPath = Object.fromEntries(
   ),
 );
 
+/**
+ * Crea e inicializa la aplicación Express para un microservicio individual específico.
+ *
+ * @param {string} name - Nombre del microservicio registrado en SERVICES.
+ * @returns {import('express').Express} Aplicación Express configurada para el microservicio.
+ */
 export function serviceApp(name) {
   const app = express();
   const serviceMonitoring = monitoring(name);
@@ -44,6 +50,12 @@ export function serviceApp(name) {
   return app;
 }
 
+/**
+ * Crea e inicializa el API Gateway con proxy inverso HTTP hacia los microservicios y health check agregado.
+ *
+ * @param {Record<string, string>} [urls=config.services] - Mapa de URLs base de los microservicios.
+ * @returns {import('express').Express} Aplicación Express del API Gateway.
+ */
 export function gatewayApp(urls = config.services) {
   const proxy = async (req, res, next) => {
     const routePrefix = req.path.split('/')[1];

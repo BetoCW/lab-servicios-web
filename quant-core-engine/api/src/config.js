@@ -2,7 +2,11 @@ import 'dotenv/config';
 
 const env = process.env;
 
-// El dashboard de Alpaca muestra el endpoint con /v2 al final; las rutas ya lo incluyen.
+/**
+ * Normaliza la URL base de un servicio externo eliminando barras finales y sufijos de versión redundantes (/v2).
+ * @param {string} url - URL original configurada en el entorno.
+ * @returns {string} URL base saneada.
+ */
 const baseUrl = (url) => url.replace(/\/+$/, '').replace(/\/v\d+(beta\d+)?$/, '');
 
 export const config = {
@@ -36,6 +40,10 @@ export const config = {
   },
 };
 
+/**
+ * Evalúa y recopila los nombres de variables de entorno requeridas que están ausentes o vacías.
+ * @returns {string[]} Lista de variables faltantes para la operación completa.
+ */
 export const missingConfig = () =>
   [
     ['ALPACA_KEY_ID', config.alpaca.keyId],

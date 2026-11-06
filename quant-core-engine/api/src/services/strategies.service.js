@@ -1,5 +1,5 @@
-// API 4 — Estrategias de opciones multi-leg (spreads, straddles, iron condors...).
-// Se arman y guardan en Supabase; cada pierna se valida contra los contratos de Alpaca.
+// Servicio 4 — Estrategias de opciones multi-leg (spreads, straddles, iron condors...).
+// Se guardan en Supabase; cada pierna se valida contra los contratos de Alpaca.
 // GET las valora con cotizaciones vivas de Alpaca; POST /:id/submit las envía como
 // orden multi-leg (order_class = 'mleg') a Alpaca Paper Trading.
 import { alpaca } from '../lib/alpaca.js';
@@ -8,10 +8,17 @@ import { check, notFound, badRequest, conflict } from '../lib/errors.js';
 import { parseOcc } from '../lib/occ.js';
 import { mirrorOrders, toOrderDto } from './orders.service.js';
 
-const MAX_LEGS = 4; // límite de Alpaca para órdenes mleg
+const MAX_LEGS = 4; // Límite de Alpaca para órdenes multi-leg (mleg)
 const CONTRACT_SIZE = 100; // Multiplicador estándar por contrato de opciones
 const INTENTS = ['buy_to_open', 'buy_to_close', 'sell_to_open', 'sell_to_close'];
 
+/**
+ * Convierte los registros de estrategia y piernas de la base de datos a DTO del cliente.
+ *
+ * @param {object} strategyRow - Fila de la estrategia en Supabase.
+ * @param {Array<object>} [legs=[]] - Registros de las piernas asociadas.
+ * @returns {object} DTO formateado de la estrategia.
+ */
 const toDto = (strategyRow, legs = []) => ({
   id: strategyRow.id,
   name: strategyRow.name,
@@ -35,6 +42,13 @@ const toDto = (strategyRow, legs = []) => ({
   updatedAt: strategyRow.updated_at,
 });
 
+/**
+ * Valida los datos recibidos para crear o actualizar una estrategia de opciones.
+ *
+ * @param {object} body - Cuerpo de la petición con metadatos y piernas de la estrategia.
+ * @returns {Promise<{strategy: object, legs: Array<object>}>} Datos sanitizados de la estrategia y piernas.
+ * @throws {import('../lib/errors.js').HttpError} Si la validación falla o algún contrato es inválido.
+ */
 async function validate(body) {
   check(body, {
     name: { required: true, type: 'string' },
@@ -90,6 +104,13 @@ async function validate(body) {
   };
 }
 
+/**
+ * Carga una estrategia y sus piernas ordenadas desde la base de datos por ID.
+ *
+ * @param {string} id - Identificador de la estrategia.
+ * @returns {Promise<{strategy: object, legs: Array<object>}>} La estrategia y sus piernas ordenadas.
+ * @throws {import('../lib/errors.js').HttpError} Si la estrategia no existe.
+ */
 export async function loadStrategy(id) {
   const rows = await q(db().from('strategies').select('*, strategy_legs(*)').eq('id', id).limit(1));
   if (!rows.length) throw notFound(`No existe la estrategia ${id}`);
@@ -99,6 +120,14 @@ export async function loadStrategy(id) {
 }
 
 export const strategiesService = {
+  /**
+   * Lista estrategias con filtros opcionales por estado y símbolo subyacente.
+   *
+   * @param {object} [query={}] - Filtros de consulta.
+   * @param {string} [query.status] - Filtrar por estado ('draft' | 'submitted').
+   * @param {string} [query.underlying] - Filtrar por símbolo subyacente.
+   * @returns {Promise<Array<object>>} Lista de DTOs de estrategias.
+   */
   async list(query = {}) {
     let req = db().from('strategies').select('*, strategy_legs(*)').order('created_at', { ascending: false });
     if (query.status) req = req.eq('status', query.status);
@@ -106,7 +135,12 @@ export const strategiesService = {
     return (await q(req)).map(({ strategy_legs, ...strategyRow }) => toDto(strategyRow, strategy_legs));
   },
 
-  /** Detalle con cotización viva de cada pierna y el costo neto (débito > 0, crédito < 0). */
+  /**
+   * Obtiene el detalle de una estrategia con cotizaciones vivas y cálculo de costo neto (débito/crédito).
+   *
+   * @param {string} id - Identificador de la estrategia.
+   * @returns {Promise<object>} DTO de la estrategia enriquecido con precios en vivo.
+   */
   async get(id) {
     const { strategy, legs } = await loadStrategy(id);
     const snapshots = await alpaca.optionSnapshots(legs.map((leg) => leg.symbol)).catch(() => ({}));
@@ -137,6 +171,12 @@ export const strategiesService = {
     };
   },
 
+  /**
+   * Crea una nueva estrategia multi-leg y sus piernas en Supabase con rollback en caso de fallo.
+   *
+   * @param {object} body - Datos para crear la estrategia.
+   * @returns {Promise<object>} DTO de la estrategia creada con cotizaciones en vivo.
+   */
   async create(body) {
     const { strategy, legs } = await validate(body);
     const [row] = await q(db().from('strategies').insert(strategy).select());
@@ -149,7 +189,13 @@ export const strategiesService = {
     return this.get(row.id);
   },
 
-  /** PUT: reemplaza la estrategia completa (solo en borrador). */
+  /**
+   * Reemplaza por completo una estrategia y sus piernas (solo permitido en estado 'draft').
+   *
+   * @param {string} id - Identificador de la estrategia.
+   * @param {object} body - Datos actualizados de la estrategia.
+   * @returns {Promise<object>} DTO de la estrategia actualizada con cotizaciones en vivo.
+   */
   async update(id, body) {
     const { strategy: current } = await loadStrategy(id);
     if (current.status !== 'draft') throw conflict(`La estrategia ya está en estado ${current.status}; solo se edita en draft`);
@@ -160,17 +206,28 @@ export const strategiesService = {
     return this.get(id);
   },
 
-  /** DELETE: si ya se envió, primero intenta cancelar la orden en Alpaca. */
+  /**
+   * Elimina una estrategia; si ya fue enviada, intenta cancelar la orden en Alpaca primero.
+   *
+   * @param {string} id - Identificador de la estrategia.
+   * @returns {Promise<void>}
+   */
   async remove(id) {
     const { strategy } = await loadStrategy(id);
     if (strategy.status === 'submitted' && strategy.alpaca_order_id) {
       await alpaca.cancelOrder(strategy.alpaca_order_id).catch(() => {
-        // Ya ejecutada o cancelada: no bloquea el borrado local.
+        // Si ya está ejecutada o cancelada, no bloquea el borrado local en base de datos.
       });
     }
     await q(db().from('strategies').delete().eq('id', id));
   },
 
+  /**
+   * Envía una estrategia en borrador como orden multi-leg (mleg) a Alpaca Paper Trading.
+   *
+   * @param {string} id - Identificador de la estrategia.
+   * @returns {Promise<{strategy: object, order: object}>} DTO de la estrategia actualizada y orden enviada.
+   */
   async submit(id) {
     const { strategy, legs } = await loadStrategy(id);
     if (strategy.status !== 'draft') throw conflict(`La estrategia ya está en estado ${strategy.status}`);
@@ -179,7 +236,7 @@ export const strategiesService = {
       qty: String(strategy.qty),
       type: strategy.order_type,
       limit_price: strategy.order_type === 'limit' ? String(strategy.limit_price) : undefined,
-      time_in_force: 'day', // Alpaca solo acepta 'day' en opciones
+      time_in_force: 'day', // Alpaca solo acepta 'day' para órdenes de opciones
       legs: legs.map((leg) => ({
         symbol: leg.symbol,
         side: leg.side,

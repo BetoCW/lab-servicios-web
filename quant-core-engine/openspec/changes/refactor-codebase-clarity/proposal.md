@@ -42,6 +42,10 @@ Diversos módulos del motor cuantitativo, los servicios de mercado y las utiler�
   - En `pruebas/mcp/f0-api-mcp.js`, clarificar peticiones y variables de entorno (`targetRequest`, `httpResponse`, `envKey`, `reqItem`).
   - En `pruebas/colecciones/build.js`, usar constantes declarativas (`WORKSPACE_ID`, `BASE_ENVIRONMENT_ID`) y nombres legibles de carpetas.
   - En `pruebas/carga/k6.js`, renombrar respuestas en verificaciones (`response`).
+- **JSDoc exhaustivo y documentación técnica en inglés (Cuarta Pasada)**:
+  - Documentar exhaustivamente cada método público y transformador DTO en los 6 servicios de negocio (`watchlists`, `orders`, `optionChains`, `strategies`, `risk`, `market`) con anotaciones `@param`, `@returns` y descripción técnica en inglés.
+  - Dotar a la envoltura WebAssembly (`packages/quant-engine/index.js`) de tipado formal JSDoc para las 7 funciones matemáticas y de riesgo, renombrando variables de iteración (`c` -> `contract`, `l` -> `leg`).
+  - Traducir a inglés técnico todos los comentarios y docstrings existentes en la base de código (`indicators.js`, `occ.js`, `errors.js`, `alpaca.js`, `supabase.js`, `metrics.js`, `app.js`, `config.js`, `microservices/index.js`, `web/templates.js`, `engine/src/lib.rs`), en estricto cumplimiento de la Regla 8 de desarrollo, preservando las cadenas de error requeridas por las pruebas.
 
 ## Capabilities
 

@@ -65,3 +65,23 @@
 - [x] 12.1 Refactorizar `pruebas/integracion/gateway.test.js` (`app`, `server`, `gatewayUrl`, `response`).
 - [x] 12.2 Refactorizar `pruebas/mcp/f0-api-mcp.js` (`targetRequest`, `httpResponse`, `envKey`, `reqItem`), `pruebas/colecciones/build.js` (`WORKSPACE_ID`, etc.) y `pruebas/carga/k6.js`.
 - [x] 12.3 Ejecutar la suite completa de 27 pruebas unitarias (`npm --prefix pruebas test`) y pruebas de contrato (`node pruebas/contrato/openapi.test.js`) para confirmar cero regresiones.
+
+## 13. JSDoc & Tipado en Servicios de Negocio (Cuarta Pasada)
+
+- [x] 13.1 Documentar con JSDoc exhaustivo y mantener comentarios en español en `api/src/services/watchlists.service.js`, `api/src/services/orders.service.js` y `api/src/services/optionChains.service.js`.
+- [x] 13.2 Documentar con JSDoc exhaustivo y comentarios en español en `api/src/services/strategies.service.js`, `api/src/services/risk.service.js` y `api/src/services/market.service.js`.
+
+## 14. Documentación FFI y Envoltura WASM (Cuarta Pasada)
+
+- [x] 14.1 Documentar con JSDoc tipado completo (`@param`, `@returns`) `packages/quant-engine/index.js`, renombrar iteradores `contract` y `leg`, y documentar comentarios en español.
+- [x] 14.2 Documentar en Rustdoc `contract_from` y `legs_from` en `engine/src/lib.rs` y documentar en español.
+
+## 15. Librerías Base, Gateway y Plantillas Web (Cuarta Pasada)
+
+- [x] 15.1 Documentar y mantener en español el JSDoc de `api/src/lib/indicators.js`, `api/src/lib/occ.js`, `api/src/lib/errors.js` y `api/src/lib/metrics.js`.
+- [x] 15.2 Documentar con JSDoc y comentarios en español en `api/src/lib/alpaca.js`, `api/src/lib/supabase.js`, `api/src/app.js`, `api/src/config.js` y `api/src/microservices/index.js`.
+- [x] 15.3 Documentar con JSDoc funciones auxiliares en `web/templates.js` (`closest`, `atStrike`, `byDelta`, `createLeg`, `build`) y mantener comentarios internos en español.
+
+## 16. Verificación Final Global (Cuarta Pasada)
+
+- [x] 16.1 Ejecutar la suite completa de 27 pruebas unitarias (`npm --prefix pruebas test`) y pruebas de contrato (`node pruebas/contrato/openapi.test.js`) para confirmar 100% pass sin regresiones.

@@ -3,6 +3,11 @@
 import { config } from '../config.js';
 import { HttpError } from './errors.js';
 
+/**
+ * Genera los encabezados de autenticación para la API de Alpaca.
+ * @returns {Record<string, string>} Encabezados HTTP con credenciales APCA.
+ * @throws {HttpError} Si faltan las credenciales en la configuración del entorno.
+ */
 function headers() {
   if (!config.alpaca.keyId || !config.alpaca.secretKey) {
     throw new HttpError(503, 'Faltan ALPACA_KEY_ID / ALPACA_SECRET_KEY en el .env');
@@ -14,6 +19,11 @@ function headers() {
   };
 }
 
+/**
+ * Convierte un objeto de parámetros en una cadena query string sanitizada.
+ * @param {object} [params={}] - Parámetros de consulta.
+ * @returns {string} Cadena formateada '?k1=v1&k2=v2' o vacía.
+ */
 function toQuery(params = {}) {
   const searchParams = new URLSearchParams();
   for (const [paramKey, paramValue] of Object.entries(params)) {
@@ -25,6 +35,16 @@ function toQuery(params = {}) {
   return queryString ? `?${queryString}` : '';
 }
 
+/**
+ * Realiza una petición HTTP genérica hacia los endpoints de Alpaca.
+ *
+ * @param {string} base - URL base del servicio (trading o market data).
+ * @param {string} method - Método HTTP (GET, POST, PUT, PATCH, DELETE).
+ * @param {string} path - Ruta relativa del endpoint.
+ * @param {object} [opts={}] - Opciones de consulta y cuerpo JSON.
+ * @returns {Promise<any>} Respuesta deserializada en formato JSON o null para 204.
+ * @throws {HttpError} Si la respuesta de Alpaca no es exitosa.
+ */
 async function request(base, method, path, { query, body } = {}) {
   const res = await fetch(`${base}${path}${toQuery(query)}`, {
     method,

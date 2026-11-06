@@ -34,15 +34,34 @@ function withBuffers(inputs, outputLength, runFn) {
   }
 }
 
-/** Stride 7: [tipo, spot, strike, t, rate, div, vol|precio] */
+/**
+ * Serializa una lista de contratos en un buffer lineal con stride 7:
+ * [tipo, spot, strike, t, rate, div, vol|precio].
+ *
+ * @param {Array<object>} list - Lista de contratos a serializar.
+ * @param {string} trailingMetricKey - Clave métrica final ('vol' para pricing, 'price' para IV).
+ * @returns {Float64Array} Buffer plano f64 preparado para memoria WASM.
+ */
 const contractRows = (list, trailingMetricKey) =>
-  Float64Array.from(list.flatMap((c) => [KIND[c.type], c.spot, c.strike, c.t, c.rate ?? 0, c.div ?? 0, c[trailingMetricKey]]));
+  Float64Array.from(list.flatMap((contract) => [KIND[contract.type], contract.spot, contract.strike, contract.t, contract.rate ?? 0, contract.div ?? 0, contract[trailingMetricKey]]));
 
-/** Stride 6: [tipo, strike, t, qty, vol, multiplicador] */
+/**
+ * Serializa las piernas de una estrategia en un buffer lineal con stride 6:
+ * [tipo, strike, t, qty, vol, multiplicador].
+ *
+ * @param {Array<object>} legs - Lista de piernas de la estrategia.
+ * @returns {Float64Array} Buffer plano f64 preparado para memoria WASM.
+ */
 const legRows = (legs) =>
-  Float64Array.from(legs.flatMap((l) => [KIND[l.type], l.strike ?? 0, l.t ?? 0, l.qty, l.vol ?? 0, l.multiplier ?? (l.type === 'stock' ? 1 : 100)]));
+  Float64Array.from(legs.flatMap((leg) => [KIND[leg.type], leg.strike ?? 0, leg.t ?? 0, leg.qty, leg.vol ?? 0, leg.multiplier ?? (leg.type === 'stock' ? 1 : 100)]));
 
-/** Black-Scholes-Merton + griegas. vega/rho por 1 punto, theta por día. */
+/**
+ * Calcula precios y griegas de Black-Scholes-Merton en lote.
+ * Vega y rho se expresan por 1 punto porcentual, theta por día calendario.
+ *
+ * @param {Array<{type: 'call'|'put', spot: number, strike: number, t: number, vol: number, rate?: number, div?: number}>} contracts - Parámetros de cada contrato.
+ * @returns {Array<{price: number, delta: number, gamma: number, vega: number, theta: number, rho: number}>} Lista de valoraciones y sensibilidades.
+ */
 export function blackScholes(contracts) {
   const { out } = withBuffers(
     [contractRows(contracts, 'vol')],
@@ -55,7 +74,16 @@ export function blackScholes(contracts) {
   });
 }
 
-/** Árbol binomial CRR (americanas por defecto). */
+/**
+ * Valora opciones mediante el modelo de árbol binomial Cox-Ross-Rubinstein (CRR).
+ * Por defecto resuelve opciones de estilo americano con ejercicio temprano.
+ *
+ * @param {Array<{type: 'call'|'put', spot: number, strike: number, t: number, vol: number, rate?: number, div?: number}>} contracts - Parámetros de cada contrato.
+ * @param {object} [options={}] - Parámetros opcionales del árbol binomial.
+ * @param {number} [options.steps=200] - Cantidad de pasos temporales en el árbol.
+ * @param {boolean} [options.american=true] - Si es true valora estilo americano, si es false estilo europeo.
+ * @returns {Array<{price: number, delta: number, gamma: number, theta: number, earlyExercisePremium: number}>} Métricas del árbol.
+ */
 export function binomial(contracts, { steps = 200, american = true } = {}) {
   const { out } = withBuffers(
     [contractRows(contracts, 'vol')],
@@ -68,7 +96,13 @@ export function binomial(contracts, { steps = 200, american = true } = {}) {
   });
 }
 
-/** Volatilidad implícita (NaN si el precio viola no-arbitraje). */
+/**
+ * Calcula la volatilidad implícita invertida mediante el algoritmo híbrido Newton-Raphson/bisección.
+ * Retorna NaN si el precio viola los límites de no-arbitraje intrínseco.
+ *
+ * @param {Array<{type: 'call'|'put', spot: number, strike: number, t: number, price: number, rate?: number, div?: number}>} quotes - Cotizaciones observadas.
+ * @returns {number[]} Arreglo con la volatilidad implícita anualizada calculada para cada contrato.
+ */
 export function impliedVol(quotes) {
   const { out } = withBuffers(
     [contractRows(quotes, 'price')],
@@ -78,7 +112,20 @@ export function impliedVol(quotes) {
   return Array.from(out);
 }
 
-/** Matriz de P&L: filas = choques de spot relativos, columnas = choques de vol absolutos. */
+/**
+ * Calcula la matriz de P&L combinada evaluando escenarios simultáneos de choque de spot y volatilidad.
+ * Filas corresponden a choques relativos de spot, columnas a choques absolutos de volatilidad.
+ *
+ * @param {Array<{type: 'call'|'put'|'stock', strike?: number, t?: number, qty: number, vol?: number, multiplier?: number}>} legs - Piernas de la estrategia.
+ * @param {object} params - Configuración del análisis de matriz.
+ * @param {number} params.spot - Precio spot actual del subyacente.
+ * @param {number} [params.rate=0] - Tasa libre de riesgo continua anualizada.
+ * @param {number} [params.div=0] - Tasa continua de dividendos.
+ * @param {number} [params.horizonDays=0] - Horizonte de proyección en días (0 para P&L inmediato).
+ * @param {number[]} params.spotShocks - Lista de choques relativos en el precio spot (ej. [-0.1, 0, 0.1]).
+ * @param {number[]} params.volShocks - Lista de choques absolutos en volatilidad (ej. [-0.05, 0, 0.05]).
+ * @returns {number[][]} Matriz bidimensional [filas spot][columnas vol] de P&L esperado.
+ */
 export function pnlMatrix(legs, { spot, rate = 0, div = 0, horizonDays = 0, spotShocks, volShocks }) {
   const { out } = withBuffers(
     [legRows(legs), Float64Array.from(spotShocks), Float64Array.from(volShocks)],
@@ -101,7 +148,21 @@ export function pnlMatrix(legs, { spot, rate = 0, div = 0, horizonDays = 0, spot
   return spotShocks.map((_, i) => Array.from(out.subarray(i * volShocks.length, (i + 1) * volShocks.length)));
 }
 
-/** Monte Carlo (GBM con antitéticas) del P&L del portafolio al horizonte. */
+/**
+ * Simulación Monte Carlo del P&L del portafolio al horizonte con movimiento browniano geométrico (GBM) y variates antitéticas.
+ *
+ * @param {Array<{type: 'call'|'put'|'stock', strike?: number, t?: number, qty: number, vol?: number, multiplier?: number}>} legs - Piernas del portafolio.
+ * @param {object} params - Parámetros de simulación.
+ * @param {number} params.spot - Precio spot actual.
+ * @param {number} [params.rate=0] - Tasa libre de riesgo continua.
+ * @param {number} [params.div=0] - Tasa de dividendos continua.
+ * @param {number} params.vol - Volatilidad del subyacente.
+ * @param {number} params.horizonDays - Horizonte de tiempo en días.
+ * @param {number} [params.paths=10000] - Cantidad de caminos simulados.
+ * @param {number} [params.seed=1] - Semilla del generador pseudoaleatorio.
+ * @param {number} [params.bins=40] - Cantidad de intervalos para el histograma de frecuencias.
+ * @returns {{mean: number, std: number, var95: number, cvar95: number, var99: number, probProfit: number, min: number, max: number, baseValue: number, histogram: number[]}} Estadísticas de distribución de P&L.
+ */
 export function monteCarlo(legs, { spot, rate = 0, div = 0, vol, horizonDays, paths = 10000, seed = 1, bins = 40 }) {
   const { out } = withBuffers(
     [legRows(legs)],
@@ -113,7 +174,16 @@ export function monteCarlo(legs, { spot, rate = 0, div = 0, vol, horizonDays, pa
   return { mean, std, var95, cvar95, var99, probProfit, min, max, baseValue, histogram: Array.from(out.subarray(9)) };
 }
 
-/** Margen Reg T por pierna; reconoce spreads verticales (cada lado de un iron condor se cobra por separado). */
+/**
+ * Calcula el requerimiento de margen regulatorio Reg T por pierna, reconociendo spreads verticales.
+ *
+ * @param {Array<{type: 'call'|'put'|'stock', strike?: number, t?: number, qty: number, vol?: number, multiplier?: number}>} legs - Piernas de la estrategia.
+ * @param {object} params - Parámetros de mercado.
+ * @param {number} params.spot - Precio spot del subyacente.
+ * @param {number} [params.rate=0] - Tasa libre de riesgo.
+ * @param {number} [params.div=0] - Tasa de dividendos.
+ * @returns {{total: number, perLeg: number[]}} Margen total requerido y desglose por pierna.
+ */
 export function regTMargin(legs, { spot, rate = 0, div = 0 }) {
   const { ret, out } = withBuffers(
     [legRows(legs)],
@@ -123,7 +193,19 @@ export function regTMargin(legs, { spot, rate = 0, div = 0 }) {
   return { total: ret, perLeg: Array.from(out) };
 }
 
-/** Margen estilo SPAN: peor pérdida de 16 escenarios vs. mínimo por opción corta. */
+/**
+ * Calcula el margen de riesgo tipo SPAN evaluando los 16 escenarios estandarizados y el piso de opciones cortas.
+ *
+ * @param {Array<{type: 'call'|'put'|'stock', strike?: number, t?: number, qty: number, vol?: number, multiplier?: number}>} legs - Piernas de la estrategia.
+ * @param {object} params - Parámetros de escaneo SPAN.
+ * @param {number} params.spot - Precio spot del subyacente.
+ * @param {number} [params.rate=0] - Tasa libre de riesgo.
+ * @param {number} [params.div=0] - Tasa de dividendos.
+ * @param {number} [params.priceScan=0.15] - Rango de choque de precio relativo (15%).
+ * @param {number} [params.volScan=0.04] - Rango de choque de volatilidad (4 puntos).
+ * @param {number} [params.shortOptionMinimum=0] - Requerimiento mínimo monetario por opción corta.
+ * @returns {{margin: number, scanRisk: number, shortOptionMinimum: number, worstScenario: number, scenarios: number[]}} Desglose de riesgo y margen SPAN.
+ */
 export function spanMargin(legs, { spot, rate = 0, div = 0, priceScan = 0.15, volScan = 0.04, shortOptionMinimum = 0 }) {
   const { out } = withBuffers(
     [legRows(legs)],

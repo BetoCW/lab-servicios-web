@@ -12,12 +12,37 @@ const RATE = Number(process.env.RISK_FREE_RATE ?? 0.04);
 const YEAR_MS = 365 * 86400000;
 const SPOT_SHOCKS = [-0.1, -0.075, -0.05, -0.025, 0, 0.025, 0.05, 0.075, 0.1];
 const VOL_SHOCKS = [-0.1, -0.05, 0, 0.05, 0.1];
+
+/**
+ * Redondea un valor numérico a una cantidad fija de decimales si es finito.
+ * @param {number} v - Valor a redondear.
+ * @param {number} [d=4] - Cantidad de decimales.
+ * @returns {number|null} Valor redondeado o null si no es finito.
+ */
 const round = (v, d = 4) => (Number.isFinite(v) ? Math.round(v * 10 ** d) / 10 ** d : null);
 
-/** Años hasta el cierre del vencimiento (16:00 de Nueva York ≈ 20:00 UTC). */
+/**
+ * Calcula la fracción de años hasta el cierre de la expiración (16:00 de Nueva York ≈ 20:00 UTC).
+ * @param {string} expiration - Fecha de expiración (YYYY-MM-DD).
+ * @param {number} now - Marca de tiempo actual en milisegundos.
+ * @returns {number} Fracción de año restante hasta la expiración.
+ */
 const yearsTo = (expiration, now) => Math.max(0, (Date.parse(`${expiration}T20:00:00Z`) - now) / YEAR_MS);
 
 export const riskService = {
+  /**
+   * Ejecuta el análisis cuantitativo integral de riesgo para una estrategia dada.
+   * Obtiene datos de mercado de Alpaca, calcula griegas Black-Scholes, simulación Monte Carlo de P&L,
+   * matriz de escenarios de choque spot x vol y requisitos de margen regulatorio (Reg T y SPAN).
+   *
+   * @param {string} id - Identificador de la estrategia a analizar.
+   * @param {object} [query={}] - Parámetros de simulación opcionales.
+   * @param {number} [query.paths=50000] - Cantidad de trayectorias Monte Carlo (1000 - 500000).
+   * @param {number} [query.seed=42] - Semilla del generador pseudoaleatorio.
+   * @param {number} [query.horizon_days] - Horizonte de proyección en días (por defecto hasta la expiración más cercana).
+   * @returns {Promise<object>} Reporte completo de riesgo, griegas, márgenes y métricas de rendimiento.
+   * @throws {import('../lib/errors.js').HttpError} Si la estrategia tiene piernas vencidas o falta cotización de mercado.
+   */
   async analyze(id, query = {}) {
     const paths = Math.min(Math.max(Number(query.paths ?? 50000), 1000), 500000);
     const seed = Number(query.seed ?? 42);

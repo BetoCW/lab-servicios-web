@@ -1,18 +1,24 @@
 // Monitoreo mínimo: /health (para UptimeRobot / Docker) y /metrics en formato Prometheus.
-// shortcut: contadores en memoria por proceso (se reinician al reiniciar); si se escala a varias
-// réplicas, migrar a prom-client + Pushgateway o a un APM.
+// Los contadores residen en memoria por proceso; si se escala horizontalmente,
+// se recomienda migrar a prom-client con Pushgateway o a un APM dedicado.
 import { missingConfig } from '../config.js';
 
+/**
+ * Genera el paquete de middlewares de monitoreo, endpoint de salud y métricas Prometheus para un servicio.
+ *
+ * @param {string} service - Nombre identificador del servicio (ej. 'gateway', 'strategies').
+ * @returns {{ track: Function, health: Function, metrics: Function }} Conjunto de middlewares y controladores.
+ */
 export function monitoring(service) {
-  // In-memory request metric counters keyed by 'method|route|status'.
-  // Counters reset upon process restart; suitable for single-instance or sidecar scraping.
+  // Contadores de peticiones en memoria organizados por 'método|ruta|estado'.
+  // Se reinician con el proceso; adecuado para una sola instancia o recolección por sidecar.
   const series = new Map();
   const started = Date.now();
 
   const track = (req, res, next) => {
     const startTimeNs = process.hrtime.bigint();
     res.on('finish', () => {
-      // Use route pattern (e.g., /:id) rather than concrete path to prevent cardinality explosion.
+      // Usar el patrón de ruta parametrizada (ej. /:id) para evitar explosión de cardinalidad en métricas.
       const route = req.metricRoute ?? req.route?.path ?? (res.statusCode === 404 ? 'not_found' : 'other');
       const key = `${req.method}|${route}|${res.statusCode}`;
       const metricStat = series.get(key) ?? { count: 0, seconds: 0 };

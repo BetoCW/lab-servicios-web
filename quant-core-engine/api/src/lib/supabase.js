@@ -4,6 +4,11 @@ import { HttpError } from './errors.js';
 
 let client;
 
+/**
+ * Obtiene o inicializa la instancia singleton del cliente Supabase con privilegios administrativos.
+ * @returns {import('@supabase/supabase-js').SupabaseClient} Cliente de Supabase conectado.
+ * @throws {HttpError} Si faltan las variables de entorno de conexión.
+ */
 export function db() {
   if (!config.supabase.url || !config.supabase.secretKey) {
     throw new HttpError(503, 'Faltan SUPABASE_URL / SUPABASE_SECRET_KEY en el .env');

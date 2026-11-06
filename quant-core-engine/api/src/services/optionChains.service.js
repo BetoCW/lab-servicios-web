@@ -1,8 +1,5 @@
-// API 3 — Cadenas de opciones (Market Data F0).
-// POST define qué cadena seguir (subyacente + filtros) y la ingesta desde Alpaca:
-//   contratos  -> GET /v2/options/contracts
-//   cotización -> GET /v1beta1/options/snapshots (bid/ask, último, IV y griegas)
-// PUT cambia filtros y vuelve a ingestar; GET la lee de Supabase.
+// Servicio 3 — Cadenas de opciones (Market Data F0).
+// Ingesta contratos y cotizaciones vivas (bid/ask, IV, griegas) desde Alpaca y los persiste en Supabase.
 import { alpaca } from '../lib/alpaca.js';
 import { db, q } from '../lib/supabase.js';
 import { check, notFound } from '../lib/errors.js';
@@ -10,6 +7,11 @@ import { check, notFound } from '../lib/errors.js';
 const MAX_CONTRACTS = 300;
 const DB_INSERT_BATCH_SIZE = 500;
 
+/**
+ * Transforma una fila de cadena de opciones de la base de datos a DTO del cliente.
+ * @param {object} chainRow - Registro de cadena en Supabase.
+ * @returns {object} DTO normalizado de la cadena de opciones.
+ */
 const toChainDto = (chainRow) => ({
   id: chainRow.id,
   underlying: chainRow.underlying,
@@ -25,6 +27,11 @@ const toChainDto = (chainRow) => ({
   updatedAt: chainRow.updated_at,
 });
 
+/**
+ * Transforma una fila de cotización de opción de la base de datos a DTO de la API.
+ * @param {object} quoteRow - Registro de cotización en Supabase.
+ * @returns {object} DTO normalizado de cotización.
+ */
 const toQuoteDto = (quoteRow) => ({
   symbol: quoteRow.symbol,
   type: quoteRow.option_type,
@@ -52,6 +59,11 @@ const FILTER_RULES = {
   strike_max: { type: 'number' },
 };
 
+/**
+ * Extrae los campos de filtro del cuerpo de la petición.
+ * @param {object} body - Cuerpo de la petición en bruto.
+ * @returns {object} Configuración de filtros.
+ */
 function filtersFrom(body) {
   return {
     expiration_from: body.expiration_from ?? null,
@@ -62,13 +74,22 @@ function filtersFrom(body) {
   };
 }
 
+/**
+ * Carga el registro de una cadena desde Supabase por su ID.
+ * @param {string} id - Identificador de la cadena.
+ * @returns {Promise<object>} Registro de la cadena.
+ */
 async function getChainRow(id) {
   const rows = await q(db().from('option_chains').select('*').eq('id', id).limit(1));
   if (!rows.length) throw notFound(`No existe la cadena ${id}`);
   return rows[0];
 }
 
-/** Descarga contratos + snapshots de Alpaca y reemplaza las cotizaciones guardadas. */
+/**
+ * Descarga contratos de opciones y cotizaciones vivas desde Alpaca, actualizando Supabase.
+ * @param {object} chain - Registro de configuración de la cadena.
+ * @returns {Promise<object>} Registro de cadena actualizado.
+ */
 async function ingest(chain) {
   const contracts = await alpaca.listOptionContracts(
     {
@@ -87,10 +108,10 @@ async function ingest(chain) {
   let underlyingPrice = null;
   try {
     const stockSnapshot = await alpaca.stockSnapshot(chain.underlying);
-    // Alpaca shorthand keys: 'p' = latest trade price, 'c' = daily bar close price
+    // Claves abreviadas de Alpaca: 'p' = precio del último trade, 'c' = precio de cierre de barra diaria
     underlyingPrice = stockSnapshot?.latestTrade?.p ?? stockSnapshot?.dailyBar?.c ?? null;
   } catch {
-    // Subyacente sin datos (p. ej. índice): la cadena se guarda igual.
+    // Si el subyacente no tiene barras de negociación (ej. índices), se guarda igualmente la cadena.
   }
 
   const rows = contracts.map((contract) => {
@@ -104,7 +125,7 @@ async function ingest(chain) {
       strike: Number(contract.strike_price),
       expiration: contract.expiration_date,
       open_interest: contract.open_interest != null ? Number(contract.open_interest) : null,
-      // Alpaca quote shorthand keys: 'bp' = bid price, 'ap' = ask price, 't' = timestamp
+      // Claves abreviadas de Alpaca para cotización: 'bp' = precio bid, 'ap' = precio ask, 't' = timestamp
       bid: quote.bp ?? null,
       ask: quote.ap ?? null,
       last: snapshot.latestTrade?.p ?? null,
@@ -133,12 +154,23 @@ async function ingest(chain) {
 }
 
 export const optionChainsService = {
+  /**
+   * Lista las cadenas de opciones monitoreadas con filtros opcionales.
+   * @param {{ underlying?: string }} [query={}] - Parámetros de filtro.
+   * @returns {Promise<object[]>} Lista de DTOs de cadenas.
+   */
   async list(query = {}) {
     let req = db().from('option_chains').select('*').order('created_at', { ascending: false });
     if (query.underlying) req = req.eq('underlying', String(query.underlying).toUpperCase());
     return (await q(req)).map(toChainDto);
   },
 
+  /**
+   * Obtiene una cadena de opciones con su lista completa de cotizaciones.
+   * @param {string} id - Identificador de la cadena.
+   * @param {{ expiration?: string, type?: string }} [query={}] - Filtros opcionales de cotización.
+   * @returns {Promise<object>} DTO de la cadena con sus cotizaciones.
+   */
   async get(id, query = {}) {
     const chain = await getChainRow(id);
     let req = db().from('option_quotes').select('*').eq('chain_id', id).order('expiration').order('strike').order('option_type');
@@ -148,6 +180,11 @@ export const optionChainsService = {
     return { ...toChainDto(chain), quotes: quotes.map(toQuoteDto) };
   },
 
+  /**
+   * Crea una nueva definición de cadena de opciones e ingesta contratos de Alpaca.
+   * @param {object} body - Parámetros de configuración de la cadena.
+   * @returns {Promise<object>} DTO de la cadena creada con sus cotizaciones.
+   */
   async create(body) {
     check(body, { underlying: { required: true, type: 'string' }, ...FILTER_RULES });
     const [chain] = await q(
@@ -159,14 +196,19 @@ export const optionChainsService = {
     try {
       await ingest(chain);
     } catch (err) {
-      // Si Alpaca rechaza la ingesta no se deja una cadena vacía colgando.
+      // Si la ingesta de Alpaca falla, elimina el registro huérfano.
       await q(db().from('option_chains').delete().eq('id', chain.id));
       throw err;
     }
     return this.get(chain.id);
   },
 
-  /** PUT: reemplaza los filtros (y el subyacente) y vuelve a ingestar. */
+  /**
+   * Actualiza los parámetros de filtro de una cadena existente y reingesta sus datos.
+   * @param {string} id - Identificador de la cadena.
+   * @param {object} body - Nuevos parámetros de filtro.
+   * @returns {Promise<object>} DTO de la cadena actualizada con cotizaciones frescas.
+   */
   async update(id, body) {
     check(body, { underlying: { required: true, type: 'string' }, ...FILTER_RULES });
     await getChainRow(id);
@@ -181,12 +223,21 @@ export const optionChainsService = {
     return this.get(id);
   },
 
-  /** POST /:id/refresh: misma cadena, cotizaciones nuevas. */
+  /**
+   * Refresca las cotizaciones de mercado y griegas de una cadena de opciones existente.
+   * @param {string} id - Identificador de la cadena.
+   * @returns {Promise<object>} DTO de la cadena actualizada.
+   */
   async refresh(id) {
     await ingest(await getChainRow(id));
     return this.get(id);
   },
 
+  /**
+   * Elimina una cadena de opciones y sus cotizaciones asociadas en cascada.
+   * @param {string} id - Identificador de la cadena.
+   * @returns {Promise<void>}
+   */
   async remove(id) {
     const deleted = await q(db().from('option_chains').delete().eq('id', id).select('id'));
     if (!deleted.length) throw notFound(`No existe la cadena ${id}`);

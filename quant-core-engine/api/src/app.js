@@ -9,7 +9,16 @@ import { errorHandler, notFoundHandler } from './lib/errors.js';
 import { monitoring } from './lib/metrics.js';
 import { fileURLToPath } from 'node:url';
 
-// Shell HTTP del gateway: CORS, GraphQL, Swagger y el front; `apiHandler` reenvía /api/v1 a los microservicios.
+/**
+ * Crea y configura la aplicación Express del gateway o microservicio, configurando middlewares,
+ * Private Network Access, CORS, endpoints de monitoreo, GraphQL Yoga, Swagger UI y enrutamiento API.
+ *
+ * @param {object} options - Opciones de inicialización.
+ * @param {string} options.service - Nombre del servicio.
+ * @param {import('express').RequestHandler} options.apiHandler - Enrutador o proxy para la API v1.
+ * @param {import('express').RequestHandler} [options.health] - Controlador personalizado de health check.
+ * @returns {import('express').Express} Aplicación Express configurada.
+ */
 export function createApp({ service, apiHandler, health }) {
   const app = express();
 
