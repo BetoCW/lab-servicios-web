@@ -1,0 +1,9 @@
+    ✓ 'p(95)<800' p(95)=439.46ms
+    ✗ 'rate<0.01' rate=20.52%
+    checks_succeeded...: 79.47% 1634 out of 2056
+    ✗ /api/v1/watchlists 200
+      ↳  17% — ✓ 92 / ✗ 422
+    http_req_duration..............: avg=138.23ms min=3.81ms med=104.32ms max=1.39s    p(90)=285.18ms p(95)=439.46ms
+      { expected_response:true }...: avg=120.29ms min=3.81ms med=100.53ms max=836.39ms p(90)=248.69ms p(95)=345.24ms
+    http_req_failed................: 20.52% 422 out of 2056
+    iteration_duration.............: avg=1.55s    min=1.25s  med=1.47s    max=2.75s    p(90)=1.94s    p(95)=2.07s   

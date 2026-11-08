@@ -3,9 +3,18 @@
 import { config } from '../config.js';
 import { alpaca } from '../lib/alpaca.js';
 import { badRequest } from '../lib/errors.js';
+import { memo } from '../lib/cache.js';
+import { normalizeSymbol } from '../lib/symbol.js';
 import { bollinger, ema, macd, rsi, sma } from '../lib/indicators.js';
 
 const DAY_IN_MS = 86_400_000;
+const SNAPSHOT_TTL_MS = 2000;
+
+/**
+ * Snapshot de la acción (último trade, bid/ask, vela del día) con caché de 2 s: la gráfica en vivo
+ * y el resumen del ticker lo comparten, así que varias pestañas o endpoints cuestan UNA llamada.
+ */
+export const stockSnapshot = memo(SNAPSHOT_TTL_MS, (symbol) => alpaca.stockSnapshot(symbol), (symbol) => symbol);
 
 // Configuración de temporalidades: [segundos por vela, días hacia atrás a solicitar].
 // Cuántos días hacia atrás pedir para juntar `limit` velas aun con fines de semana y feriados.
@@ -37,8 +46,7 @@ export const marketService = {
    * @throws {import('../lib/errors.js').HttpError} Si el símbolo o timeframe son inválidos o no hay datos disponibles.
    */
   async bars(symbol, query = {}) {
-    const normalizedSymbol = String(symbol).toUpperCase();
-    if (!/^[A-Z][A-Z.]{0,9}$/.test(normalizedSymbol)) throw badRequest('Símbolo inválido');
+    const normalizedSymbol = normalizeSymbol(symbol);
     const timeframe = query.timeframe ?? '5Min';
     if (!TIMEFRAMES[timeframe]) throw badRequest(`timeframe debe ser uno de: ${Object.keys(TIMEFRAMES).join(', ')}`);
     const limit = Math.min(Math.max(Number(query.limit) || 300, 50), 1000);
@@ -51,7 +59,7 @@ export const marketService = {
         sort: 'desc',
         start: new Date(Date.now() - lookbackDays * DAY_IN_MS).toISOString(),
       }),
-      alpaca.stockSnapshot(normalizedSymbol),
+      stockSnapshot(normalizedSymbol),
     ]);
 
     // Mapeo del formato de barra Alpaca: t (timestamp), o (open), h (high), l (low), c (close), v (volume).

@@ -31,6 +31,16 @@ export const config = {
     orders: env.ORDERS_URL ?? 'http://localhost:3062',
     'option-chains': env.OPTION_CHAINS_URL ?? 'http://localhost:3063',
     strategies: env.STRATEGIES_URL ?? 'http://localhost:3064',
+    ai: env.AI_URL ?? 'http://localhost:3065',
+  },
+
+  // Validación de riesgo con IA (OpenRouter). La llave vive solo en .env.
+  ai: {
+    apiKey: env.OPENROUTER_API_KEY ?? '',
+    model: env.OPENROUTER_MODEL ?? 'nvidia/nemotron-3-ultra-550b-a55b:free',
+    // Si el modelo principal falla (404, 429 por límite gratuito), se prueban estos en orden.
+    fallbackModels: (env.AI_FALLBACK_MODELS ?? 'google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free').split(',').filter(Boolean),
+    timeoutMs: Number(env.AI_TIMEOUT_MS ?? 25000),
   },
 
   supabase: {

@@ -62,6 +62,9 @@ async function request(base, method, path, { query, body } = {}) {
   }
   if (!res.ok) {
     // Alpaca responde { code, message }; se respeta su status (404, 403, 422...).
+    // Mensaje entendible cuando el ticker no existe (Alpaca responde "no snapshot found for XXXX").
+    const missing = String(data?.message ?? '').match(/no snapshot found for (\S+)/i);
+    if (missing) throw new HttpError(404, `No existe el ticker ${missing[1]} en Alpaca. Búscalo por nombre en el buscador.`);
     throw new HttpError(res.status, `Alpaca: ${data?.message ?? res.statusText}`, { alpacaCode: data?.code });
   }
   return data;
@@ -72,6 +75,8 @@ const data = (method, path, opts) => request(config.alpaca.dataUrl, method, path
 
 export const alpaca = {
   account: () => trading('GET', '/v2/account'),
+  /** Catálogo de activos negociables (para el buscador de tickers). */
+  assets: (query) => trading('GET', '/v2/assets', { query }),
 
   // ---- watchlists
   listWatchlists: () => trading('GET', '/v2/watchlists'),

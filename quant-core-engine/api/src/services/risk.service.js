@@ -7,6 +7,7 @@ import { alpaca } from '../lib/alpaca.js';
 import { badRequest } from '../lib/errors.js';
 import { parseOcc } from '../lib/occ.js';
 import { loadStrategy } from './strategies.service.js';
+import { extendedRisk } from './riskExtended.service.js';
 
 const RATE = Number(process.env.RISK_FREE_RATE ?? 0.04);
 const YEAR_MS = 365 * 86400000;
@@ -44,9 +45,25 @@ export const riskService = {
    * @throws {import('../lib/errors.js').HttpError} Si la estrategia tiene piernas vencidas o falta cotización de mercado.
    */
   async analyze(id, query = {}) {
+    const { strategy, legs } = await loadStrategy(id);
+    return this.analyzeLegs(strategy, legs, query);
+  },
+
+  /**
+   * Núcleo del análisis: recibe la estrategia y sus piernas YA en memoria (no necesita base de datos).
+   * Lo usan dos caminos: analyze(id) para estrategias guardadas y el recomendador, que evalúa
+   * plantillas candidatas que todavía no existen en Supabase.
+   *
+   * @param {{id?: string, name: string, underlying: string, qty: number}} strategy - Datos de la estrategia.
+   * @param {Array<{symbol: string, side: 'buy'|'sell', ratio_qty: number}>} legs - Piernas con símbolo OCC.
+   * @param {object} [query={}] - Mismos parámetros que analyze (paths, seed, horizon_days).
+   * @param {{stock?: object, snaps?: object, history?: object}} [prefetched={}] - Datos ya descargados
+   *   (snapshot de la acción, snapshots de opciones, historial) para no repetir llamadas a Alpaca.
+   * @returns {Promise<object>} Mismo reporte que analyze, más el bloque `extended`.
+   */
+  async analyzeLegs(strategy, legs, query = {}, prefetched = {}) {
     const paths = Math.min(Math.max(Number(query.paths ?? 50000), 1000), 500000);
     const seed = Number(query.seed ?? 42);
-    const { strategy, legs } = await loadStrategy(id);
     const now = Date.now();
 
     const contracts = legs.map((leg) => ({ ...leg, ...parseOcc(leg.symbol) }));
@@ -57,8 +74,8 @@ export const riskService = {
 
     // ---------------------------------------------------- datos reales de Alpaca
     const [stock, snaps] = await Promise.all([
-      alpaca.stockSnapshot(strategy.underlying),
-      alpaca.optionSnapshots(contracts.map((contract) => contract.symbol)),
+      prefetched.stock ?? alpaca.stockSnapshot(strategy.underlying),
+      prefetched.snaps ?? alpaca.optionSnapshots(contracts.map((contract) => contract.symbol)),
     ]);
     const spot = stock?.latestTrade?.p ?? stock?.dailyBar?.c;
     if (!spot) throw badRequest(`Alpaca no tiene precio para ${strategy.underlying}`);
@@ -146,6 +163,26 @@ export const riskService = {
       : null;
 
     const binWidth = (mc.max - mc.min) / mc.histogram.length;
+    const histogram = mc.histogram.map((count, i) => ({
+      from: round(mc.min + i * binWidth, 2),
+      to: round(mc.min + (i + 1) * binWidth, 2),
+      count,
+    }));
+    // Riesgo extendido (VaR histórico, drawdown, Sharpe, beta, estrés, intervalos de confianza).
+    // Si Alpaca no entrega historial, el reporte base sigue siendo válido: extended = null.
+    const extended = await extendedRisk({
+      underlying: strategy.underlying,
+      spot,
+      engineLegs,
+      mc,
+      histogram,
+      paths,
+      horizonDays,
+      underlyingVol,
+      portfolioDelta: portfolio.delta,
+      rate: RATE,
+      history: prefetched.history,
+    }).catch(() => null);
     return {
       strategy: { id: strategy.id, name: strategy.name, underlying: strategy.underlying, qty: strategy.qty },
       inputs: {
@@ -169,12 +206,9 @@ export const riskService = {
         probProfit: round(mc.probProfit),
         min: round(mc.min, 2),
         max: round(mc.max, 2),
-        histogram: mc.histogram.map((count, i) => ({
-          from: round(mc.min + i * binWidth, 2),
-          to: round(mc.min + (i + 1) * binWidth, 2),
-          count,
-        })),
+        histogram,
       },
+      extended,
       pnlMatrix: { spotShocks: SPOT_SHOCKS, volShocks: VOL_SHOCKS, values: matrix.map((row) => row.map((val) => round(val, 2))) },
       pnlAtHorizon: SPOT_SHOCKS.map((shock, i) => ({ spotShock: shock, spot: round(spot * (1 + shock), 2), pnl: round(atExpiry[i], 2) })),
       greeks: Object.fromEntries(Object.entries(portfolio).map(([metric, val]) => [metric, round(val, 2)])),

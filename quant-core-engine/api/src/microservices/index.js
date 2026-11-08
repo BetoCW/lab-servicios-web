@@ -3,7 +3,8 @@
 //   cliente ─► gateway :3060 ─┬─► watchlists    :3061  (/watchlists)
 //   (REST, GraphQL,           ├─► orders        :3062  (/orders, /account)
 //    Swagger, front)          ├─► option-chains :3063  (/option-chains)
-//                             └─► strategies    :3064  (/strategies, motor WASM)
+//                             ├─► strategies    :3064  (/strategies, motor WASM, recomendador)
+//                             └─► ai            :3065  (/ai, validación de riesgo con OpenRouter)
 //
 // Cada servicio monta solo sus routers; la lógica vive en services/ y no se duplica.
 import express from 'express';
@@ -19,6 +20,7 @@ export const SERVICES = {
   orders: { port: 3062, paths: ['orders', 'account'] },
   'option-chains': { port: 3063, paths: ['option-chains', 'market'] },
   strategies: { port: 3064, paths: ['strategies'] },
+  ai: { port: 3065, paths: ['ai'] },
 };
 
 // Ruta pública (/orders, /account...) -> microservicio dueño.

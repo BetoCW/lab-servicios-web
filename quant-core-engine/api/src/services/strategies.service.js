@@ -119,6 +119,38 @@ export async function loadStrategy(id) {
   return { strategy, legs };
 }
 
+/**
+ * Pone precios en vivo a las piernas de una estrategia y calcula su costo neto (débito > 0 / crédito < 0).
+ * Fórmula: neto por unidad = Σ (±1 según compra/venta) · mid · ratio, con mid = (bid + ask) / 2;
+ * total = neto · 100 (tamaño del contrato) · qty. Si alguna pierna no cotiza, `pricing` es null.
+ *
+ * @param {object} strategy - Fila de la estrategia.
+ * @param {Array<object>} legs - Filas de las piernas.
+ * @param {Record<string, object>} snapshots - Snapshots de Alpaca por símbolo OCC.
+ * @returns {object} DTO con `legs[].quote` y `pricing`.
+ */
+export function priceStrategy(strategy, legs, snapshots) {
+  let net = 0;
+  let complete = legs.length > 0;
+  const priced = legs.map((leg) => {
+    const quote = snapshots[leg.symbol]?.latestQuote;
+    if (!quote?.bp && !quote?.ap) {
+      complete = false;
+      return leg;
+    }
+    const mid = (quote.bp + quote.ap) / 2;
+    net += (leg.side === 'buy' ? 1 : -1) * mid * leg.ratio_qty;
+    return {
+      ...leg,
+      quote: { bid: quote.bp, ask: quote.ap, mid, iv: snapshots[leg.symbol].impliedVolatility ?? null, delta: snapshots[leg.symbol].greeks?.delta ?? null },
+    };
+  });
+  return {
+    ...toDto(strategy, priced),
+    pricing: complete ? { netPerUnit: Math.round(net * 10000) / 10000, netTotal: Math.round(net * CONTRACT_SIZE * strategy.qty * 100) / 100 } : null,
+  };
+}
+
 export const strategiesService = {
   /**
    * Lista estrategias con filtros opcionales por estado y símbolo subyacente.
@@ -132,7 +164,11 @@ export const strategiesService = {
     let req = db().from('strategies').select('*, strategy_legs(*)').order('created_at', { ascending: false });
     if (query.status) req = req.eq('status', query.status);
     if (query.underlying) req = req.eq('underlying', String(query.underlying).toUpperCase());
-    return (await q(req)).map(({ strategy_legs, ...strategyRow }) => toDto(strategyRow, strategy_legs));
+    const rows = await q(req);
+    if (query.priced !== 'true') return rows.map(({ strategy_legs, ...strategyRow }) => toDto(strategyRow, strategy_legs));
+    // ?priced=true: precios en vivo de TODAS las estrategias con una sola consulta a Alpaca (evita pedir el detalle una por una).
+    const snapshots = await alpaca.optionSnapshots([...new Set(rows.flatMap((row) => row.strategy_legs.map((leg) => leg.symbol)))]).catch(() => ({}));
+    return rows.map(({ strategy_legs, ...strategyRow }) => priceStrategy(strategyRow, strategy_legs, snapshots));
   },
 
   /**
@@ -144,31 +180,7 @@ export const strategiesService = {
   async get(id) {
     const { strategy, legs } = await loadStrategy(id);
     const snapshots = await alpaca.optionSnapshots(legs.map((leg) => leg.symbol)).catch(() => ({}));
-    let net = 0;
-    let complete = legs.length > 0;
-    const priced = legs.map((leg) => {
-      const quote = snapshots[leg.symbol]?.latestQuote;
-      if (!quote?.bp && !quote?.ap) {
-        complete = false;
-        return leg;
-      }
-      const mid = (quote.bp + quote.ap) / 2;
-      net += (leg.side === 'buy' ? 1 : -1) * mid * leg.ratio_qty;
-      return {
-        ...leg,
-        quote: {
-          bid: quote.bp,
-          ask: quote.ap,
-          mid,
-          iv: snapshots[leg.symbol].impliedVolatility ?? null,
-          delta: snapshots[leg.symbol].greeks?.delta ?? null,
-        },
-      };
-    });
-    return {
-      ...toDto(strategy, priced),
-      pricing: complete ? { netPerUnit: Math.round(net * 10000) / 10000, netTotal: Math.round(net * CONTRACT_SIZE * strategy.qty * 100) / 100 } : null,
-    };
+    return priceStrategy(strategy, legs, snapshots);
   },
 
   /**

@@ -128,3 +128,32 @@ export const watchlistsService = {
     return toDto(watchlist);
   },
 };
+
+// ---------------------------------------------------------------------------
+// Caché corto de list() — por qué existe:
+//   list() hace 1 + N llamadas a Alpaca y además espeja en Supabase. Alpaca limita a 200 peticiones
+//   por minuto; bajo la prueba de carga (k6, 25 usuarios) esto devolvía 429 en ~20 % de las lecturas.
+//   Con 5 s de caché la lectura repetida se sirve de memoria. Cualquier escritura (crear, editar,
+//   borrar, agregar o quitar símbolo) invalida el caché, así que nunca se ve un dato viejo tras un cambio.
+// ---------------------------------------------------------------------------
+const LIST_CACHE_TTL_MS = 5000;
+let listCache = null;
+const listFromAlpaca = watchlistsService.list.bind(watchlistsService);
+
+watchlistsService.list = async () => {
+  if (listCache && Date.now() - listCache.at < LIST_CACHE_TTL_MS) return listCache.value;
+  const value = await listFromAlpaca();
+  listCache = { at: Date.now(), value };
+  return value;
+};
+
+for (const method of ['create', 'update', 'remove', 'addSymbol', 'removeSymbol']) {
+  const original = watchlistsService[method].bind(watchlistsService);
+  watchlistsService[method] = async (...args) => {
+    try {
+      return await original(...args);
+    } finally {
+      listCache = null;
+    }
+  };
+}

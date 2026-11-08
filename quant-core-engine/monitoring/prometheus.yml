@@ -3,4 +3,4 @@ global:
 scrape_configs:
   - job_name: f0-microservicios
     static_configs:
-      - targets: ['gateway:3060', 'watchlists:3061', 'orders:3062', 'option-chains:3063', 'strategies:3064']
+      - targets: ['gateway:3060', 'watchlists:3061', 'orders:3062', 'option-chains:3063', 'strategies:3064', 'ai:3065']

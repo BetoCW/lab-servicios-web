@@ -1,4 +1,5 @@
 # Microservicios F0 + monitoreo.   docker compose up -d --build
+#   ai          http://localhost:3065   (interno: validación de riesgo con OpenRouter)
 #   gateway     http://localhost:3060   (REST, GraphQL, Swagger, front, /health, /metrics)
 #   prometheus  http://localhost:9090
 #   grafana     http://localhost:3000   (admin / admin, dashboard "F0 microservicios")
@@ -26,8 +27,13 @@ services:
   strategies:
     <<: *service
     command: [node, src/microservices/start.js, strategies]
-    environment: { HOST: 0.0.0.0 }
+    environment: { HOST: 0.0.0.0, AI_URL: 'http://ai:3065' }
     healthcheck: { <<: *hc, test: [CMD, wget, -qO-, http://localhost:3064/health] }
+  ai:
+    <<: *service
+    command: [node, src/microservices/start.js, ai]
+    environment: { HOST: 0.0.0.0 }
+    healthcheck: { <<: *hc, test: [CMD, wget, -qO-, http://localhost:3065/health] }
   gateway:
     <<: *service
     command: [node, src/microservices/start.js, gateway]
@@ -37,8 +43,9 @@ services:
       ORDERS_URL: http://orders:3062
       OPTION_CHAINS_URL: http://option-chains:3063
       STRATEGIES_URL: http://strategies:3064
+      AI_URL: http://ai:3065
     ports: ['3060:3060']
-    depends_on: [watchlists, orders, option-chains, strategies]
+    depends_on: [watchlists, orders, option-chains, strategies, ai]
 
   prometheus:
     image: prom/prometheus:v3.5.0

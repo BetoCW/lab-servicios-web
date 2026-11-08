@@ -89,3 +89,11 @@ apis:
     spec: changes/microservicios/specs/microservices/spec.md
     origen: ia-sdd
     estructura: gateway + 4 procesos que reutilizan los mismos routers del monolito
+  recomendador-ia:
+    servicio: strategies :3064 (/strategies/recommend, /strategies/auto) + ai :3065 (/ai/validate-risk)
+    spec: changes/recomendador-ia/specs/recommender/spec.md
+    origen: manual-optimizado
+    optimizaciones:
+      - fórmulas de riesgo puras y probadas con valores conocidos (lib/stats.js), explicables una por una
+      - las 4 plantillas se miden con un solo viaje de datos a Alpaca y reutilizan snapshots (sin repetir llamadas)
+      - la IA falla cerrado: sin validación no se opera, y nunca bloquea al resto del sistema

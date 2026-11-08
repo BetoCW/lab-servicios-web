@@ -26,6 +26,7 @@ export const openapi = {
     { name: 'Strategies', description: 'Estrategias multi-leg validadas contra Alpaca y enviadas como orden mleg' },
     { name: 'Market', description: 'Velas e indicadores técnicos en vivo para la gráfica (Alpaca Market Data)' },
     { name: 'Account', description: 'Estado de la cuenta paper (verifica las llaves)' },
+    { name: 'AI', description: 'Validación de riesgo con IA (OpenRouter); si no está disponible responde sin bloquear' },
   ],
   paths: {
     '/account': { get: op('Account', 'Cuenta de Alpaca', { responses: ok({ type: 'object' }) }) },
@@ -109,10 +110,61 @@ export const openapi = {
         parameters: [
           { name: 'status', in: 'query', schema: { type: 'string', enum: ['draft', 'submitted', 'canceled'] } },
           { name: 'underlying', in: 'query', schema: { type: 'string' } },
+          { name: 'priced', in: 'query', schema: { type: 'boolean', default: false }, description: 'true = incluye cotizaciones vivas y `pricing` de cada estrategia con UNA sola consulta a Alpaca (en vez de pedir el detalle una por una)' },
         ],
         responses: ok({ type: 'array', items: ref('Strategy') }),
       }),
       post: op('Strategies', 'Crear estrategia (valida cada pierna en Alpaca)', { requestBody: json(ref('StrategyInput')), responses: ok(ref('Strategy'), 201) }),
+    },
+    '/strategies/recommend': {
+      get: op('Strategies', 'Recomendar la mejor estrategia (Straddle, Strangle, Calendar, Diagonal) para un ticker', {
+        description:
+          'Con datos reales de Alpaca y el motor Rust/WASM evalúa las 4 estrategias, las ordena por puntaje (40 % prob. de ganancia + 30 % valor esperado/riesgo + 30 % encaje con el mercado) y explica por qué gana la primera. Incluye VaR/CVaR, drawdown, Sharpe/Sortino, beta, estrés e intervalos del 95 %.',
+        parameters: [
+          { name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } },
+          { name: 'paths', in: 'query', schema: { type: 'integer', default: 20000, minimum: 2000, maximum: 100000 } },
+        ],
+        responses: ok({ type: 'object' }),
+      }),
+    },
+    '/strategies/recommend/backtest': {
+      get: op('Strategies', 'Backtest del recomendador: % de acierto histórico y calibración', {
+        description:
+          'Re-juega el último año del ticker cada 5 días hábiles y mide en qué % de las veces habría ganado la primera opción a 30 días, y si la probabilidad anunciada coincide con la real. La IV histórica se aproxima con la volatilidad histórica de largo plazo.',
+        parameters: [{ name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } }],
+        responses: ok({ type: 'object' }),
+      }),
+    },
+    '/strategies/auto': {
+      post: op('Strategies', 'Ejecutar automático: recomienda, valida riesgo e IA y opera en Alpaca PAPER', {
+        description:
+          'Solo envía la orden si pasa el filtro de riesgo Y la IA responde "approved". No garantiza ganancias. Con dryRun=true calcula todo sin enviar la orden.',
+        requestBody: json({
+          type: 'object',
+          required: ['symbol'],
+          properties: {
+            symbol: { type: 'string', example: 'AAPL' },
+            dryRun: { type: 'boolean', default: false },
+            confirm: { type: 'boolean', description: 'Obligatorio en true para enviar la orden (no hace falta con dryRun)' },
+          },
+        }),
+        responses: ok({ type: 'object' }),
+      }),
+    },
+    '/ai/validate-risk': {
+      post: op('AI', 'Validar el riesgo de una estrategia con IA (OpenRouter)', {
+        description:
+          'Devuelve approved, caution o rejected con su justificación. Si no hay llave o el modelo falla responde verdict = unavailable (sin validación) y nunca bloquea al resto del sistema.',
+        requestBody: json({ type: 'object', required: ['metrics'], properties: { metrics: { type: 'object' } } }),
+        responses: ok({
+          type: 'object',
+          properties: {
+            verdict: { type: 'string', enum: ['approved', 'caution', 'rejected', 'unavailable'] },
+            reason: { type: 'string' },
+            model: { type: 'string', nullable: true },
+          },
+        }),
+      }),
     },
     '/strategies/{id}': {
       parameters: [idParam],
@@ -123,7 +175,7 @@ export const openapi = {
     '/strategies/{id}/risk': {
       parameters: [idParam],
       get: op('Strategies', 'Riesgo con el motor Rust/WASM sobre datos reales de Alpaca', {
-        description: 'Monte Carlo del P&L al vencimiento, matriz precio × vol, márgenes Reg T / SPAN, griegas del portafolio y precio del motor vs. mid de Alpaca.',
+        description: 'Monte Carlo del P&L al vencimiento, matriz precio × vol, márgenes Reg T / SPAN, griegas del portafolio y precio del motor vs. mid de Alpaca. El bloque `extended` agrega VaR/CVaR histórico y Monte Carlo, drawdown, Sharpe/Sortino, beta contra SPY, estrés ±2σ con caída de IV e intervalos de confianza del 95 %.',
         parameters: [
           { name: 'paths', in: 'query', schema: { type: 'integer', default: 50000, minimum: 1000, maximum: 500000 } },
           { name: 'seed', in: 'query', schema: { type: 'integer', default: 42 } },
@@ -135,6 +187,26 @@ export const openapi = {
     '/strategies/{id}/submit': {
       parameters: [idParam],
       post: op('Strategies', 'Enviar como orden multi-leg a Alpaca', { responses: ok({ type: 'object' }, 201) }),
+    },
+    '/market/search': {
+      get: op('Market', 'Buscar tickers por símbolo o nombre de la empresa', {
+        description:
+          'Autocompletado para quien no conoce los símbolos: "apple" devuelve AAPL, "tes" devuelve TSLA... Usa el catálogo de activos de Alpaca (~14 000 acciones y ETFs) con 6 horas de caché. Sin q devuelve los subyacentes más comunes.',
+        parameters: [
+          { name: 'q', in: 'query', schema: { type: 'string', example: 'apple' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 12, minimum: 1, maximum: 50 } },
+          { name: 'optionsOnly', in: 'query', schema: { type: 'boolean', default: false }, description: 'true = solo los que tienen opciones listadas' },
+        ],
+        responses: ok({ type: 'object' }),
+      }),
+    },
+    '/market/overview': {
+      get: op('Market', 'Resumen del ticker para la pantalla única (cotización, indicadores, vencimientos)', {
+        description:
+          'Una sola llamada al cambiar de ticker: cotización (TTL 2 s), indicadores diarios SMA20/EMA9/RSI14/Bollinger/HV30 (TTL 5 min) y vencimientos de opciones de los próximos 120 días (TTL 10 min). Si fallan indicadores o vencimientos, esos campos van en null y el motivo en `errors`; solo la cotización es indispensable.',
+        parameters: [{ name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } }],
+        responses: ok({ type: 'object' }),
+      }),
     },
     '/market/{symbol}/bars': {
       get: op('Market', 'Velas en vivo + indicadores (SMA20, EMA9, Bollinger, RSI14, MACD)', {

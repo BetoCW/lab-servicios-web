@@ -6,6 +6,7 @@ import { ordersService as orders } from '../services/orders.service.js';
 import { optionChainsService as chains } from '../services/optionChains.service.js';
 import { strategiesService as strategies } from '../services/strategies.service.js';
 import { riskService } from '../services/risk.service.js';
+import { recommendService } from '../services/recommend.service.js';
 
 const typeDefs = /* GraphQL */ `
   type Watchlist { id: ID! name: String! symbols: [String!]! createdAt: String updatedAt: String }
@@ -53,6 +54,12 @@ const typeDefs = /* GraphQL */ `
     marketCost: Float modelCost: Float! monteCarloMs: Float!
   }
 
+  type RankedStrategy {
+    rank: Int! name: String! score: Float! probProfit: Float expectedValue: Float
+    worstSimulated: Float var95: Float marginRegT: Float error: String
+  }
+  type Recommendation { symbol: String! explanation: String! volView: String! ranking: [RankedStrategy!]! }
+
   input WatchlistInput { name: String! symbols: [String!] }
   input OrderInput {
     symbol: String! qty: Float! side: String! type: String! time_in_force: String!
@@ -79,6 +86,7 @@ const typeDefs = /* GraphQL */ `
     strategies(status: String, underlying: String): [Strategy!]!
     strategy(id: ID!): Strategy
     strategyRisk(id: ID!, paths: Int, seed: Int): StrategyRisk
+    recommendStrategies(symbol: String!): Recommendation!
   }
 
   type Mutation {
@@ -140,6 +148,21 @@ const resolvers = {
         marketCost: riskAnalysisResult.cost.market,
         modelCost: riskAnalysisResult.cost.model,
         monteCarloMs: riskAnalysisResult.performance.monteCarloMs,
+      };
+    }),
+    recommendStrategies: wrap(async (_, { symbol }) => {
+      const recommendation = await recommendService.recommend(symbol);
+      return {
+        symbol: recommendation.symbol,
+        explanation: recommendation.explanation,
+        volView: recommendation.signals.volView,
+        ranking: recommendation.ranking.map((entry) => ({
+          rank: entry.rank,
+          name: entry.name,
+          score: entry.score,
+          error: entry.error ?? null,
+          ...(entry.metrics ?? {}),
+        })),
       };
     }),
   },

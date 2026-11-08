@@ -7,6 +7,7 @@ import { yoga } from './graphql/index.js';
 import { openapi } from './docs/openapi.js';
 import { errorHandler, notFoundHandler } from './lib/errors.js';
 import { monitoring } from './lib/metrics.js';
+import { securityHeaders } from './lib/security.js';
 import { fileURLToPath } from 'node:url';
 
 /**
@@ -21,6 +22,8 @@ import { fileURLToPath } from 'node:url';
  */
 export function createApp({ service, apiHandler, health }) {
   const app = express();
+  app.disable('x-powered-by'); // no anunciar "Express" en cada respuesta
+  app.use(securityHeaders);
 
   // Private Network Access: permite que el front publicado en GitHub Pages (https) llame a
   // esta API en localhost; Chrome lo pregunta en el preflight.

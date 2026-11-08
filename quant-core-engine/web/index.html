@@ -4,221 +4,433 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quant Core F0</title>
+<!-- Tipografía: Fraunces (display: marca, ticker, títulos) + Instrument Sans (interfaz) + JetBrains Mono (solo cifras). Si no cargan, caen a Georgia / system-ui / ui-monospace. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="templates.js"></script>
 <style>
+/* =====================================================================================
+   SISTEMA DE DISEÑO · "Tinta y marfil" (editorial financiero)
+   TODA la paleta y la tipografía viven aquí: cambia estas variables y cambia la marca.
+   Oscuro = tinta verde-negra con marfil y lima ácido. Claro = papel cálido con verde bosque.
+   Verde/rojo SOLO para compra/venta y ganancia/pérdida. Sin morados ni azules-violeta.
+   ===================================================================================== */
+:root {
+  /* tipografía */
+  --display: 'Fraunces', Georgia, 'Times New Roman', serif;   /* marca, ticker y títulos de panel */
+  --font: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* solo cifras */
+  /* modo claro: papel cálido */
+  --bg: #f3eee1; --panel: #fbf8ef; --panel2: #efe9d8; --line: #d8d0b8;
+  --text: #15201b; --muted: #5a695f;
+  --accent: #1f4d3a; --accent-fg: #fbf8ef; --accent-soft: #e0e7d1; --focus: rgba(31, 77, 58, .45);
+  --ok: #17703f; --ok-soft: #d9ead4; --bad: #b4301c; --bad-soft: #f4dcd2; --warn: #765000; --warn-soft: #f1e4c0;
+  --shadow: 0 4px 14px rgba(21, 32, 27, .16);
+  /* medidas del app-shell */
+  --top: 48px; --foot: 28px; --dock: 232px; --rail: 220px; --side: 340px;
+  --r: 6px; --r-sm: 4px; --t: 150ms;
+}
+@media (prefers-color-scheme: dark) {
   :root {
-    --bg: #f6f7f9; --panel: #fff; --text: #16181d; --muted: #646b78; --line: #e2e5ea;
-    --accent: #2457d6; --accent-soft: #e8eefc; --ok: #13804a; --ok-soft: #e3f4ea;
-    --bad: #c2322b; --bad-soft: #fbe7e6; --warn: #9a6200; --warn-soft: #fdf2dc;
+    --bg: #0b1210; --panel: #111a17; --panel2: #16221d; --line: #22302a;
+    --text: #ece6d6; --muted: #8a9a91;
+    --accent: #d9f24f; --accent-fg: #0b1210; --accent-soft: #1c2a12; --focus: rgba(217, 242, 79, .5);
+    --ok: #46d79b; --ok-soft: #0f2a20; --bad: #ff6f61; --bad-soft: #32160f; --warn: #e6c75a; --warn-soft: #2b2510;
+    --shadow: 0 4px 14px rgba(0, 0, 0, .5);
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1115; --panel: #171a20; --text: #e7e9ee; --muted: #9aa1ad; --line: #2a2f38;
-      --accent: #7aa2ff; --accent-soft: #1d2740; --ok: #4cc488; --ok-soft: #14291f;
-      --bad: #ff7b72; --bad-soft: #351a19; --warn: #e3b341; --warn-soft: #30260f;
-    }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 16px; }
-  .wrap { max-width: 1100px; margin: 0 auto; }
-  .top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
-  h1 { font-size: 17px; margin: 0; }
-  h1 small { color: var(--muted); font-weight: 400; }
-  .conn { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  .stats { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; color: var(--muted); font-size: 13px; }
-  .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
-  nav { display: flex; gap: 4px; margin-top: 12px; overflow-x: auto; }
-  nav button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 12px; color: var(--muted); font-weight: 500; }
-  nav button.on { color: var(--accent); border-color: var(--accent); }
-  main { padding: 16px; }
-  section { display: none; } section.on { display: block; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-  .card h2 { font-size: 14px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
-  label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
-  input, select, button { font: inherit; color: var(--text); }
-  input, select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; }
-  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-weight: 500; }
-  button.ghost { background: var(--accent-soft); color: var(--accent); }
-  button.danger { background: var(--bad-soft); color: var(--bad); }
-  button.sm { padding: 3px 8px; font-size: 12px; }
-  button:disabled { opacity: .5; cursor: wait; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th { color: var(--muted); font-weight: 500; font-size: 12px; }
-  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
-  .scroll { overflow-x: auto; }
-  .chip { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 4px 2px 9px; margin: 2px; font-size: 12px; font-weight: 500; }
-  .chip button { background: none; color: inherit; padding: 0 5px; font-size: 13px; }
-  .badge { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 500; background: var(--line); color: var(--muted); }
-  .badge.ok { background: var(--ok-soft); color: var(--ok); }
-  .badge.bad { background: var(--bad-soft); color: var(--bad); }
-  .badge.warn { background: var(--warn-soft); color: var(--warn); }
-  .muted { color: var(--muted); }
-  .empty { color: var(--muted); padding: 10px 0; }
-  .buy { color: var(--ok); font-weight: 600; } .sell { color: var(--bad); font-weight: 600; }
-  #log { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 220px; overflow: auto; }
-  #log div { padding: 2px 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
-  #log pre { white-space: pre-wrap; word-break: break-all; margin: 4px 0 6px; color: var(--muted); }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; }
-  .kpi { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
-  .kpi span { display: block; color: var(--muted); font-size: 12px; }
-  .kpi b { font-size: 18px; font-variant-numeric: tabular-nums; }
-  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
-  .heat td { text-align: center; font-variant-numeric: tabular-nums; }
-  svg text { fill: var(--muted); font-size: 11px; }
-  .help { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: none; }
-  .chart { height: 380px; } .chart.sm { height: 130px; margin-top: 6px; }
-  .help code { background: rgba(0,0,0,.08); padding: 1px 4px; border-radius: 4px; }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 var(--font); overflow: hidden; font-optical-sizing: auto; }
+b, th { font-weight: 600; }
+/* Fraunces con peso 600 y tamaño óptico alto: marca, ticker y títulos */
+.brand, #mkSymbol, .card h2, dialog > .dh { font-family: var(--display); font-weight: 600; font-variation-settings: 'opsz' 72; }
+.n, .mono, td.n, th.n, .kpi b, #acct b, .q { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.buy { color: var(--ok); font-weight: 600; } .sell { color: var(--bad); font-weight: 600; }
+.pad { padding: 10px 12px; }
+
+/* ---------- controles ---------- */
+input, select, button { font: inherit; color: var(--text); }
+input, select { background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px; min-width: 0; transition: border-color var(--t); }
+button { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: var(--r-sm); padding: 6px 11px; cursor: pointer; font-weight: 500; transition: filter var(--t), background var(--t); }
+button:hover { filter: brightness(1.08); }
+button.ghost { background: var(--accent-soft); color: var(--accent); }
+button.danger { background: var(--bad-soft); color: var(--bad); }
+button.sm { padding: 2px 8px; font-size: 12px; }
+button.ic { padding: 3px 8px; line-height: 1; }
+button:disabled { opacity: .5; cursor: wait; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; box-shadow: 0 0 0 4px var(--focus); }
+label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+summary { cursor: pointer; font-weight: 500; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.scroll { overflow-x: auto; }
+
+/* ---------- tablas compactas ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; background: var(--panel); z-index: 1; }
+td.n, th.n { text-align: right; }
+td.cut { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.empty { color: var(--muted); padding: 10px 12px; }
+.heat td { text-align: center; }
+
+/* ---------- insignias, chips y KPIs ---------- */
+.badge { display: inline-block; border-radius: var(--r-sm); padding: 0 8px; font-size: 11px; font-weight: 500; background: var(--line); color: var(--muted); }
+.badge.ok { background: var(--ok-soft); color: var(--ok); } .badge.bad { background: var(--bad-soft); color: var(--bad); } .badge.warn { background: var(--warn-soft); color: var(--warn); }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); color: var(--accent); border-radius: var(--r-sm); padding: 1px 4px 1px 9px; margin: 2px; font-size: 12px; font-weight: 500; }
+.chip button { background: none; color: inherit; padding: 0 5px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 10px 0; }
+.kpi { background: var(--panel2); border-radius: var(--r-sm); padding: 6px 9px; }
+.kpi span { display: block; color: var(--muted); font-size: 11px; }
+.kpi b { font-size: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin-bottom: 14px; }
+.card h2 { font-size: 14px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+code { font-family: var(--mono); font-size: 12px; }
+svg text { fill: var(--muted); font: 11px var(--mono); }
+
+/* ---------- esqueletos de carga (discretos) ---------- */
+.skel { display: block; border-radius: 4px; background: linear-gradient(90deg, var(--panel2) 25%, var(--line) 50%, var(--panel2) 75%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(5px); } }
+@media (prefers-reduced-motion: reduce) { .skel, #recTable tr { animation: none !important; } * { transition: none !important; } }
+
+/* =====================================================================================
+   APP-SHELL: barra superior · (riel | centro | lateral) · dock · pie. Ocupa el alto de la ventana.
+   ===================================================================================== */
+#app { height: 100vh; height: 100dvh; display: grid; grid-template-rows: var(--top) minmax(0, 1fr) auto var(--foot); }
+
+/* 1) barra superior */
+#top { display: flex; align-items: center; gap: 12px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--accent); min-width: 0; }
+.brand { font-size: 19px; white-space: nowrap; letter-spacing: -.01em; }
+.brand small { font: 500 10px var(--mono); color: var(--accent-fg); background: var(--accent); border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: 3px; letter-spacing: .04em; }
+#mkForm { display: flex; align-items: center; gap: 8px; min-width: 0; }
+#mkSymbol { font-size: 24px; line-height: 1.1; width: 140px; text-transform: uppercase; padding: 2px 10px; border-radius: var(--r-sm); border-color: var(--accent); letter-spacing: .02em; }
+#mkForm label.live { flex-direction: row; align-items: center; gap: 5px; white-space: nowrap; }
+.sp { flex: 1; }
+.pill { background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 3px 12px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill b { color: var(--text); font-weight: 500; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); }
+
+/* menús flotantes (ajustes, peticiones) */
+.menu { position: fixed; z-index: 70; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; animation: rise var(--t) both; }
+#menuLog { width: min(520px, 94vw); max-height: 50vh; overflow: auto; }
+#log { font: 12px/1.5 var(--mono); }
+#log div { padding: 2px 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
+#log pre { white-space: pre-wrap; word-break: break-all; margin: 4px 0 6px; color: var(--muted); }
+
+.help { position: fixed; z-index: 60; top: calc(var(--top) + 8px); left: 50%; transform: translateX(-50%); width: min(620px, 94vw); background: var(--warn-soft); color: var(--warn); border-radius: var(--r); padding: 8px 12px; box-shadow: var(--shadow); display: none; }
+.help code { background: rgba(0, 0, 0, .08); padding: 1px 4px; border-radius: 4px; }
+
+/* 2-4) zona de trabajo: riel de watchlists | centro | lateral del recomendador */
+#work { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr) var(--side); gap: 10px; padding: 10px 10px 8px; min-height: 0; }
+#rail, #center, #side { min-height: 0; display: flex; flex-direction: column; }
+.pnl { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+.ph { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line); flex: none; }
+.ph b { font-family: var(--display); font-variation-settings: 'opsz' 48; font-size: 15px; color: var(--text); letter-spacing: -.005em; }
+.ph .acts { display: flex; gap: 5px; align-items: center; }
+.body { overflow: auto; flex: 1; min-height: 0; }
+
+/* riel: watchlists como lista de símbolos con precio y % */
+#rail { overflow: hidden; }
+.wl { border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.wlh { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 2px 10px; }
+.wlh b { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.wla, .wladd { display: flex; gap: 5px; padding: 3px 8px; flex-wrap: wrap; }
+.wladd input { flex: 1; min-width: 0; }
+.sym { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; cursor: pointer; border-left: 2px solid transparent; transition: background var(--t), border-color var(--t); }
+.sym:hover { background: var(--panel2); }
+.sym.on { background: var(--accent-soft); border-left-color: var(--accent); }
+.sym b { font-family: var(--mono); font-size: 12px; flex: 1; }
+.sym .q { display: flex; gap: 8px; font-size: 11px; } .sym .q span { min-width: 44px; text-align: right; }
+.sym .x { background: none; color: var(--muted); padding: 0 4px; opacity: 0; } .sym:hover .x, .sym .x:focus-visible { opacity: 1; }
+
+/* centro: cotización compacta + gráfica a todo el alto */
+#mkQuote { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; flex: none; overflow: hidden; }
+#mkQuote .kpi { background: none; border-right: 1px solid var(--line); border-radius: 0; padding: 6px 12px; margin: 0; min-width: 0; }
+#mkQuote .kpi:last-child { border-right: 0; }
+#mkQuote .kpi span { text-transform: uppercase; letter-spacing: .05em; font-size: 10px; }
+#mkQuote .kpi b { font-size: 17px; font-weight: 500; white-space: nowrap; }
+#mkQuote .kpi b.t { font-family: var(--font); font-weight: 600; font-size: 13px; }
+#mkQuote .skel { height: 30px; margin: 8px 12px; }
+.chartbox { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-top: 8px; }
+#chPrice { flex: 1; min-height: 120px; }
+.pane { flex: none; border-top: 1px solid var(--line); }
+.pane > button { display: flex; width: 100%; justify-content: space-between; background: var(--panel2); color: var(--muted); border-radius: 0; padding: 2px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.pane .chart { height: 84px; }
+.pane.off .chart { display: none; }
+
+/* lateral derecho con scroll interno */
+#side { overflow: auto; gap: 8px; padding-right: 2px; }
+#side .pnl { flex: none; }
+#recTable { font-size: 12px; }
+#recTable tr { animation: rise 180ms both; animation-delay: calc(var(--i, 0) * 45ms); transition: background var(--t); }
+#recTable tr[data-i] { cursor: pointer; }
+#recTable tr[data-i]:hover { background: var(--panel2); }
+#recTable tr.pick { background: var(--accent-soft); }
+#recTable td { padding: 5px 8px; white-space: normal; }
+#recTable td.n { white-space: nowrap; }
+.bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 4px; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; width: var(--w); transition: width 300ms; }
+.why { margin: 8px 10px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sel .kpis { grid-template-columns: 1fr 1fr; margin: 8px 10px; }
+.sel .kpi b { font-size: 15px; }
+.sel .legs { margin: 6px 10px 0; font-size: 11px; font-family: var(--mono); }
+.sel .row { padding: 0 10px 10px; }
+.sel, .det { transition: opacity var(--t); }
+.det { margin: 6px 10px 0; } .det p { margin: 6px 0; }
+.det.sig .kpis { grid-template-columns: 1fr 1fr; }
+.aviso { margin: 8px 10px; font-size: 11px; background: var(--warn-soft); color: var(--warn); border-radius: var(--r-sm); padding: 4px 8px; }
+#autoOut { padding: 0 10px 10px; font-size: 12px; } #autoOut .grid2 { grid-template-columns: 1fr; gap: 8px; }
+
+/* 5) dock inferior: tres paneles lado a lado, cada uno con su scroll */
+#dock { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 10px; padding: 0 10px 8px; height: var(--dock); min-height: 0; }
+.dp { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.st { padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.st .top1 b { font-family: var(--display); font-variation-settings: 'opsz' 48; font-weight: 600; font-size: 14px; }
+.st .top1 { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.st .acts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.st details { margin-top: 2px; font-size: 12px; }
+.chh { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.chh select { padding: 2px 6px; }
+.chh .muted { margin-left: auto; }
+
+/* pie: plegar dock + bitácora */
+#foot { display: flex; align-items: center; gap: 10px; padding: 0 12px; border-top: 1px solid var(--line); background: var(--panel); font-size: 12px; color: var(--muted); }
+#foot button { padding: 1px 9px; font-size: 12px; }
+.dockOff #dock { display: none; }
+
+/* autocompletado de tickers */
+#tickerBox { position: fixed; z-index: 90; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); max-height: 320px; overflow: auto; min-width: 300px; max-width: 460px; }
+#tickerBox .tk { padding: 6px 10px; cursor: pointer; display: flex; gap: 8px; align-items: baseline; border-bottom: 1px solid var(--line); }
+#tickerBox .tk:last-child { border-bottom: 0; }
+#tickerBox .tk.on, #tickerBox .tk:hover { background: var(--accent-soft); }
+#tickerBox .tk b { min-width: 58px; font-family: var(--mono); }
+#tickerBox .tk span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+#tickerBox .tk small { color: var(--muted); }
+#tickerBox .hint { padding: 6px 10px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); }
+
+/* diálogos */
+dialog { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--text); padding: 16px; box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(5, 8, 12, .55); }
+dialog > .dh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 600; }
+#detalle { width: min(1000px, 96vw); max-height: 92vh; background: var(--bg); }
+#dlgStrat { position: fixed; margin: 0; right: 14px; bottom: calc(var(--foot) + var(--dock) + 14px); left: auto; top: auto; width: min(560px, 94vw); z-index: 40; }
+dialog#dlgStrat:not([open]) { display: none; }
+
+/* =====================================================================================
+   RESPONSIVE
+   < 1100 px: el riel pasa a franja horizontal de chips sobre la gráfica.
+   <  800 px: todo apilado (gráfica, recomendador, dock) con scroll de página normal.
+   ===================================================================================== */
+@media (max-width: 1450px) { .hs, .chh .muted { display: none; } }
+@media (max-width: 1100px) {
+  :root { --side: 310px; }
+  #work { grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto minmax(0, 1fr); }
+  #rail { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+  #rail .ph { border: 0; } #rail .ph b { display: none; }
+  #wlList { display: flex; overflow-x: auto; overflow-y: hidden; align-items: center; }
+  .wl { display: flex; align-items: center; border: 0; padding: 0; flex: none; }
+  .wlh b { display: none; } .wla, .wladd { padding: 0; } .wls { display: flex; }
+  .sym { border-left: 0; border-radius: var(--r-sm); padding: 2px 10px; margin: 3px; background: var(--panel2); }
+  .sym .x { display: none; }
+  #brand-s, .brand small { display: none; }
+}
+@media (max-width: 800px) {
+  body { overflow: auto; }
+  #app { height: auto; display: block; }
+  #top { flex-wrap: wrap; padding: 8px 12px; height: auto; }
+  #acct { display: none; }
+  #work { display: flex; flex-direction: column; }
+  #center { min-height: 520px; } #chPrice { min-height: 300px; }
+  #mkQuote { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #side { overflow: visible; }
+  #dock { display: flex; flex-direction: column; height: auto; }
+  .dp { max-height: 320px; }
+  #dlgStrat { bottom: 14px; }
+}
 </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="top">
-      <h1>Quant Core F0 <small>· Market Data </small></h1>
-      <div class="conn">
-        <input id="apiUrl" size="26" aria-label="URL de la API">
-        <button id="connect" class="ghost">Conectar</button>
-        <span id="connBadge" class="badge">sin conexión</span>
-      </div>
-    </div>
-    <div class="stats" id="stats"></div>
-    <nav id="tabs">
-      <button data-tab="watchlists" class="on">Watchlists</button>
-      <button data-tab="chains">Cadenas de opciones</button>
-      <button data-tab="strategies">Estrategias</button>
-      <button data-tab="orders">Órdenes</button>
-      <button data-tab="market">Gráfica en vivo</button>
-    </nav>
-  </div>
+<div id="app" class="">
+
+<!-- 1) BARRA SUPERIOR: marca · ticker (protagonista) · temporalidad · en vivo | cuenta · conexión · ajustes -->
+<header id="top">
+  <div class="brand">Quant Core <small>F0</small></div>
+  <form id="mkForm" autocomplete="off">
+    <input name="symbol" id="mkSymbol" data-ticker autocomplete="off" aria-label="Ticker" placeholder="Ticker o empresa" size="8">
+    <button class="ghost ic" aria-label="Cargar ticker" title="Cargar (Enter)">↵</button>
+    <select id="mkTf" aria-label="Temporalidad"><option>1Min</option><option selected>5Min</option><option>15Min</option><option>1Hour</option><option>1Day</option></select>
+    <label class="live"><input type="checkbox" id="mkLive" checked> En vivo</label>
+  </form>
+  <div class="sp"></div>
+  <div class="pill" id="acct">Paper · sin conexión</div>
+  <span class="dot" id="connDot" title="sin conexión" role="status" aria-label="estado de conexión"></span>
+  <button class="ghost ic" id="btnGear" aria-label="Ajustes" title="Ajustes de conexión">⚙</button>
 </header>
 
-<main class="wrap">
-  <div class="help" id="help">
-    No se pudo conectar con la API. Levántala en tu máquina:
-    <code>cd quant-core-engine/api && npm run dev</code> y vuelve a pulsar <b>Conectar</b>.
-    Si Chrome pregunta por <i>acceso a la red local</i>, permítelo.
-  </div>
+<!-- Ajustes: URL de la API, Conectar y estrategia guardada en la gráfica (escondidos para no estorbar) -->
+<div class="menu" id="menuGear" hidden>
+  <label>URL de la API <input id="apiUrl" size="30"></label>
+  <button id="connect">Conectar</button>
+  <label>Estrategia guardada en la gráfica <select id="mkStrat"><option value="">—</option></select></label>
+</div>
+<div class="help" id="help">
+  No se pudo conectar con la API. Levántala en tu máquina:
+  <code>cd quant-core-engine/api && npm run dev</code> y pulsa <b>Conectar</b> (⚙).
+  Si Chrome pregunta por <i>acceso a la red local</i>, permítelo.
+</div>
 
-  <!-- 1. WATCHLISTS -->
-  <section id="watchlists" class="on">
-    <div class="card">
-      <h2>Nueva watchlist <span class="muted">POST /watchlists</span></h2>
-      <form class="row" id="wlForm">
-        <label>Nombre <input name="name" required placeholder="Tech F0"></label>
-        <label style="flex:1">Símbolos (coma) <input name="symbols" placeholder="AAPL, MSFT, SPY"></label>
-        <button>Crear</button>
-      </form>
+<main id="work">
+  <!-- 2) RIEL IZQUIERDO: watchlists como lista de símbolos. Clic = setTicker. -->
+  <aside id="rail" class="pnl">
+    <div class="ph"><b>Watchlists</b><button class="ghost sm ic" id="btnNewWl" title="Nueva watchlist" aria-label="Nueva watchlist">＋</button></div>
+    <div id="wlList" class="body"></div>
+  </aside>
+
+  <!-- 3) CENTRO: tarjetas de cotización + gráfica a todo el alto (RSI/MACD plegables) -->
+  <section id="center">
+    <div class="pnl" id="mkQuote"></div>
+    <div class="pnl chartbox">
+      <div id="chPrice"></div>
+      <div class="pane" id="paneRsi"><button type="button" data-pane="paneRsi"><span>RSI 14</span><span>▾</span></button><div class="chart" id="chRsi"></div></div>
+      <div class="pane" id="paneMacd"><button type="button" data-pane="paneMacd"><span>MACD 12/26/9</span><span>▾</span></button><div class="chart" id="chMacd"></div></div>
     </div>
-    <div id="wlList"></div>
   </section>
 
-  <!-- 2. CHAINS -->
-  <section id="chains">
-    <div class="card">
-      <h2>Seguir una cadena <span class="muted">POST /option-chains</span></h2>
-      <form class="row" id="chForm">
-        <label>Subyacente <input name="underlying" required value="SPY" size="6"></label>
-        <label>Vence desde <input name="expiration_from" type="date"></label>
-        <label>Vence hasta <input name="expiration_to" type="date"></label>
-        <label>Tipo <select name="option_type"><option value="">ambos</option><option>call</option><option>put</option></select></label>
-        <label>Strike mín <input name="strike_min" type="number" step="any" size="6"></label>
-        <label>Strike máx <input name="strike_max" type="number" step="any" size="6"></label>
-        <button>Ingestar desde Alpaca</button>
-      </form>
+  <!-- 4) LATERAL DERECHO: recomendador y ejecución automática -->
+  <aside id="side">
+    <div class="pnl" id="recCard">
+      <div class="ph"><b>Recomendador</b><span class="acts"><button class="ghost sm" id="recRun" title="Volver a calcular">Recalcular</button><button class="ghost sm" id="recBacktest" title="Qué tan seguido acertó en el último año">Backtest</button></span></div>
+      <div id="recOut"><div class="pad muted">Elige un ticker arriba.</div></div>
+      <div id="recSel" class="sel" hidden></div>
     </div>
-    <div class="card">
-      <h2>Cadenas guardadas <span class="muted">GET /option-chains</span></h2>
-      <div class="scroll"><table id="chTable"></table></div>
-    </div>
-    <div class="card" id="chDetail" hidden></div>
-  </section>
-
-  <!-- 3. STRATEGIES -->
-  <section id="strategies">
-    <div class="card">
-      <h2>Armar estrategia <span class="muted">POST /strategies</span></h2>
-      <p class="muted" style="margin:0 0 10px">Agrega piernas desde una cadena (botones <b>+C</b> / <b>+V</b>), máximo 4.</p>
-      <form class="row" id="stForm">
-        <label>Nombre <input name="name" required value="Bull call spread"></label>
-        <label>Cantidad <input name="qty" type="number" min="1" value="1" size="4"></label>
-        <label>Tipo <select name="order_type"><option>limit</option><option>market</option></select></label>
-        <label>Límite (neto) <input name="limit_price" type="number" step="0.01" value="0.01" size="6"></label>
-        <button>Guardar borrador</button>
-      </form>
-      <div class="row" style="margin-top:10px">
-        <label>Plantilla <select id="tplName"></select></label>
-        <button type="button" class="ghost" id="tplBuild">Armar desde la cadena abierta</button>
-        <span class="muted">Usa el vencimiento elegido en “Cadenas”; calendar y diagonal toman el último vencimiento como lejano.</span>
+    <div class="pnl" id="autoCard">
+      <div class="ph"><b>Ejecutar automático</b><span class="badge warn">PAPER</span></div>
+      <p class="aviso"><b>Aviso:</b> no garantiza ganancias; opera solo con dinero simulado. Envía la orden únicamente si pasa el filtro de riesgo y el de la IA.</p>
+      <div class="row" style="padding:0 10px 10px;align-items:center">
+        <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="autoDry"> Solo simular</label>
+        <button id="autoRun" style="margin-left:auto">Ejecutar automático</button>
       </div>
-      <div id="legs" style="margin-top:10px"></div>
+      <div id="autoOut"></div>
     </div>
-    <div class="card" id="riskPanel" hidden></div>
-    <div id="stList"></div>
-  </section>
-
-  <!-- 4. ORDERS -->
-  <section id="orders">
-    <div class="card">
-      <h2>Nueva orden <span class="muted">POST /orders · paper</span></h2>
-      <form class="row" id="orForm">
-        <label>Símbolo <input name="symbol" required value="AAPL" size="7"></label>
-        <label>Cant. <input name="qty" type="number" min="1" value="1" size="4"></label>
-        <label>Lado <select name="side"><option>buy</option><option>sell</option></select></label>
-        <label>Tipo <select name="type"><option>limit</option><option>market</option></select></label>
-        <label>Límite <input name="limit_price" type="number" step="0.01" value="1" size="6"></label>
-        <label>Vigencia <select name="time_in_force"><option>gtc</option><option>day</option></select></label>
-        <button>Enviar</button>
-      </form>
-    </div>
-    <div class="card">
-      <h2>Órdenes <span class="row"><button class="ghost sm" id="orRefresh">Actualizar</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></h2>
-      <div class="scroll"><table id="orTable"></table></div>
-    </div>
-  </section>
-
-  <!-- 5. MARKET -->
-  <section id="market">
-    <div class="card">
-      <h2>Gráfica en vivo <span class="muted">GET /market/{symbol}/bars · Alpaca</span></h2>
-      <form class="row" id="mkForm">
-        <label>Símbolo <input name="symbol" id="mkSymbol" value="SPY" size="6"></label>
-        <label>Temporalidad <select id="mkTf"><option>1Min</option><option selected>5Min</option><option>15Min</option><option>1Hour</option><option>1Day</option></select></label>
-        <label>Superponer estrategia <select id="mkStrat"><option value="">—</option></select></label>
-        <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="mkLive" checked> En vivo (cada 5 s)</label>
-        <button>Cargar</button>
-      </form>
-      <div class="kpis" id="mkQuote"></div>
-      <div class="chart" id="chPrice"></div>
-      <div class="chart sm" id="chRsi"></div>
-      <div class="chart sm" id="chMacd"></div>
-      <p class="muted" style="margin:8px 0 0">Velas y volumen · SMA20 (amarillo) · EMA9 (azul) · Bandas de Bollinger 20/2 (punteadas) · RSI14 con 70/30 · MACD 12/26/9. Indicadores calculados en el microservicio, no en el navegador.</p>
-    </div>
-  </section>
-
-  <div class="card">
-    <h2>Peticiones <span class="muted">clic para ver la respuesta</span></h2>
-    <div id="log"></div>
-  </div>
+  </aside>
 </main>
+
+<!-- 5) DOCK INFERIOR: Órdenes | Estrategias guardadas | Cadena de opciones (cada panel con su scroll) -->
+<section id="dock">
+  <div class="pnl dp">
+    <div class="ph"><b>Órdenes</b><span class="acts"><button class="sm" id="btnNewOrder">＋ Nueva</button><button class="ghost sm" id="orRefresh">↻</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></div>
+    <div class="body"><table id="orTable"></table></div>
+  </div>
+  <div class="pnl dp">
+    <div class="ph"><b>Estrategias guardadas</b><button class="sm" id="btnStrat">＋ Armar manual</button></div>
+    <div class="body" id="stList"></div>
+  </div>
+  <div class="pnl dp">
+    <div class="ph"><b>Cadena de opciones</b><button class="ghost sm" id="btnChains">Gestionar cadenas</button></div>
+    <div class="body" id="chDetail"></div>
+  </div>
+</section>
+
+<!-- PIE: plegar el dock y ver la bitácora de peticiones -->
+<footer id="foot">
+  <button class="ghost" id="btnDock">▾ Ocultar panel inferior</button>
+  <span class="muted">Datos de Alpaca · cuenta de práctica (paper)</span>
+  <span class="sp"></span>
+  <button class="ghost" id="btnLog">Peticiones</button>
+</footer>
+<div class="menu" id="menuLog" hidden><b>Peticiones <span class="muted">(clic para ver la respuesta)</span></b><div id="log"></div></div>
+
+</div>
+
+<!-- DIÁLOGOS: formularios que no ocupan espacio fijo -->
+<dialog id="dlgWl">
+  <div class="dh">Nueva watchlist <button class="ghost sm" data-close>✕</button></div>
+  <form class="row" id="wlForm">
+    <label>Nombre <input name="name" required placeholder="Tech F0"></label>
+    <label style="flex:1">Símbolos (coma) <input name="symbols" placeholder="apple, tesla, SPY…" data-ticker="multi" autocomplete="off"></label>
+    <button>Crear</button>
+  </form>
+</dialog>
+
+<dialog id="dlgOrder">
+  <div class="dh">Nueva orden <span class="muted">POST /orders · paper</span> <button class="ghost sm" data-close>✕</button></div>
+  <form class="row" id="orForm">
+    <label>Símbolo <input name="symbol" required value="SPY" size="8" data-ticker autocomplete="off"></label>
+    <label>Cant. <input name="qty" type="number" min="1" value="1" size="4"></label>
+    <label>Lado <select name="side"><option>buy</option><option>sell</option></select></label>
+    <label>Tipo <select name="type"><option>limit</option><option>market</option></select></label>
+    <label>Límite <input name="limit_price" type="number" step="0.01" value="1" size="6"></label>
+    <label>Vigencia <select name="time_in_force"><option>gtc</option><option>day</option></select></label>
+    <button>Enviar</button>
+  </form>
+</dialog>
+
+<dialog id="dlgChain" style="width:min(900px,96vw)">
+  <div class="dh">Cadenas de opciones <span class="muted">GET/POST /option-chains</span> <button class="ghost sm" data-close>✕</button></div>
+  <form class="row" id="chForm">
+    <label>Subyacente <input name="underlying" required value="SPY" size="10" data-ticker data-options="1" autocomplete="off" placeholder="apple, SPY…"></label>
+    <label>Vence desde <input name="expiration_from" type="date"></label>
+    <label>Vence hasta <input name="expiration_to" type="date"></label>
+    <label>Tipo <select name="option_type"><option value="">ambos</option><option>call</option><option>put</option></select></label>
+    <label>Strike mín <input name="strike_min" type="number" step="any" size="6"></label>
+    <label>Strike máx <input name="strike_max" type="number" step="any" size="6"></label>
+    <button>Ingestar desde Alpaca</button>
+  </form>
+  <div class="scroll" style="margin-top:10px;max-height:40vh;overflow:auto"><table id="chTable"></table></div>
+</dialog>
+
+<!-- Armar estrategia manual: diálogo NO modal (flota sobre el dock) para poder pulsar +C/+V en la cadena mientras está abierto -->
+<dialog id="dlgStrat">
+  <div class="dh">Armar estrategia manual <span class="muted">POST /strategies</span> <button class="ghost sm" data-close>✕</button></div>
+  <p class="muted" style="margin:0 0 8px">Agrega piernas con <b>+C</b> / <b>+V</b> en la cadena (máx. 4) o usa una plantilla.</p>
+  <form class="row" id="stForm">
+    <label>Nombre <input name="name" required value="Bull call spread"></label>
+    <label>Cantidad <input name="qty" type="number" min="1" value="1" size="4"></label>
+    <label>Tipo <select name="order_type"><option>limit</option><option>market</option></select></label>
+    <label>Límite (neto) <input name="limit_price" type="number" step="0.01" value="0.01" size="6"></label>
+    <button>Guardar borrador</button>
+  </form>
+  <div class="row" style="margin-top:10px">
+    <label>Plantilla <select id="tplName"></select></label>
+    <button type="button" class="ghost" id="tplBuild">Armar desde la cadena abierta</button>
+  </div>
+  <div id="legs" style="margin-top:10px"></div>
+</dialog>
+
+<!-- MODAL "ver más": riesgo del motor, detalle de la fila elegida y backtest (uno a la vez, ver verMas) -->
+<dialog id="detalle">
+  <button class="ghost sm" id="detalleX" style="float:right">Cerrar ✕</button>
+  <div class="card" id="riskPanel" hidden></div>
+  <div class="card" id="recDetail" hidden></div>
+  <div class="card" id="recBt" hidden></div>
+</dialog>
 
 <script>
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const money = (v) => v == null ? '—' : Number(v).toLocaleString('es-MX', { style: 'currency', currency: 'USD' });
+// Cifras sin decimales para la píldora de cuenta; bid/ask en 0 o null se muestran como "—".
+const usd0 = (v) => '$' + Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 });
+const px = (v) => (v > 0 ? Number(v).toFixed(2) : '—');
 const num = (v, d = 2) => v == null || v === '' ? '—' : Number(v).toFixed(d);
 const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 
-// En localhost la página la sirve la propia API; en GitHub Pages se apunta a localhost:3060.
-const defaultApi = location.protocol.startsWith('http') && location.port === '3060' ? location.origin : 'http://localhost:3060';
+// Si la página se sirve por http, la API es el mismo origen; abierta como archivo se apunta a localhost:3060.
+const defaultApi = location.protocol.startsWith('http') ? location.origin : 'http://localhost:3060';
 $('#apiUrl').value = store.get('f0.api', defaultApi);
+$('#mkSymbol').value = store.get('f0.sym', 'SPY');
 const base = () => $('#apiUrl').value.replace(/\/+$/, '');
 
 // ------------------------------------------------------------- HTTP + bitácora
-async function api(method, path, body) {
+// `silent` = carga automática en paralelo: el error se lanza pero NO abre alert (cada panel muestra su aviso).
+async function api(method, path, body, silent = false) {
   const t0 = performance.now();
   let res, data;
   try {
@@ -234,7 +446,7 @@ async function api(method, path, body) {
   log(method, path, res.status, performance.now() - t0, data);
   if (!res.ok) {
     const msg = [data?.message, ...(data?.details ?? [])].filter(Boolean).join('\n');
-    alert(`${method} ${path}\n${res.status}: ${msg}`);
+    if (!silent) alert(`${method} ${path}\n${res.status}: ${msg}`);
     throw new Error(msg);
   }
   return data;
@@ -262,41 +474,43 @@ async function connect() {
   try {
     const a = await api('GET', '/account');
     $('#help').style.display = 'none';
-    $('#connBadge').className = 'badge ok';
-    $('#connBadge').textContent = `conectado · ${a.status}`;
-    $('#stats').innerHTML = `<span>Efectivo <b>${money(a.cash)}</b></span><span>Poder de compra <b>${money(a.buyingPower)}</b></span><span>Nivel de opciones <b>${a.optionsLevel}</b></span><span>Cuenta <b>paper</b></span>`;
+    $('#connDot').className = 'dot ok';
+    $('#connDot').title = `conectado · ${a.status} · opciones nivel ${a.optionsLevel}`;
+    $('#acct').innerHTML = `Paper · Efectivo <b>${usd0(a.cash)}</b> · Poder de compra <b>${usd0(a.buyingPower)}</b>`;
     await Promise.all([loadWatchlists(), loadChains(), loadStrategies(), loadOrders()]);
+    await setTicker($('#mkSymbol').value);
   } catch {
-    $('#connBadge').className = 'badge bad';
-    $('#connBadge').textContent = 'sin conexión';
+    $('#connDot').className = 'dot bad';
+    $('#connDot').title = 'sin conexión';
   }
 }
 $('#connect').onclick = connect;
 
-$('#tabs').onclick = (e) => {
-  const tab = e.target.dataset.tab;
-  if (!tab) return;
-  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b === e.target));
-  document.querySelectorAll('main section').forEach((s) => s.classList.toggle('on', s.id === tab));
-  store.set('f0.tab', tab);
-  if (tab === 'market') setTimeout(() => loadMarket().catch(() => {}));
-};
-$(`#tabs [data-tab="${store.get('f0.tab', 'watchlists')}"]`)?.click();
-
 // ------------------------------------------------------------- 1. watchlists
+// Cotizaciones ya conocidas (símbolo -> {price, chg}). No hay endpoint agrupado, así que solo se muestran
+// precios de los tickers que ya se visitaron; el resto muestra únicamente el símbolo.
+const quoteCache = {};
+const wlQuote = (s) => {
+  const q = quoteCache[s];
+  if (!q) return '';
+  const chg = q.chg == null ? '' : `${q.chg >= 0 ? '+' : ''}${q.chg.toFixed(2)}%`;
+  return `<span>${num(q.price)}</span><span class="${q.chg >= 0 ? 'buy' : 'sell'}">${chg}</span>`;
+};
+// Refresca precios y marca el ticker activo (barato: no toca la red).
+function paintWl() {
+  document.querySelectorAll('#wlList [data-q]').forEach((el) => { el.innerHTML = wlQuote(el.dataset.q); });
+  document.querySelectorAll('#wlList .sym').forEach((el) => el.classList.toggle('on', el.dataset.go === ticker()));
+}
 async function loadWatchlists() {
   const list = await api('GET', '/watchlists');
   $('#wlList').innerHTML = list.length ? list.map((w) => `
-    <div class="card" data-id="${w.id}">
-      <h2>${esc(w.name)}
-        <span class="row">
-          <button class="ghost sm" data-act="rename">Renombrar (PUT)</button>
-          <button class="danger sm" data-act="delete">Eliminar</button>
-        </span>
-      </h2>
-      <div>${w.symbols.map((s) => `<span class="chip">${esc(s)}<button data-act="rm" data-sym="${esc(s)}" title="Quitar">×</button></span>`).join('') || '<span class="muted">sin símbolos</span>'}</div>
-      <form class="row" style="margin-top:8px" data-act="add"><input name="symbol" placeholder="Agregar símbolo" size="10" required><button class="ghost sm">Agregar</button></form>
-    </div>`).join('') : '<div class="card empty">No hay watchlists todavía.</div>';
+    <section class="wl" data-id="${w.id}">
+      <div class="wlh"><b>${esc(w.name)}</b><button class="ghost sm ic" data-act="menu" title="Opciones de la lista" aria-label="Opciones de ${esc(w.name)}">⋯</button></div>
+      <div class="wla" hidden><button class="ghost sm" data-act="rename">Renombrar</button><button class="ghost sm" data-act="addtoggle">+ Símbolo</button><button class="danger sm" data-act="delete">Eliminar</button></div>
+      <form class="wladd" hidden data-act="add"><input name="symbol" placeholder="Nombre o ticker" required data-ticker autocomplete="off"><button class="sm">Agregar</button></form>
+      <div class="wls">${w.symbols.map((s) => `<div class="sym" data-go="${esc(s)}"><b>${esc(s)}</b><span class="q" data-q="${esc(s)}"></span><button class="x" data-act="rm" data-sym="${esc(s)}" title="Quitar de la lista" aria-label="Quitar ${esc(s)}">×</button></div>`).join('') || '<div class="muted pad">Sin símbolos</div>'}</div>
+    </section>`).join('') : '<div class="muted pad">No hay watchlists. Crea una con ＋.</div>';
+  paintWl();
 }
 $('#wlForm').onsubmit = (e) => {
   e.preventDefault();
@@ -304,20 +518,24 @@ $('#wlForm').onsubmit = (e) => {
     const f = formData(e.target);
     await api('POST', '/watchlists', { name: f.name, symbols: (f.symbols ?? '').split(',').map((s) => s.trim()).filter(Boolean) });
     e.target.reset();
+    $('#dlgWl').close();
     await loadWatchlists();
   })();
 };
 $('#wlList').onclick = async (e) => {
   const act = e.target.dataset.act;
   const card = e.target.closest('[data-id]');
-  if (!act || !card) return;
+  if (!act) { const go = e.target.closest('[data-go]'); return go && setTicker(go.dataset.go); }
+  if (!card) return;
   const id = card.dataset.id;
+  if (act === 'menu') return card.querySelector('.wla').toggleAttribute('hidden');
+  if (act === 'addtoggle') { const f = card.querySelector('.wladd'); f.toggleAttribute('hidden'); return f.hidden || f.symbol.focus(); }
   if (act === 'delete' && confirm('¿Eliminar la watchlist?')) await api('DELETE', `/watchlists/${id}`);
   if (act === 'rm') await api('DELETE', `/watchlists/${id}/symbols/${e.target.dataset.sym}`);
   if (act === 'rename') {
-    const name = prompt('Nuevo nombre:', card.querySelector('h2').firstChild.textContent.trim());
+    const name = prompt('Nuevo nombre:', card.querySelector('.wlh b').textContent.trim());
     if (!name) return;
-    const symbols = [...card.querySelectorAll('[data-sym]')].map((b) => b.dataset.sym);
+    const symbols = [...card.querySelectorAll('[data-act=rm]')].map((b) => b.dataset.sym);
     await api('PUT', `/watchlists/${id}`, { name, symbols });
   }
   await loadWatchlists();
@@ -336,7 +554,7 @@ $('#chForm').expiration_from.value = iso(1);
 $('#chForm').expiration_to.value = iso(14);
 
 async function loadChains() {
-  const list = await api('GET', '/option-chains');
+  const list = window.chains = await api('GET', '/option-chains');
   $('#chTable').innerHTML = list.length ? `
     <tr><th>Subyacente</th><th class="n">Precio</th><th>Vencimientos</th><th>Tipo</th><th class="n">Contratos</th><th>Actualizada</th><th></th></tr>
     ${list.map((c) => `<tr data-id="${c.id}">
@@ -380,14 +598,13 @@ function showChain(c) {
       <td>${q.type}</td><td class="n"><b>${num(q.strike)}</b></td><td class="n">${num(q.bid)}</td><td class="n">${num(q.ask)}</td>
       <td class="n">${q.impliedVolatility == null ? '—' : (q.impliedVolatility * 100).toFixed(1) + '%'}</td>
       <td class="n">${num(q.delta, 3)}</td><td class="n">${num(q.gamma, 4)}</td><td class="n">${num(q.theta, 3)}</td><td class="n">${num(q.vega, 3)}</td>
-      <td><button class="ghost sm" data-leg="buy" data-sym="${q.symbol}">+C</button> <button class="danger sm" data-leg="sell" data-sym="${q.symbol}">+V</button></td>
+      <td><button class="ghost sm" data-leg="buy" data-sym="${q.symbol}" title="Agregar compra">+C</button> <button class="danger sm" data-leg="sell" data-sym="${q.symbol}" title="Agregar venta">+V</button></td>
     </tr>`).join('');
   };
   $('#chDetail').hidden = false;
   $('#chDetail').innerHTML = `
-    <h2>${esc(c.underlying)} · ${num(c.underlyingPrice)} <span class="muted">${c.contractsCount} contratos · IV y griegas de Alpaca</span></h2>
-    <div class="row" style="margin-bottom:8px"><label>Vencimiento <select id="chExp">${exps.map((x) => `<option>${x}</option>`).join('')}</select></label></div>
-    <div class="scroll"><table><thead><tr><th>Tipo</th><th class="n">Strike</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">IV</th><th class="n">Delta</th><th class="n">Gamma</th><th class="n">Theta</th><th class="n">Vega</th><th>Estrategia</th></tr></thead><tbody id="chRows"></tbody></table></div>`;
+    <div class="chh"><b>${esc(c.underlying)} · <span class="mono">${num(c.underlyingPrice)}</span></b><select id="chExp" aria-label="Vencimiento">${exps.map((x) => `<option>${x}</option>`).join('')}</select><span class="muted">${c.contractsCount} contratos · IV y griegas de Alpaca</span></div>
+    <table><thead><tr><th>Tipo</th><th class="n">Strike</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">IV</th><th class="n">Delta</th><th class="n">Gamma</th><th class="n">Theta</th><th class="n">Vega</th><th>Armar</th></tr></thead><tbody id="chRows"></tbody></table>`;
   $('#chExp').onchange = (e) => render(e.target.value);
   if (exps[0]) render(exps[0]);
   window.currentChain = c;
@@ -406,7 +623,7 @@ $('#chDetail').addEventListener('click', (e) => {
 function renderLegs() {
   $('#legs').innerHTML = legs.length
     ? legs.map((l, i) => `<span class="chip"><span class="${l.side}">${l.side === 'buy' ? 'COMPRA' : 'VENTA'}</span>&nbsp;${esc(l.symbol)}<button data-i="${i}">×</button></span>`).join('')
-    : '<span class="muted">Sin piernas: ve a “Cadenas de opciones”, pulsa Ver y agrega con +C / +V.</span>';
+    : '<span class="muted">Sin piernas: agrégalas con +C / +V en la cadena del panel inferior.</span>';
 }
 $('#legs').onclick = (e) => { if (e.target.dataset.i) { legs.splice(+e.target.dataset.i, 1); renderLegs(); } };
 renderLegs();
@@ -415,7 +632,7 @@ renderLegs();
 $('#tplName').innerHTML = Object.entries(F0Templates.TEMPLATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
 $('#tplBuild').onclick = () => {
   const c = window.currentChain;
-  if (!c) return alert('Primero abre una cadena en “Cadenas de opciones” (botón Ver).');
+  if (!c) return alert('Primero abre una cadena (panel “Cadena de opciones” o “Gestionar cadenas” → Ver).');
   if (!c.underlyingPrice) return alert('La cadena no tiene precio del subyacente: pulsa Refresh.');
   try {
     const t = F0Templates.build($('#tplName').value, c.quotes, c.underlyingPrice, $('#chExp').value);
@@ -436,32 +653,32 @@ $('#stForm').onsubmit = (e) => {
     await api('POST', '/strategies', { ...f, underlying, qty: Number(f.qty), limit_price: f.limit_price ? Number(f.limit_price) : undefined, legs });
     legs = [];
     renderLegs();
+    $('#dlgStrat').close();
     await loadStrategies();
   })();
 };
 
 async function loadStrategies() {
-  const list = await api('GET', '/strategies');
-  const detailed = await Promise.all(list.map((s) => api('GET', `/strategies/${s.id}`)));
+  const detailed = await api('GET', '/strategies?priced=true'); // una sola petición: piernas, cotizaciones y costo neto
   const badge = { draft: 'warn', submitted: 'ok', canceled: 'bad' };
   window.savedStrategies = detailed;
   $('#mkStrat').innerHTML = '<option value="">—</option>' + detailed.map((s) => `<option value="${s.id}">${esc(s.name)} · ${esc(s.underlying)}</option>`).join('');
   $('#stList').innerHTML = detailed.length ? detailed.map((s) => `
-    <div class="card" data-id="${s.id}">
-      <h2><span>${esc(s.name)} <span class="badge ${badge[s.status]}">${s.status}</span></span>
-        <span class="row">
-          ${s.status === 'draft' ? '<button class="sm" data-act="submit">Enviar a Alpaca</button><button class="ghost sm" data-act="rename">Renombrar (PUT)</button>' : ''}
-          <button class="ghost sm" data-act="risk">Riesgo (motor)</button>
-          <button class="danger sm" data-act="delete">Eliminar</button>
-        </span>
-      </h2>
-      <table><tr><th>Lado</th><th>Contrato</th><th class="n">Strike</th><th>Vence</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">Mid</th><th class="n">Delta</th></tr>
-      ${s.legs.map((l) => `<tr><td class="${l.side}">${l.side === 'buy' ? 'Compra' : 'Venta'} ×${l.ratioQty}</td><td>${esc(l.symbol)}</td><td class="n">${num(l.strike)}</td><td>${l.expiration}</td>
-        <td class="n">${num(l.quote?.bid)}</td><td class="n">${num(l.quote?.ask)}</td><td class="n">${num(l.quote?.mid)}</td><td class="n">${num(l.quote?.delta, 3)}</td></tr>`).join('')}
-      </table>
-      <p class="muted" style="margin:8px 0 0">${s.pricing ? `Costo neto por unidad <b>${num(s.pricing.netPerUnit)}</b> · total ${money(s.pricing.netTotal)} (${s.pricing.netPerUnit >= 0 ? 'débito' : 'crédito'})` : 'Sin cotización viva'}
-      · ${s.qty} × ${s.orderType}${s.limitPrice != null ? ' @ ' + s.limitPrice : ''}${s.alpacaOrderId ? ` · orden <code>${s.alpacaOrderId.slice(0, 8)}</code>` : ''}</p>
-    </div>`).join('') : '<div class="card empty">No hay estrategias.</div>';
+    <div class="st" data-id="${s.id}">
+      <div class="top1"><span><b>${esc(s.name)}</b> <span class="badge ${badge[s.status]}">${s.status}</span></span>
+        <span class="n muted">${s.pricing ? `${num(s.pricing.netPerUnit)} ${s.pricing.netPerUnit >= 0 ? 'débito' : 'crédito'}` : 'sin cotización'}</span></div>
+      <div class="acts">
+        ${s.status === 'draft' ? '<button class="sm" data-act="submit">Enviar a Alpaca</button><button class="ghost sm" data-act="rename">Renombrar</button>' : ''}
+        <button class="ghost sm" data-act="chart">En gráfica</button>
+        <button class="ghost sm" data-act="risk">Riesgo</button>
+        <button class="danger sm" data-act="delete">Eliminar</button>
+      </div>
+      <details><summary class="muted">${s.legs.length} piernas · ${s.qty} × ${s.orderType}${s.limitPrice != null ? ' @ ' + s.limitPrice : ''}${s.pricing ? ` · total ${money(s.pricing.netTotal)}` : ''}</summary>
+        <table><tr><th>Lado</th><th>Contrato</th><th class="n">Strike</th><th>Vence</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">Mid</th><th class="n">Delta</th></tr>
+        ${s.legs.map((l) => `<tr><td class="${l.side}">${l.side === 'buy' ? 'Compra' : 'Venta'} ×${l.ratioQty}</td><td class="mono">${esc(l.symbol)}</td><td class="n">${num(l.strike)}</td><td>${l.expiration}</td>
+          <td class="n">${px(l.quote?.bid)}</td><td class="n">${px(l.quote?.ask)}</td><td class="n">${num(l.quote?.mid)}</td><td class="n">${num(l.quote?.delta, 3)}</td></tr>`).join('')}
+        </table>${s.alpacaOrderId ? `<p class="muted" style="margin:4px 0">orden <code>${s.alpacaOrderId.slice(0, 8)}</code></p>` : ''}</details>
+    </div>`).join('') : '<div class="empty">No hay estrategias. Pulsa “＋ Armar manual” o usa el recomendador.</div>';
 }
 $('#stList').onclick = async (e) => {
   const act = e.target.dataset.act;
@@ -470,6 +687,7 @@ $('#stList').onclick = async (e) => {
   const id = card.dataset.id;
   e.target.disabled = true;
   try {
+    if (act === 'chart') { $('#mkStrat').value = id; $('#mkStrat').onchange(); return; }
     if (act === 'risk') return await showRisk(id);
     if (act === 'submit') await api('POST', `/strategies/${id}/submit`);
     if (act === 'delete' && confirm('¿Eliminar? Si ya se envió, se cancela la orden.')) await api('DELETE', `/strategies/${id}`);
@@ -485,31 +703,99 @@ $('#stList').onclick = async (e) => {
   } finally { e.target.disabled = false; }
 };
 
+// ------------------------------------------------------------- ticker único + modal "ver más"
+const ticker = () => $('#mkSymbol').value.trim().toUpperCase();
+
+// Muestra UNO de los paneles de detalle (riesgo, detalle de la fila, backtest) en el modal.
+function verMas(el) {
+  document.querySelectorAll('#detalle > .card').forEach((c) => { c.hidden = c !== el; });
+  if (!$('#detalle').open) $('#detalle').showModal();
+}
+$('#detalleX').onclick = () => $('#detalle').close();
+$('#detalle').addEventListener('click', (e) => { if (e.target === $('#detalle')) $('#detalle').close(); }); // clic en el fondo
+
+// Ticket anti-carrera: cada cambio de ticker lo incrementa; toda respuesta con un ticket viejo se descarta.
+let ticket = 0;
+
+// Cambia el ticker de TODA la pantalla: overview + velas + recomendador (una vez) + cadena. Es el único punto de entrada.
+async function setTicker(sym) {
+  sym = sym.trim().toUpperCase();
+  if (!sym) return;
+  const mine = ++ticket;
+  $('#mkSymbol').value = $('#chForm').underlying.value = $('#orForm').symbol.value = sym;
+  store.set('f0.sym', sym);
+  $('#mkStrat').value = '';
+  setOverlay([]);
+  paintWl();
+  await Promise.allSettled([loadOverview(sym, mine), loadBars(sym, mine), recommend(sym, mine), openChainOf(sym, mine)]);
+}
+document.addEventListener('tickerchosen', (e) => { if (e.target.id === 'mkSymbol') setTicker(e.target.value); });
+
+// Si ya hay una cadena guardada de este subyacente la abre; si no, explica cómo ingestarla.
+async function openChainOf(sym, mine) {
+  const c = (window.chains ?? []).find((x) => x.underlying === sym);
+  window.currentChain = null;
+  $('#chDetail').hidden = false;
+  $('#chDetail').innerHTML = '<div class="pad"><span class="skel" style="height:14px;width:60%"></span></div>';
+  if (c) {
+    try { const d = await api('GET', `/option-chains/${c.id}`, undefined, true); if (mine === ticket) showChain(d); }
+    catch (err) { if (mine === ticket) $('#chDetail').innerHTML = `<div class="empty">No se pudo abrir la cadena: ${esc(err.message)}</div>`; }
+    return;
+  }
+  $('#chDetail').innerHTML = `<div class="empty">No hay cadena guardada de ${esc(sym)}. Pulsa “Gestionar cadenas” → “Ingestar desde Alpaca”.</div>`;
+}
+
 // ------------------------------------------------------------- riesgo con el motor Rust/WASM
 const signed = (v) => v == null ? '—' : (v >= 0 ? '+' : '') + money(v);
 const heat = (v, max) => {
   const a = Math.min(Math.abs(v) / (max || 1), 1) * 0.55;
-  return v >= 0 ? `background: rgba(19,128,74,${a})` : `background: rgba(194,50,43,${a})`;
+  return `background: color-mix(in srgb, var(${v >= 0 ? '--ok' : '--bad'}) ${Math.round(a * 100)}%, transparent)`;
 };
 
-function histogramSvg(bins) {
+// Histograma del P&L. `interval` = [bajo, alto] del intervalo de confianza del 95 %: se dibuja con líneas punteadas.
+function histogramSvg(bins, interval) {
   const W = 640, H = 170, pad = 22, max = Math.max(...bins.map((b) => b.count)) || 1, bw = (W - pad * 2) / bins.length;
   const bars = bins.map((b, i) => {
     const h = (b.count / max) * (H - pad * 2);
     const color = (b.from + b.to) / 2 >= 0 ? 'var(--ok)' : 'var(--bad)';
     return `<rect x="${pad + i * bw + 1}" y="${H - pad - h}" width="${Math.max(bw - 2, 1)}" height="${h}" fill="${color}" rx="2"><title>${money(b.from)} a ${money(b.to)}: ${b.count} trayectorias</title></rect>`;
   }).join('');
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Histograma del P&L simulado">${bars}
+  const lo = bins[0].from, hi = bins.at(-1).to;
+  const xAt = (v) => pad + ((Math.min(Math.max(v, lo), hi) - lo) / (hi - lo)) * (W - pad * 2);
+  const ci = interval ? interval.map((v, i) => `<line x1="${xAt(v)}" x2="${xAt(v)}" y1="6" y2="${H - pad}" stroke="var(--accent)" stroke-dasharray="4 3" stroke-width="1.5"/>
+    <text x="${xAt(v)}" y="12" fill="var(--accent)" text-anchor="${i ? 'end' : 'start'}">${i ? '97.5 %' : '2.5 %'}: ${money(v)}</text>`).join('') : '';
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Histograma del P&L simulado">${bars}${ci}
     <line x1="${pad}" x2="${W - pad}" y1="${H - pad}" y2="${H - pad}" stroke="var(--line)"/>
     <text x="${pad}" y="${H - 6}">${money(bins[0].from)}</text>
     <text x="${W - pad}" y="${H - 6}" text-anchor="end">${money(bins.at(-1).to)}</text></svg>`;
 }
 
+// Bloque de riesgo extendido (VaR, CVaR, drawdown, Sharpe/Sortino, beta, estrés, intervalos). Datos de services/riskExtended.service.js
+function extendedHtml(e) {
+  if (!e) return '<p class="muted">Riesgo extendido no disponible: Alpaca no entregó el historial de precios.</p>';
+  const pct = (v) => (v == null ? '—' : `${(v * 100).toFixed(1)}%`);
+  return `
+    <h2 style="margin-top:16px">Riesgo extendido <span class="muted">VaR · CVaR · drawdown · Sharpe/Sortino · beta · estrés</span></h2>
+    <div class="kpis">
+      <div class="kpi"><span>VaR 95% histórico</span><b>${money(e.var.historical95)}</b><span>Monte Carlo ${money(e.var.monteCarlo95)}</span></div>
+      <div class="kpi"><span>CVaR 95% histórico</span><b>${money(e.var.historicalCVaR95)}</b><span>Monte Carlo ${money(e.var.monteCarloCVaR95)}</span></div>
+      <div class="kpi"><span>Drawdown máx. (1 año)</span><b>${num(e.drawdown.underlyingMaxDrawdownPct, 1)}%</b><span>peor histórico estrategia ${signed(e.drawdown.strategyWorstHistoricalPnl)}</span></div>
+      <div class="kpi"><span>Sharpe · Sortino (acción)</span><b>${num(e.ratios.underlyingSharpe)} · ${num(e.ratios.underlyingSortino)}</b><span>estrategia ${num(e.ratios.strategySharpe, 3)} · ${num(e.ratios.strategySortino, 3)}</span></div>
+      <div class="kpi"><span>Beta vs SPY</span><b>${num(e.beta.vsSPY)}</b><span>delta ponderado ${num(e.beta.betaWeightedDelta)}</span></div>
+      <div class="kpi"><span>Rango del P&L (95%)</span><b>${money(e.confidence.pnlRange95[0])} a ${money(e.confidence.pnlRange95[1])}</b><span>media entre ${money(e.confidence.meanPnl95[0])} y ${money(e.confidence.meanPnl95[1])}</span></div>
+      <div class="kpi"><span>Prob. de ganancia (IC 95%)</span><b>${pct(e.confidence.probProfit95[0])} – ${pct(e.confidence.probProfit95[1])}</b></div>
+    </div>
+    <b>Escenarios de estrés</b> <span class="muted">(1σ del horizonte = ${num(e.stress.sigmaMovePct, 1)}%)</span>
+    <div class="scroll"><table>
+      <tr><th>Escenario</th><th class="n">Movimiento del precio</th><th class="n">Cambio de IV</th><th class="n">P&L</th></tr>
+      ${e.stress.scenarios.map((x) => `<tr><td>${esc(x.name)}</td><td class="n">${num(x.spotMovePct, 1)}%</td><td class="n">${num(x.ivChangePoints, 1)} pts</td><td class="n ${x.pnl >= 0 ? 'buy' : 'sell'}">${signed(x.pnl)}</td></tr>`).join('')}
+    </table></div>`;
+}
+
 async function showRisk(id, paths = 100000, seed = 42) {
   const panel = $('#riskPanel');
-  panel.hidden = false;
+  verMas(panel);
   panel.innerHTML = '<span class="muted">Corriendo el motor…</span>';
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const r = await api('GET', `/strategies/${id}/risk?paths=${paths}&seed=${seed}`);
   const mc = r.monteCarlo, m = r.pnlMatrix;
   const maxAbs = Math.max(...m.values.flat().map(Math.abs));
@@ -536,7 +822,7 @@ async function showRisk(id, paths = 100000, seed = 42) {
     <div class="grid2">
       <div>
         <b>Monte Carlo: distribución del P&L al vencimiento</b>
-        ${histogramSvg(mc.histogram)}
+        ${histogramSvg(mc.histogram, r.extended?.confidence?.pnlRange95)}
       </div>
       <div>
         <b>P&L al vencimiento según el precio de ${esc(r.strategy.underlying)}</b>
@@ -562,10 +848,236 @@ async function showRisk(id, paths = 100000, seed = 42) {
         </table></div>
         <p class="muted">Costo de la estrategia: mercado ${money(r.cost.market)} · motor ${money(r.cost.model)}</p>
       </div>
-    </div>`;
+    </div>
+    ${extendedHtml(r.extended)}`;
   $('#mcAgain').onclick = busy($('#mcAgain'), () => showRisk(id, Number($('#mcPaths').value), Math.floor(Math.random() * 1e6)));
   $('#mcPaths').onchange = () => showRisk(id, Number($('#mcPaths').value), seed);
 }
+
+// ------------------------------------------------------------- 3b. recomendador
+// Qué hace: pide GET /strategies/recommend, pinta el ranking y el detalle de la fila elegida,
+// corre el backtest y el botón "Ejecutar automático" (POST /strategies/auto, solo Alpaca paper).
+const verdictBadge = { approved: ['ok', 'Aprobado'], caution: ['warn', 'Precaución'], rejected: ['bad', 'Rechazado'], unavailable: ['', 'Sin validación'] };
+
+// OCC (AAPL251121C00250000) -> pierna dibujable en la gráfica. La respuesta del recomendador solo trae el símbolo OCC.
+const occLeg = (l) => {
+  const m = /^[A-Z.]+(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/.exec(l.symbol);
+  return m && { side: l.side, strike: Number(m[5]) / 1000, type: m[4] === 'C' ? 'call' : 'put', expiration: `20${m[1]}-${m[2]}-${m[3]}` };
+};
+
+// Fila elegida del ranking: KPIs 2x2 a la derecha, sus piernas sobre la gráfica y el detalle completo en el modal.
+function recDetail(entry) {
+  const m = entry.metrics, r = entry.report;
+  window.recEntry = entry;
+  setOverlay(entry.legs.map(occLeg).filter(Boolean));
+  document.querySelectorAll('#recTable tr[data-i]').forEach((tr) => tr.classList.toggle('pick', window.recRanking[Number(tr.dataset.i)] === entry));
+  $('#recSel').hidden = false;
+  $('#recSel').innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><span>Prob. de ganancia</span><b>${(m.probProfit * 100).toFixed(1)}%</b></div>
+      <div class="kpi"><span>P&L esperado</span><b class="${m.expectedValue >= 0 ? 'buy' : 'sell'}">${signed(m.expectedValue)}</b></div>
+      <div class="kpi"><span>Peor caso</span><b class="sell">${signed(m.worstSimulated)}</b></div>
+      <div class="kpi"><span>VaR 95%</span><b>${money(m.var95)}</b></div>
+    </div>
+    <div class="legs"><b>${esc(entry.name)}</b> · ${entry.legs.map((l) => `<span class="${l.side}">${l.side === 'buy' ? 'C' : 'V'}</span> ${esc(l.symbol)}`).join(' · ')}</div>
+    <div class="row" style="margin-top:8px"><button class="sm" data-act="save">Armar y guardar</button><button class="ghost sm" data-act="more">Ver más</button></div>`;
+  // Modal con el detalle completo (se abre con "Ver más").
+  $('#recDetail').innerHTML = `
+    <h2>${esc(entry.name)} · detalle <span class="muted">Monte Carlo y riesgo extendido</span></h2>
+    <div class="kpis">
+      <div class="kpi"><span>Mejor / peor caso</span><b>${signed(m.bestSimulated)}</b><span>${signed(m.worstSimulated)}</span></div>
+      <div class="kpi"><span>VaR 95% · CVaR 95%</span><b>${money(m.var95)}</b><span>${money(m.cvar95)}</span></div>
+      <div class="kpi"><span>Margen Reg T / SPAN</span><b>${money(m.marginRegT)}</b><span>${money(m.marginSpan)} SPAN</span></div>
+      <div class="kpi"><span>Delta · Theta/día · Vega</span><b>${num(m.greeks.delta, 1)}</b><span>${signed(m.greeks.theta)} · vega ${num(m.greeks.vega, 1)}</span></div>
+    </div>
+    <b>Monte Carlo: distribución del P&L</b> <span class="muted">(líneas punteadas = intervalo del 95%)</span>
+    ${histogramSvg(r.monteCarlo.histogram, r.extended?.confidence?.pnlRange95)}
+    ${extendedHtml(r.extended)}`;
+}
+
+$('#recSel').onclick = async (e) => {
+  const act = e.target.dataset.act, entry = window.recEntry;
+  if (!act || !entry) return;
+  if (act === 'more') return verMas($('#recDetail'));
+  // "Armar y guardar": guarda la estrategia elegida como borrador (POST /strategies) con las piernas del ranking.
+  e.target.disabled = true;
+  try {
+    await api('POST', '/strategies', {
+      name: `${entry.name} ${ticker()}`, underlying: ticker(), qty: 1, order_type: 'market',
+      legs: entry.legs.map((l) => ({ symbol: l.symbol, side: l.side, ratio_qty: l.ratio_qty ?? 1 })),
+    });
+    await loadStrategies();
+    e.target.textContent = 'Guardada ✓';
+  } catch { e.target.disabled = false; }
+};
+
+// Pide GET /strategies/recommend, pinta el ranking compacto y elige la primera fila válida.
+async function recommend(symbol, mine = ticket) {
+  $('#recSel').hidden = true;
+  // esqueleto discreto mientras se simulan las 4 estrategias
+  $('#recOut').innerHTML = '<div class="pad" style="display:grid;gap:8px">' + '<span class="skel" style="height:16px"></span>'.repeat(5) + '</div>';
+  try {
+    const d = await api('GET', `/strategies/recommend?symbol=${encodeURIComponent(symbol)}`, undefined, true);
+    if (mine !== ticket) return; // el usuario ya cambió de ticker: se descarta la respuesta vieja
+    const s = d.signals;
+    window.recRanking = d.ranking;
+    const firstSentence = String(d.explanation).split(/(?<=\.)\s/)[0]; // UNA frase; el texto largo va en el desplegable
+    $('#recOut').innerHTML = `
+      <div class="scroll"><table id="recTable">
+        <tr><th>#</th><th>Estrategia · puntaje</th><th class="n">Prob.</th><th class="n">P&L esp.</th></tr>
+        ${d.ranking.map((x, i) => x.error
+          ? `<tr style="--i:${i}"><td>${x.rank}</td><td>${esc(x.name)}</td><td colspan="2" class="muted">${esc(x.error)}</td></tr>`
+          : `<tr data-i="${i}" style="--i:${i}"><td class="n">${x.rank}</td><td><b>${esc(x.name)}</b> <span class="n muted">${x.score}</span><div class="bar"><i style="--w:${Math.max(0, Math.min(100, x.score))}%"></i></div></td><td class="n">${(x.metrics.probProfit * 100).toFixed(0)}%</td><td class="n ${x.metrics.expectedValue >= 0 ? 'buy' : 'sell'}">${signed(x.metrics.expectedValue)}</td></tr>`).join('')}
+      </table></div>
+      <p class="why"><b>Por qué gana la 1ª:</b> ${esc(firstSentence)}</p>
+      <details class="det"><summary class="muted">Ver explicación completa</summary><p>${esc(d.explanation)}</p><p class="muted">${esc(d.method)}</p></details>
+      <details class="det sig"><summary class="muted">Señales del mercado · ${esc(s.volView)}</summary>
+        <div class="kpis">
+          <div class="kpi"><span>Precio</span><b>${money(s.spot)}</b><span>RSI ${num(s.rsi14, 1)}</span></div>
+          <div class="kpi"><span>IV vs HV</span><b>${num(s.ivPct, 1)}% / ${num(s.hv30Pct, 1)}%</b><span>razón ${num(s.ivToHv)}</span></div>
+          <div class="kpi"><span>Tendencia</span><b>${num(s.trendStrengthPct)}%</b><span>EMA9 vs SMA20</span></div>
+          <div class="kpi"><span>Bollinger</span><b>${num(s.bollingerPosition * 100, 0)}%</b><span>0 baja · 100 alta</span></div>
+          <div class="kpi"><span>Vencimientos</span><b>${esc(s.nearExpiration)}</b><span>lejano ${esc(s.farExpiration ?? '—')}</span></div>
+        </div></details>`;
+    $('#recTable').onclick = (ev) => {
+      const row = ev.target.closest('tr[data-i]');
+      if (row) recDetail(d.ranking[Number(row.dataset.i)]);
+    };
+    const first = d.ranking.find((x) => !x.error);
+    if (first) recDetail(first);
+  } catch (err) { if (mine === ticket) $('#recOut').innerHTML = `<div class="pad muted">Este ticker no tiene opciones listadas o no se pudo recomendar (${esc(err.message)}).</div>`; }
+}
+$('#recRun').onclick = busy($('#recRun'), () => recommend(ticker(), ticket));
+
+// Backtest: ¿en qué % de las veces habría ganado la primera opción en el último año? ¿La probabilidad anunciada coincide con la real?
+$('#recBacktest').onclick = busy($('#recBacktest'), async () => {
+  const symbol = ticker();
+  verMas($('#recBt'));
+  $('#recBt').innerHTML = '<span class="muted">Re-jugando el último año…</span>';
+  const b = await api('GET', `/strategies/recommend/backtest?symbol=${encodeURIComponent(symbol)}`);
+  $('#recBt').innerHTML = `
+    <h2>Backtest de ${esc(b.symbol)} <span class="muted">GET /strategies/recommend/backtest</span></h2>
+    <div class="kpis">
+      <div class="kpi"><span>% de acierto histórico (1ª opción)</span><b>${num(b.topPick.winRatePct, 1)}%</b><span>${b.samples} puntos de prueba</span></div>
+      <div class="kpi"><span>P&L promedio de la 1ª opción</span><b>${signed(b.topPick.avgPnl)}</b></div>
+    </div>
+    <div class="grid2">
+      <div><b>Acierto por estrategia</b><div class="scroll"><table>
+        <tr><th>Estrategia</th><th class="n">% ganó</th><th class="n">P&L promedio</th></tr>
+        ${Object.entries(b.byStrategy).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${num(v.winRatePct, 1)}%</td><td class="n ${v.avgPnl >= 0 ? 'buy' : 'sell'}">${signed(v.avgPnl)}</td></tr>`).join('')}
+      </table></div></div>
+      <div><b>Calibración: probabilidad anunciada vs. real</b><div class="scroll"><table>
+        <tr><th>Rango anunciado</th><th class="n">Casos</th><th class="n">Anunciada</th><th class="n">Real</th></tr>
+        ${b.calibration.map((c) => `<tr><td>${esc(c.range)}</td><td class="n">${c.samples}</td><td class="n">${num(c.predictedAvgPct, 1)}%</td><td class="n">${num(c.realizedPct, 1)}%</td></tr>`).join('')}
+      </table></div></div>
+    </div>
+    <p class="muted" style="margin-bottom:0">${esc(b.limitation)}</p>`;
+});
+
+// Botón automático: recomienda → filtro de riesgo → IA → orden en Alpaca PAPER. Pide confirmación y muestra el aviso.
+$('#autoRun').onclick = busy($('#autoRun'), async () => {
+  const symbol = ticker(), dryRun = $('#autoDry').checked;
+  if (!dryRun && !confirm(`Se enviará una orden multi-pierna a Alpaca PAPER (dinero simulado) si ${symbol} pasa los dos filtros.\nEsto no garantiza ganancias. ¿Continuar?`)) return;
+  $('#autoOut').innerHTML = '<span class="muted">Recomendando, validando riesgo y consultando a la IA…</span>';
+  const r = await api('POST', '/strategies/auto', { symbol, dryRun, confirm: !dryRun }); // confirm:true solo si la persona aceptó el aviso (el backend lo exige)
+  const [cls, label] = verdictBadge[r.filters.ai.verdict] ?? ['', r.filters.ai.verdict];
+  $('#autoOut').innerHTML = `
+    <p style="margin:0 0 6px"><b>${esc(r.strategy)}</b> en ${esc(r.symbol)} — <span class="badge ${r.executed ? 'ok' : 'warn'}">${r.executed ? 'Orden enviada (paper)' : 'No se envió orden'}</span></p>
+    <p class="muted" style="margin:0 0 8px">${esc(r.message)}</p>
+    <div class="grid2">
+      <div><b>Filtro 1 · riesgo</b> <span class="badge ${r.filters.risk.passed ? 'ok' : 'bad'}">${r.filters.risk.passed ? 'Pasó' : 'No pasó'}</span>
+        <div class="scroll"><table>${r.filters.risk.checks.map((c) => `<tr><td>${esc(c.rule)}</td><td class="n">${num(c.value, 2)}</td><td class="muted">${esc(c.limit)}</td><td><span class="badge ${c.ok ? 'ok' : 'bad'}">${c.ok ? 'ok' : 'falla'}</span></td></tr>`).join('')}</table></div></div>
+      <div><b>Filtro 2 · IA</b> <span class="badge ${cls}">${esc(label)}</span>
+        <p style="margin:6px 0 0">${esc(r.filters.ai.reason)}</p><p class="muted" style="margin:4px 0 0">Modelo: ${esc(r.filters.ai.model ?? '—')}</p></div>
+    </div>
+    ${r.executed ? `<p style="margin:8px 0 0">Orden Alpaca: <code>${esc(r.order?.id ?? '')}</code> · estado ${esc(r.order?.status ?? '')}</p>` : ''}
+    <p class="muted" style="margin:8px 0 0">${esc(r.disclaimer)}</p>`;
+  if (r.executed) loadOrders().catch(() => {});
+});
+
+// ------------------------------------------------------------- buscador de tickers (autocompletado)
+// Qué hace: en cualquier campo con data-ticker, al escribir "apple" o "tes" consulta GET /market/search
+// y muestra símbolo + nombre de la empresa. data-ticker="multi" = lista separada por comas (watchlists);
+// data-options="1" = solo activos con opciones listadas (lo necesario para armar estrategias).
+(() => {
+  let box = null, timer = null, items = [], selected = -1, current = null, requestId = 0;
+  const ensureBox = () => {
+    if (box) return box;
+    box = document.createElement('div');
+    box.id = 'tickerBox';
+    box.hidden = true;
+    box.addEventListener('mousedown', (e) => e.preventDefault()); // no le quita el foco al campo
+    box.addEventListener('click', (e) => {
+      const row = e.target.closest('.tk');
+      if (row) choose(Number(row.dataset.i));
+    });
+    document.body.appendChild(box);
+    return box;
+  };
+  const hide = () => { if (box) box.hidden = true; selected = -1; };
+  const termOf = (input) => (input.dataset.ticker === 'multi' ? input.value.split(',').pop() : input.value).trim();
+
+  function choose(index) {
+    const hit = items[index];
+    if (!hit || !current) return;
+    if (current.dataset.ticker === 'multi') {
+      const parts = current.value.split(',').slice(0, -1).map((x) => x.trim()).filter(Boolean);
+      current.value = [...parts, hit.symbol].join(', ') + ', ';
+    } else {
+      current.value = hit.symbol;
+    }
+    current.dispatchEvent(new Event('input', { bubbles: true }));
+    current.dispatchEvent(new Event('tickerchosen', { bubbles: true })); // la pantalla única recarga todo (setTicker)
+    hide();
+    current.focus();
+  }
+
+  function render() {
+    const b = ensureBox();
+    if (!items.length) { b.innerHTML = '<div class="hint">Sin coincidencias. Prueba con otra parte del nombre.</div>'; }
+    else {
+      const hint = termOf(current) ? '' : '<div class="hint">Más usados — escribe el nombre de una empresa para buscar</div>';
+      b.innerHTML = hint + items.map((x, i) => `<div class="tk ${i === selected ? 'on' : ''}" data-i="${i}"><b>${esc(x.symbol)}</b><span>${esc(x.name)}</span><small>${esc(x.exchange)}${x.hasOptions ? ' · opciones' : ''}</small></div>`).join('');
+    }
+    (current.closest('dialog') ?? document.body).appendChild(b);
+    const r = current.getBoundingClientRect();
+    b.style.left = `${Math.min(r.left, window.innerWidth - 320)}px`;
+    b.style.top = `${r.bottom + 4}px`;
+    b.hidden = false;
+  }
+
+  async function lookup(input) {
+    current = input;
+    const myRequest = ++requestId;
+    const params = new URLSearchParams({ q: termOf(input), limit: '10' });
+    if (input.dataset.options) params.set('optionsOnly', 'true');
+    try {
+      const res = await fetch(`${base()}/api/v1/market/search?${params}`);
+      if (!res.ok || myRequest !== requestId) return; // llegó una respuesta vieja: se ignora
+      items = (await res.json()).results;
+      selected = items.length ? 0 : -1;
+      if (document.activeElement === input) render();
+    } catch { /* sin conexión: el campo sigue funcionando como texto libre */ }
+  }
+
+  document.addEventListener('focusin', (e) => { if (e.target.matches?.('input[data-ticker]')) lookup(e.target); });
+  document.addEventListener('input', (e) => {
+    if (!e.target.matches?.('input[data-ticker]') || !e.isTrusted) return; // solo cuando escribe la persona
+    clearTimeout(timer);
+    timer = setTimeout(() => lookup(e.target), 180);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!box || box.hidden || !e.target.matches?.('input[data-ticker]')) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      selected = (selected + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      render();
+    } else if (e.key === 'Enter' && selected >= 0) { e.preventDefault(); choose(selected); }
+    else if (e.key === 'Escape') hide();
+  });
+  document.addEventListener('focusout', (e) => { if (e.target.matches?.('input[data-ticker]')) setTimeout(hide, 120); });
+  window.addEventListener('scroll', hide, true);
+})();
 
 // ------------------------------------------------------------- 4. órdenes
 async function loadOrders() {
@@ -573,13 +1085,13 @@ async function loadOrders() {
   const tone = (s) => ({ filled: 'ok', canceled: 'bad', rejected: 'bad', expired: 'bad', replaced: '' }[s] ?? 'warn');
   const open = (s) => ['new', 'accepted', 'pending_new', 'partially_filled'].includes(s);
   $('#orTable').innerHTML = list.length ? `
-    <tr><th>Enviada</th><th>Símbolo</th><th>Clase</th><th>Lado</th><th>Tipo</th><th class="n">Cant.</th><th class="n">Límite</th><th>Estado</th><th></th></tr>
+    <tr><th class="hs">Hora</th><th>Símbolo</th><th>Lado</th><th class="n">Cant.</th><th class="n">Límite</th><th>Estado</th><th></th></tr>
     ${list.map((o) => `<tr data-id="${o.id}">
-      <td class="muted">${new Date(o.submittedAt).toLocaleString('es-MX')}</td>
-      <td><b>${esc(o.symbol ?? o.legs.map((l) => l.symbol).join(' / '))}</b></td><td>${o.orderClass || 'simple'}</td>
-      <td class="${o.side ?? ''}">${o.side ?? '—'}</td><td>${o.type}</td><td class="n">${o.qty}</td><td class="n">${num(o.limitPrice)}</td>
+      <td class="muted hs">${new Date(o.submittedAt).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+      <td class="cut mono" title="${esc(o.symbol ?? o.legs.map((l) => l.symbol).join(' / '))}"><b>${esc(o.symbol ?? o.legs.map((l) => l.symbol).join(' / '))}</b></td>
+      <td class="${o.side ?? ''}">${o.side ?? o.orderClass ?? '—'}</td><td class="n">${o.qty}</td><td class="n">${num(o.limitPrice)}</td>
       <td><span class="badge ${tone(o.status)}">${o.status}</span></td>
-      <td>${open(o.status) ? `${o.orderClass !== 'mleg' ? '<button class="ghost sm" data-act="patch">Cambiar precio</button> ' : ''}<button class="danger sm" data-act="cancel">Cancelar</button>` : ''}</td>
+      <td>${open(o.status) ? `${o.orderClass !== 'mleg' ? '<button class="ghost sm" data-act="patch">Precio</button> ' : ''}<button class="danger sm" data-act="cancel">Cancelar</button>` : ''}</td>
     </tr>`).join('')}` : '<tr><td class="empty">No hay órdenes.</td></tr>';
 }
 $('#orForm').onsubmit = (e) => {
@@ -589,6 +1101,7 @@ $('#orForm').onsubmit = (e) => {
     f.qty = Number(f.qty);
     if (f.type === 'market') delete f.limit_price; else f.limit_price = Number(f.limit_price);
     await api('POST', '/orders', f);
+    $('#dlgOrder').close();
     await loadOrders();
   })();
 };
@@ -617,32 +1130,39 @@ const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v
 const localTime = (t) => t - new Date(t * 1000).getTimezoneOffset() * 60;
 let charts = null, overlay = [];
 
+// Autoscale del eje de precios ampliado para que entren los strikes dibujados (el zoom manual sigue funcionando).
+function includeStrikes(original) {
+  const r = original();
+  if (!r || !overlayLegs.length) return r;
+  const k = overlayLegs.map((l) => l.strike);
+  return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...k), maxValue: Math.max(r.priceRange.maxValue, ...k) } };
+}
+// Colores de las gráficas tomados de las variables CSS (se reaplican si cambia el modo claro/oscuro).
+const chartTheme = () => ({
+  layout: { background: { color: css('--panel') }, textColor: css('--muted'), fontFamily: 'JetBrains Mono, ui-monospace, monospace' },
+  grid: { vertLines: { color: css('--line') }, horzLines: { color: css('--line') } },
+});
+// Líneas de indicadores: marfil/tinta (SMA20), acento (EMA9, RSI, MACD) y salvia (bandas, señal): todo sale de las variables CSS.
 function makeCharts() {
   const LC = LightweightCharts;
-  const opts = {
-    autoSize: true,
-    layout: { background: { color: css('--panel') }, textColor: css('--muted') },
-    grid: { vertLines: { color: css('--line') }, horzLines: { color: css('--line') } },
-    timeScale: { timeVisible: true, borderColor: css('--line') },
-    rightPriceScale: { borderColor: css('--line'), minimumWidth: 70 },
-  };
+  const opts = { autoSize: true, ...chartTheme(), timeScale: { timeVisible: true, borderColor: css('--line') }, rightPriceScale: { borderColor: css('--line'), minimumWidth: 70 } };
   const price = LC.createChart($('#chPrice'), opts), rsiC = LC.createChart($('#chRsi'), opts), macdC = LC.createChart($('#chMacd'), opts);
   const line = (chart, color, title, lineStyle = 0) => chart.addLineSeries({ color, lineWidth: 1, title, lineStyle, priceLineVisible: false, lastValueVisible: !!title });
   const series = {
-    candles: price.addCandlestickSeries({ upColor: css('--ok'), downColor: css('--bad'), wickUpColor: css('--ok'), wickDownColor: css('--bad'), borderVisible: false }),
+    candles: price.addCandlestickSeries({ autoscaleInfoProvider: includeStrikes, upColor: css('--ok'), downColor: css('--bad'), wickUpColor: css('--ok'), wickDownColor: css('--bad'), borderVisible: false }),
     volume: price.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, priceLineVisible: false, lastValueVisible: false }),
-    sma20: line(price, '#e3b341', 'SMA20'),
+    sma20: line(price, css('--text'), 'SMA20'),
     ema9: line(price, css('--accent'), 'EMA9'),
     bbUpper: line(price, css('--muted'), '', 2),
     bbLower: line(price, css('--muted'), '', 2),
-    rsi14: line(rsiC, '#a371f7', 'RSI14'),
+    rsi14: line(rsiC, css('--accent'), 'RSI14'),
     histogram: macdC.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false }),
     macd: line(macdC, css('--accent'), 'MACD'),
-    signal: line(macdC, '#e3b341', 'Señal'),
+    signal: line(macdC, css('--muted'), 'Señal'),
   };
   price.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-  series.rsi14.createPriceLine({ price: 70, color: css('--bad'), lineStyle: 2, axisLabelVisible: false });
-  series.rsi14.createPriceLine({ price: 30, color: css('--ok'), lineStyle: 2, axisLabelVisible: false });
+  const rsi70 = series.rsi14.createPriceLine({ price: 70, color: css('--bad'), lineStyle: 2, axisLabelVisible: false });
+  const rsi30 = series.rsi14.createPriceLine({ price: 30, color: css('--ok'), lineStyle: 2, axisLabelVisible: false });
   // Las 3 gráficas se desplazan y hacen zoom juntas.
   const all = [price, rsiC, macdC];
   let syncing = false;
@@ -652,66 +1172,138 @@ function makeCharts() {
     all.forEach((o) => o !== c && o.timeScale().setVisibleLogicalRange(r));
     syncing = false;
   }));
+  const all3 = [price, rsiC, macdC];
+  // Cambio de modo claro/oscuro en caliente: fondo, rejilla, velas, líneas e indicadores se recolorean con las variables CSS.
+  const retheme = () => {
+    all3.forEach((c) => c.applyOptions({ ...chartTheme(), timeScale: { borderColor: css('--line') }, rightPriceScale: { borderColor: css('--line') } }));
+    series.candles.applyOptions({ upColor: css('--ok'), downColor: css('--bad'), wickUpColor: css('--ok'), wickDownColor: css('--bad') });
+    for (const [k, v] of Object.entries({ sma20: '--text', ema9: '--accent', bbUpper: '--muted', bbLower: '--muted', rsi14: '--accent', macd: '--accent', signal: '--muted' })) series[k].applyOptions({ color: css(v) });
+    rsi70.applyOptions({ color: css('--bad') }); rsi30.applyOptions({ color: css('--ok') });
+    drawOverlay();
+    loadBars(ticker(), ticket).catch(() => {}); // repinta volumen e histograma MACD (colores por barra)
+  };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => setTimeout(retheme, 50));
+  window.rethemeCharts = retheme; // expuesta también para probarla a mano
   return { price, series };
 }
 
 let lastKey = '';
-async function loadMarket(quiet = false) {
-  const sym = $('#mkSymbol').value.trim().toUpperCase(), tf = $('#mkTf').value;
-  const path = `/market/${encodeURIComponent(sym)}/bars?timeframe=${tf}&limit=300`;
-  // El refresco en vivo no se anota en la bitácora para no llenarla.
-  const d = quiet ? await fetch(`${base()}/api/v1${path}`).then((r) => r.ok ? r.json() : Promise.reject()) : await api('GET', path);
+
+// Velas + indicadores de la gráfica. Solo se piden aquí (las tarjetas salen de /market/overview).
+// `live` = refresco silencioso del temporizador: sin bitácora ni alert; actualiza solo precio y bid/ask.
+async function loadBars(sym, mine, live = false) {
+  const tf = $('#mkTf').value, path = `/market/${encodeURIComponent(sym)}/bars?timeframe=${tf}&limit=300`;
+  // Si falla, la tarjeta de cotización (overview) ya avisa; aquí solo se propaga sin alert.
+  const d = live ? await fetch(`${base()}/api/v1${path}`).then((r) => r.ok ? r.json() : Promise.reject()) : await api('GET', path, undefined, true);
+  if (mine !== ticket) return; // el usuario cambió de ticker mientras llegaba: se descarta
   charts ??= makeCharts();
   const { series } = charts;
   const time = d.bars.map((b) => localTime(b.time));
   series.candles.setData(d.bars.map((b, i) => ({ time: time[i], open: b.open, high: b.high, low: b.low, close: b.close })));
-  series.volume.setData(d.bars.map((b, i) => ({ time: time[i], value: b.volume, color: b.close >= b.open ? 'rgba(19,128,74,.35)' : 'rgba(194,50,43,.35)' })));
+  series.volume.setData(d.bars.map((b, i) => ({ time: time[i], value: b.volume, color: b.close >= b.open ? css('--ok') + '55' : css('--bad') + '55' })));
   for (const k of ['sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram']) {
     series[k].setData(d.indicators[k].flatMap((v, i) => v == null ? [] : [{ time: time[i], value: v, ...(k === 'histogram' ? { color: v >= 0 ? css('--ok') : css('--bad') } : {}) }]));
   }
   const key = `${sym}|${tf}`;
-  if (key !== lastKey) { charts.price.timeScale().fitContent(); lastKey = key; }
+  if (key !== lastKey) { charts.price.timeScale().fitContent(); lastKey = key; drawOverlay(); }
+  if (live) paintPrice(d.quote);
+}
+$('#mkTf').onchange = () => loadBars(ticker(), ticket).catch(() => {});
 
-  const ind = (k) => d.indicators[k].at(-1);
-  const q = d.quote, chg = q.prevClose ? (q.price / q.prevClose - 1) * 100 : null;
-  const rsiNow = ind('rsi14'), m = ind('macd'), sg = ind('signal');
-  const rsiTxt = rsiNow == null ? '—' : rsiNow > 70 ? 'sobrecompra' : rsiNow < 30 ? 'sobreventa' : 'neutral';
-  const bbTxt = q.price > ind('bbUpper') ? 'sobre banda sup.' : q.price < ind('bbLower') ? 'bajo banda inf.' : 'dentro de bandas';
-  $('#mkQuote').innerHTML = `
-    <div class="kpi"><span>${esc(d.symbol)} · último</span><b>${num(q.price)}</b></div>
-    <div class="kpi"><span>vs. cierre anterior</span><b class="${chg >= 0 ? 'buy' : 'sell'}">${chg == null ? '—' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%'}</b></div>
-    <div class="kpi"><span>Bid / Ask</span><b>${num(q.bid)} / ${num(q.ask)}</b></div>
-    <div class="kpi"><span>RSI14 · ${rsiTxt}</span><b>${num(rsiNow, 1)}</b></div>
-    <div class="kpi"><span>MACD vs señal</span><b class="${m >= sg ? 'buy' : 'sell'}">${m == null ? '—' : m >= sg ? 'alcista' : 'bajista'}</b></div>
-    <div class="kpi"><span>Bollinger</span><b style="font-size:14px">${bbTxt}</b></div>
-    <div class="kpi"><span>Broker · datos</span><b style="font-size:13px">Alpaca Paper<br><span class="muted">${esc(d.source)} · ${q.time ? new Date(q.time).toLocaleTimeString('es-MX') : '—'}</span></b></div>`;
+// Precio, % del día y bid/ask (lo único que cambia con el modo en vivo). Bid o ask en 0/null -> "—".
+function paintPrice(q) {
+  if (!$('#kpPrice')) return;
+  const chg = q.prevClose ? (q.price / q.prevClose - 1) * 100 : q.changePct ?? null;
+  $('#kpPrice').textContent = num(q.price);
+  $('#kpChg').className = chg >= 0 ? 'buy' : 'sell';
+  $('#kpChg').textContent = chg == null ? '—' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+  $('#kpBA').textContent = `${px(q.bid)} / ${px(q.ask)}`;
+  quoteCache[ticker()] = { price: q.price, chg };
+  paintWl();
 }
 
-// Strikes de una estrategia guardada como líneas sobre el precio (verde = compra, rojo = venta).
+// Tarjetas del ticker con UNA petición: GET /market/overview (cotización, indicadores resumidos, vencimientos).
+async function loadOverview(sym, mine) {
+  $('#mkQuote').innerHTML = '<span class="skel"></span>'.repeat(6);
+  try {
+    const d = await api('GET', `/market/overview?symbol=${encodeURIComponent(sym)}`, undefined, true);
+    if (mine !== ticket) return;
+    const i = d.indicators, ex = d.expirations, q = d.quote;
+    const rsiTxt = i?.rsi14 == null ? '—' : i.rsi14 > 70 ? 'sobrecompra' : i.rsi14 < 30 ? 'sobreventa' : 'neutral';
+    const na = '<span class="muted">no disponible</span>';
+    $('#mkQuote').innerHTML = `
+      <div class="kpi"><span>${esc(d.symbol)} · último</span><b id="kpPrice"></b></div>
+      <div class="kpi"><span>vs. cierre</span><b id="kpChg"></b></div>
+      <div class="kpi"><span>Bid / Ask</span><b id="kpBA"></b></div>
+      <div class="kpi"><span>RSI14 · ${rsiTxt}</span><b>${i ? num(i.rsi14, 1) : na}</b></div>
+      <div class="kpi"><span>Tendencia · HV30</span><b class="t">${i ? `${esc(i.trend)} · ${num(i.hv30Pct, 1)}%` : na}</b></div>
+      <div class="kpi"><span>Vencimientos</span><b class="t">${ex ? (ex.length ? `${esc(ex[0].date.slice(5))} · ${ex.length}` : 'sin opciones') : na}</b></div>`;
+    paintPrice(q);
+  } catch (err) { if (mine === ticket) $('#mkQuote').innerHTML = `<div class="pad muted" style="grid-column:1/-1">No se pudo cargar ${esc(sym)}: ${esc(err.message)}</div>`; }
+}
+
+// Piernas [{side, strike, type, expiration}] dibujadas como líneas sobre el precio (verde = compra, rojo = venta).
+let overlayLegs = [];
+function setOverlay(legs) { overlayLegs = legs; drawOverlay(); }
 function drawOverlay() {
-  if (!charts) return;
+  if (!charts) return; // loadBars la vuelve a llamar al crear las gráficas
   overlay.forEach((l) => charts.series.candles.removePriceLine(l));
-  overlay = [];
-  const s = (window.savedStrategies ?? []).find((x) => x.id === $('#mkStrat').value);
-  if (!s || s.underlying !== $('#mkSymbol').value.trim().toUpperCase()) return;
-  overlay = s.legs.map((l) => charts.series.candles.createPriceLine({
+  overlay = overlayLegs.map((l) => charts.series.candles.createPriceLine({
     price: l.strike, color: l.side === 'buy' ? css('--ok') : css('--bad'), lineWidth: 1, lineStyle: 1, axisLabelVisible: true,
     title: `${l.side === 'buy' ? 'C' : 'V'} ${l.type} ${l.expiration.slice(5)}`,
   }));
+  charts.price.priceScale('right').applyOptions({ autoScale: true }); // recalcula el rango con los strikes nuevos
 }
+// Estrategia guardada elegida en el selector: cambia al ticker de la estrategia y dibuja sus piernas.
 $('#mkStrat').onchange = async () => {
   const s = (window.savedStrategies ?? []).find((x) => x.id === $('#mkStrat').value);
-  if (s) $('#mkSymbol').value = s.underlying;
-  await loadMarket();
-  drawOverlay();
+  if (s && s.underlying !== ticker()) { const id = s.id; await setTicker(s.underlying); $('#mkStrat').value = id; }
+  setOverlay(s ? s.legs : []);
 };
-$('#mkForm').onsubmit = (e) => {
-  e.preventDefault();
-  busy(e.submitter, async () => { await loadMarket(); drawOverlay(); })();
-};
-setInterval(() => {
-  if ($('#market').classList.contains('on') && $('#mkLive').checked && !document.hidden) loadMarket(true).catch(() => {});
+$('#mkForm').onsubmit = (e) => { e.preventDefault(); setTicker(ticker()); };
+// Temporizador MAESTRO del modo en vivo: solo refresca velas/precio; se pausa con la pestaña oculta y
+// no solapa peticiones. El recomendador NO se refresca aquí (se carga una vez por cambio de ticker).
+let liveBusy = false;
+setInterval(async () => {
+  if (!$('#mkLive').checked || document.hidden || liveBusy) return;
+  liveBusy = true;
+  try { await loadBars(ticker(), ticket, true); } catch {} finally { liveBusy = false; }
 }, 5000);
+
+// ------------------------------------------------------------- interfaz: menús, diálogos, dock y paneles plegables
+// Menú flotante anclado a un botón; se cierra con clic fuera o Esc.
+function toggleMenu(menu, btn, above = false) {
+  const show = menu.hidden;
+  document.querySelectorAll('.menu').forEach((m) => { m.hidden = true; });
+  if (!show) return;
+  menu.hidden = false;
+  const r = btn.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.left = `${Math.max(8, Math.min(r.right - w, innerWidth - w - 8))}px`;
+  menu.style.top = `${above ? Math.max(8, r.top - h - 6) : r.bottom + 6}px`;
+}
+$('#btnGear').onclick = () => toggleMenu($('#menuGear'), $('#btnGear'));
+$('#btnLog').onclick = () => toggleMenu($('#menuLog'), $('#btnLog'), true);
+document.addEventListener('mousedown', (e) => {
+  if (!e.target.closest('.menu, #btnGear, #btnLog, #tickerBox')) document.querySelectorAll('.menu').forEach((m) => { m.hidden = true; });
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.menu').forEach((m) => { m.hidden = true; }); });
+
+// Diálogos: abrir, cerrar con ✕ y con clic en el fondo (los modales).
+const openDlg = (btn, dlg, modal = true) => { $(btn).onclick = () => { if (!$(dlg).open) modal ? $(dlg).showModal() : $(dlg).show(); }; };
+openDlg('#btnNewWl', '#dlgWl'); openDlg('#btnNewOrder', '#dlgOrder'); openDlg('#btnChains', '#dlgChain'); openDlg('#btnStrat', '#dlgStrat', false);
+document.addEventListener('click', (e) => {
+  if (e.target.matches('[data-close]')) e.target.closest('dialog').close();
+  else if (e.target.matches('dialog') && e.target.id !== 'dlgStrat') e.target.close(); // clic en el fondo
+});
+
+// Dock inferior plegable (se recuerda la elección).
+const setDock = (off) => { $('#app').classList.toggle('dockOff', off); $('#btnDock').textContent = off ? '▴ Mostrar panel inferior' : '▾ Ocultar panel inferior'; store.set('f0.dock', off ? 'off' : 'on'); };
+$('#btnDock').onclick = () => setDock(!$('#app').classList.contains('dockOff'));
+setDock(store.get('f0.dock', 'on') === 'off');
+
+// RSI y MACD plegables: en ventanas bajas arrancan plegados para darle todo el alto a las velas.
+document.querySelectorAll('.pane > button').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('off'); });
+if (innerHeight < 900) document.querySelectorAll('.pane').forEach((p) => p.classList.add('off'));
 
 connect();
 </script>
