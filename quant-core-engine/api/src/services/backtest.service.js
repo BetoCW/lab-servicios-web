@@ -96,7 +96,7 @@ export const backtestService = {
       const candidates = [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal'].map((template) => {
         const legs = backtestLegs(template, spot, iv);
         const mc = monteCarlo(legs, { spot, rate: RATE, vol: iv, horizonDays: 30, paths: MC_PATHS, seed: 7 });
-        const { score } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, var95: mc.var95, fit: fits[template] });
+        const { score } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] });
         const realizedPnl = pnlMatrix(legs, { spot, rate: RATE, horizonDays: 30, spotShocks: [move], volShocks: [0] })[0][0];
         return { template, score, predictedProb: mc.probProfit, realizedPnl, won: realizedPnl > 0 };
       });

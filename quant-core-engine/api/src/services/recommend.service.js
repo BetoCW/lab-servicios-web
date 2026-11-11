@@ -202,7 +202,7 @@ export const recommendService = {
             { stock: market.stock, snaps: market.snaps, history },
           );
           const mc = report.monteCarlo;
-          const { score, parts } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, var95: mc.var95, fit: fits[template] });
+          const { score, parts } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] });
           return {
             template,
             name: TEMPLATES[template],
@@ -240,7 +240,7 @@ export const recommendService = {
     return {
       symbol,
       asOf: new Date().toISOString(),
-      method: 'Puntaje = 40 % prob. de ganancia + 30 % valor esperado/riesgo + 30 % encaje con el mercado (lib/scoring.js).',
+      method: 'Puntaje = 20 % prob. de ganancia + 40 % valor esperado/CVaR + 40 % encaje con el mercado (lib/scoring.js).',
       signals: {
         spot,
         hv30Pct: round(signals.hv30 * 100, 1),

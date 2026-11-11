@@ -103,19 +103,21 @@ export function templateFit({ ivToHv, termSlope, signals }) {
 
 /**
  * Puntaje final 0–100 de una estrategia.
- *   score = 100 · ( 0.40·probabilidad de ganancia + 0.30·puntaje de valor esperado + 0.30·encaje )
- *   puntaje de valor esperado = 0.5 + 0.5·tanh( valor esperado / pérdida VaR95 )
+ *   score = 100 · ( 0.20·probabilidad de ganancia + 0.40·puntaje de valor esperado + 0.40·encaje )
+ *   puntaje de valor esperado = 0.5 + 0.5·tanh( valor esperado / pérdida CVaR95 )
  *     → 0.5 si el valor esperado es 0; sube hacia 1 si gana mucho respecto al riesgo; baja hacia 0 si pierde.
  *
  * @param {object} input
  * @param {number} input.probProfit - Probabilidad de ganancia (0–1) del Monte Carlo.
  * @param {number} input.expectedValue - P&L promedio simulado en dólares.
- * @param {number} input.var95 - VaR 95 % en dólares (pérdida positiva).
+ * @param {number} [input.cvar95] - CVaR 95 % en dólares (pérdida positiva).
+ * @param {number} [input.var95] - VaR 95 % en dólares (fallback si no se provee cvar95).
  * @param {number} input.fit - Encaje con el régimen (0–1).
  * @returns {{ score: number, parts: { probability: number, expectedValue: number, fit: number } }}
  */
-export function composite({ probProfit, expectedValue, var95, fit }) {
-  const evScore = 0.5 + 0.5 * Math.tanh(expectedValue / Math.max(Math.abs(var95), 1));
-  const score = 100 * (0.4 * probProfit + 0.3 * evScore + 0.3 * fit);
+export function composite({ probProfit, expectedValue, cvar95, var95, fit }) {
+  const tailRisk = cvar95 ?? var95 ?? 1;
+  const evScore = 0.5 + 0.5 * Math.tanh(expectedValue / Math.max(Math.abs(tailRisk), 1));
+  const score = 100 * (0.2 * probProfit + 0.4 * evScore + 0.4 * fit);
   return { score: Math.round(score * 10) / 10, parts: { probability: probProfit, expectedValue: evScore, fit } };
 }
