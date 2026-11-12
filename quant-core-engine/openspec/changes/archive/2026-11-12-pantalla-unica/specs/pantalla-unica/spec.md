@@ -25,6 +25,14 @@ vencimientos 10 min, recomendación 20 s. Los fallos no se cachean.
 ### Requirement: Precios de todas las estrategias en una consulta
 `GET /strategies?priced=true` SHALL devolver `pricing` y cotizaciones por pierna usando una sola consulta de snapshots.
 
+#### Scenario: Consulta de estrategias con precios en vivo
+- **WHEN** un cliente invoca `GET /strategies?priced=true`
+- **THEN** la respuesta incluye `pricing` y cotizaciones calculadas con una única consulta de snapshots de Alpaca
+
 ### Requirement: Ejecución automática protegida
 `POST /strategies/auto` SHALL rechazar con 429 una segunda ejecución simultánea y un segundo envío del mismo
 ticker dentro de 60 s; un fallo al enviar libera el bloqueo.
+
+#### Scenario: Ejecución simultánea o recurrente dentro del intervalo protegido
+- **WHEN** se invoca `POST /strategies/auto` mientras hay una ejecución en curso o dentro de los 60 s posteriores para el mismo ticker
+- **THEN** la petición es rechazada con código HTTP 429

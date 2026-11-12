@@ -28,6 +28,10 @@ confianza del 95 % para la media, el rango del P&L y la probabilidad de ganancia
 El sistema SHALL reportar el % de veces que la primera opción habría ganado a 30 días y comparar la
 probabilidad anunciada con la frecuencia real por tramos, declarando que la IV histórica se aproxima.
 
+#### Scenario: Evaluación de calibración histórica
+- **WHEN** un cliente consulta `GET /strategies/recommend/backtest?symbol={symbol}`
+- **THEN** el sistema evalúa ventanas históricas cada 5 días hábiles, reporta `topPick` con `winRatePct` y `avgPnl`, la tabla de calibración por tramos y declara la aproximación de IV histórica en `limitation`
+
 ### Requirement: Validación de riesgo con IA
 El sistema SHALL exponer `POST /ai/validate-risk` en el servicio `ai` (:3065) que devuelva `approved`,
 `caution` o `rejected` con justificación usando OpenRouter.

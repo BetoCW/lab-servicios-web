@@ -7,4 +7,4 @@
 - [x] 5. Caché de 20 s en `GET /strategies/recommend`
 - [x] 6. Candado y bloqueo por ticker en `POST /strategies/auto`
 - [x] 7. Documento `docs/arquitectura/UI-UNA-VISTA.md`
-- [ ] 8. Front: usar `overview` y `?priced=true`, un solo ciclo de polling (a cargo del agente de desarrollo)
+- [x] 8. Front: usar `overview` y `?priced=true`, un solo ciclo de polling (a cargo del agente de desarrollo)
