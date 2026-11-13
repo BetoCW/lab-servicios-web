@@ -177,6 +177,22 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 #recTable td.n { white-space: nowrap; }
 .bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 4px; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; width: var(--w); transition: width 300ms; }
+.cat-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px 10px 4px; }
+.cat-card { background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 8px; cursor: pointer; transition: border-color var(--t), background var(--t); }
+.cat-card:hover { border-color: var(--accent); }
+.cat-card.active { border-color: var(--accent); background: var(--accent-soft); }
+.cat-card .ctitle { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 2px; }
+.cat-card .cname { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-card .cval { font-size: 11px; color: var(--accent); font-family: var(--mono); margin-top: 2px; }
+.th-sort { cursor: pointer; user-select: none; }
+.th-sort:hover { color: var(--accent); }
+.th-sort::after { content: ' ⇅'; font-size: 9px; opacity: 0.5; }
+.th-sort.sorted::after { content: ' ▼'; opacity: 1; color: var(--accent); }
+.badge-tag { display: inline-block; font-size: 9px; padding: 1px 4px; border-radius: 3px; font-weight: 600; text-transform: uppercase; margin: 1px 2px 1px 0; }
+.badge-composite { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+.badge-fit { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid #3b82f6; }
+.badge-return { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; }
+.badge-prob { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid #f59e0b; }
 .why { margin: 8px 10px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sel .kpis { grid-template-columns: 1fr 1fr; margin: 8px 10px; }
 .sel .kpi b { font-size: 15px; }
@@ -870,7 +886,11 @@ function recDetail(entry) {
   const m = entry.metrics, r = entry.report;
   window.recEntry = entry;
   setOverlay(entry.legs.map(occLeg).filter(Boolean));
-  document.querySelectorAll('#recTable tr[data-i]').forEach((tr) => tr.classList.toggle('pick', window.recRanking[Number(tr.dataset.i)] === entry));
+  document.querySelectorAll('#recTable tr[data-template]').forEach((tr) => tr.classList.toggle('pick', tr.dataset.template === entry.template));
+  document.querySelectorAll('.cat-card').forEach((card) => {
+    const target = window.recCategoryWinners?.[card.dataset.cat]?.template;
+    card.classList.toggle('active', target === entry.template);
+  });
   $('#recSel').hidden = false;
   $('#recSel').innerHTML = `
     <div class="kpis">
@@ -911,6 +931,46 @@ $('#recSel').onclick = async (e) => {
   } catch { e.target.disabled = false; }
 };
 
+let recSortCriterion = 'composite';
+
+function renderRecTable(rows) {
+  const badgeMap = {
+    byComposite: '<span class="badge-tag badge-composite" title="Líder Algoritmo Equilibrado">Puntaje</span>',
+    byFit: '<span class="badge-tag badge-fit" title="Líder Régimen de Volatilidad / Tendencia">Encaje</span>',
+    byRiskAdjustedReturn: '<span class="badge-tag badge-return" title="Líder Retorno Asimétrico / CVaR">EV/CVaR</span>',
+    byProbability: '<span class="badge-tag badge-prob" title="Líder Mayor Probabilidad de Ganancia">Prob</span>',
+  };
+
+  const sorted = [...rows].sort((a, b) => {
+    if (a.error) return 1;
+    if (b.error) return -1;
+    if (recSortCriterion === 'fit') return (b.scoreParts?.fit ?? 0) - (a.scoreParts?.fit ?? 0);
+    if (recSortCriterion === 'ev') return (b.scoreParts?.expectedValue ?? 0) - (a.scoreParts?.expectedValue ?? 0);
+    if (recSortCriterion === 'prob') return (b.metrics?.probProfit ?? 0) - (a.metrics?.probProfit ?? 0);
+    return b.score - a.score;
+  });
+
+  return `
+    <div class="scroll"><table id="recTable">
+      <tr>
+        <th class="th-sort ${recSortCriterion === 'composite' ? 'sorted' : ''}" data-sort="composite" title="Ordenar por puntaje equilibrado"># Estrategia</th>
+        <th class="n th-sort ${recSortCriterion === 'fit' ? 'sorted' : ''}" data-sort="fit" title="Ordenar por encaje con tendencia y volatilidad">Fit</th>
+        <th class="n th-sort ${recSortCriterion === 'ev' ? 'sorted' : ''}" data-sort="ev" title="Ordenar por retorno ajustado a CVaR">EV/CVaR</th>
+        <th class="n th-sort ${recSortCriterion === 'prob' ? 'sorted' : ''}" data-sort="prob" title="Ordenar por probabilidad de ganancia">Prob.</th>
+        <th>Insignias</th>
+      </tr>
+      ${sorted.map((x, i) => x.error
+        ? `<tr style="--i:${i}"><td>${x.rank}</td><td colspan="4" class="muted">${esc(x.name)}: ${esc(x.error)}</td></tr>`
+        : `<tr data-template="${esc(x.template)}" style="--i:${i}">
+            <td><b>${esc(x.name)}</b> <span class="n muted">${x.score}</span><div class="bar"><i style="--w:${Math.max(0, Math.min(100, x.score))}%"></i></div></td>
+            <td class="n">${Math.round((x.scoreParts?.fit ?? 0) * 100)}%</td>
+            <td class="n ${x.metrics.expectedValue >= 0 ? 'buy' : 'sell'}">${signed(x.metrics.expectedValue)}</td>
+            <td class="n">${(x.metrics.probProfit * 100).toFixed(0)}%</td>
+            <td>${(x.badges || []).map((b) => badgeMap[b] || '').join('')}</td>
+          </tr>`).join('')}
+    </table></div>`;
+}
+
 // Pide GET /strategies/recommend, pinta el ranking compacto y elige la primera fila válida.
 async function recommend(symbol, mine = ticket) {
   $('#recSel').hidden = true;
@@ -921,14 +981,32 @@ async function recommend(symbol, mine = ticket) {
     if (mine !== ticket) return; // el usuario ya cambió de ticker: se descarta la respuesta vieja
     const s = d.signals;
     window.recRanking = d.ranking;
+    window.recCategoryWinners = d.categoryWinners;
     const firstSentence = String(d.explanation).split(/(?<=\.)\s/)[0]; // UNA frase; el texto largo va en el desplegable
+    const cw = d.categoryWinners || {};
+
+    const categoryCardsHtml = cw.byFit ? `
+      <div class="cat-cards">
+        <div class="cat-card" data-cat="byFit" title="${esc(cw.byFit.description)}">
+          <div class="ctitle">Régimen / Técnica</div>
+          <div class="cname">${esc(cw.byFit.name)}</div>
+          <div class="cval">${esc(cw.byFit.label)}</div>
+        </div>
+        <div class="cat-card" data-cat="byRiskAdjustedReturn" title="${esc(cw.byRiskAdjustedReturn.description)}">
+          <div class="ctitle">Retorno / CVaR</div>
+          <div class="cname">${esc(cw.byRiskAdjustedReturn.name)}</div>
+          <div class="cval">${esc(cw.byRiskAdjustedReturn.label)}</div>
+        </div>
+        <div class="cat-card" data-cat="byProbability" title="${esc(cw.byProbability.description)}">
+          <div class="ctitle">Prob. Pura</div>
+          <div class="cname">${esc(cw.byProbability.name)}</div>
+          <div class="cval">${esc(cw.byProbability.label)}</div>
+        </div>
+      </div>` : '';
+
     $('#recOut').innerHTML = `
-      <div class="scroll"><table id="recTable">
-        <tr><th>#</th><th>Estrategia · puntaje</th><th class="n">Prob.</th><th class="n">P&L esp.</th></tr>
-        ${d.ranking.map((x, i) => x.error
-          ? `<tr style="--i:${i}"><td>${x.rank}</td><td>${esc(x.name)}</td><td colspan="2" class="muted">${esc(x.error)}</td></tr>`
-          : `<tr data-i="${i}" style="--i:${i}"><td class="n">${x.rank}</td><td><b>${esc(x.name)}</b> <span class="n muted">${x.score}</span><div class="bar"><i style="--w:${Math.max(0, Math.min(100, x.score))}%"></i></div></td><td class="n">${(x.metrics.probProfit * 100).toFixed(0)}%</td><td class="n ${x.metrics.expectedValue >= 0 ? 'buy' : 'sell'}">${signed(x.metrics.expectedValue)}</td></tr>`).join('')}
-      </table></div>
+      ${categoryCardsHtml}
+      <div id="recTableWrap">${renderRecTable(d.ranking)}</div>
       <p class="why"><b>Por qué gana la 1ª:</b> ${esc(firstSentence)}</p>
       <details class="det"><summary class="muted">Ver explicación completa</summary><p>${esc(d.explanation)}</p><p class="muted">${esc(d.method)}</p></details>
       <details class="det sig"><summary class="muted">Señales del mercado · ${esc(s.volView)}</summary>
@@ -939,10 +1017,33 @@ async function recommend(symbol, mine = ticket) {
           <div class="kpi"><span>Bollinger</span><b>${num(s.bollingerPosition * 100, 0)}%</b><span>0 baja · 100 alta</span></div>
           <div class="kpi"><span>Vencimientos</span><b>${esc(s.nearExpiration)}</b><span>lejano ${esc(s.farExpiration ?? '—')}</span></div>
         </div></details>`;
-    $('#recTable').onclick = (ev) => {
-      const row = ev.target.closest('tr[data-i]');
-      if (row) recDetail(d.ranking[Number(row.dataset.i)]);
+
+    // Click handlers para ordenamiento de columnas y selección de tarjetas
+    $('#recOut').onclick = (ev) => {
+      const th = ev.target.closest('th[data-sort]');
+      if (th) {
+        recSortCriterion = th.dataset.sort;
+        $('#recTableWrap').innerHTML = renderRecTable(window.recRanking);
+        return;
+      }
+      const card = ev.target.closest('.cat-card');
+      if (card) {
+        const catKey = card.dataset.cat;
+        const targetTpl = cw[catKey]?.template;
+        const match = window.recRanking.find((r) => r.template === targetTpl);
+        if (match) {
+          recDetail(match);
+          document.querySelectorAll('.cat-card').forEach((c) => c.classList.toggle('active', c === card));
+        }
+        return;
+      }
+      const row = ev.target.closest('tr[data-template]');
+      if (row) {
+        const match = window.recRanking.find((r) => r.template === row.dataset.template);
+        if (match) recDetail(match);
+      }
     };
+
     const first = d.ranking.find((x) => !x.error);
     if (first) recDetail(first);
   } catch (err) { if (mine === ticket) $('#recOut').innerHTML = `<div class="pad muted">Este ticker no tiene opciones listadas o no se pudo recomendar (${esc(err.message)}).</div>`; }

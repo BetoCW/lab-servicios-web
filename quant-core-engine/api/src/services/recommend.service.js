@@ -156,6 +156,61 @@ function explain(winner, second, signals, all = []) {
   );
 }
 
+/**
+ * Determina los líderes por categoría analítica y asigna insignias a cada estrategia.
+ * @param {Array<object>} usable - Lista de estrategias válidas evaluadas en orden de rank.
+ * @returns {{ categoryWinners: object, rankingWithBadges: Array<object> }}
+ */
+export function buildCategoryWinners(usable) {
+  if (!usable.length) return { categoryWinners: {}, rankingWithBadges: [] };
+  const bestFit = [...usable].sort((a, b) => (b.scoreParts?.fit ?? 0) - (a.scoreParts?.fit ?? 0))[0];
+  const bestRiskReward = [...usable].sort((a, b) => (b.scoreParts?.expectedValue ?? 0) - (a.scoreParts?.expectedValue ?? 0))[0];
+  const bestWinRate = [...usable].sort((a, b) => (b.metrics?.probProfit ?? 0) - (a.metrics?.probProfit ?? 0))[0];
+  const bestComposite = usable[0];
+
+  const categoryWinners = {
+    byFit: {
+      template: bestFit.template,
+      name: bestFit.name,
+      value: bestFit.scoreParts?.fit ?? 0,
+      label: `${Math.round((bestFit.scoreParts?.fit ?? 0) * 100)} % encaje`,
+      description: 'Recomendada si confías en el análisis técnico de tendencia (EMA9/SMA20) y régimen de volatilidad.',
+    },
+    byRiskAdjustedReturn: {
+      template: bestRiskReward.template,
+      name: bestRiskReward.name,
+      value: bestRiskReward.scoreParts?.expectedValue ?? 0,
+      label: `EV $${bestRiskReward.metrics.expectedValue} (CVaR $${bestRiskReward.metrics.cvar95})`,
+      description: 'Recomendada si buscas la mejor asimetría matemática protegiendo el capital ante colas de pérdida.',
+    },
+    byProbability: {
+      template: bestWinRate.template,
+      name: bestWinRate.name,
+      value: bestWinRate.metrics.probProfit,
+      label: `${Math.round(bestWinRate.metrics.probProfit * 100)} % prob.`,
+      description: 'Recomendada si buscas cobrar primas y tener la máxima frecuencia de operaciones ganadoras.',
+    },
+    byComposite: {
+      template: bestComposite.template,
+      name: bestComposite.name,
+      value: bestComposite.score,
+      label: `${bestComposite.score} pts`,
+      description: 'Ganadora del algoritmo equilibrado (20 % probabilidad + 40 % EV/CVaR + 40 % encaje).',
+    },
+  };
+
+  const rankingWithBadges = usable.map((entry) => {
+    const badges = [];
+    if (entry.template === bestComposite.template) badges.push('byComposite');
+    if (entry.template === bestFit.template) badges.push('byFit');
+    if (entry.template === bestRiskReward.template) badges.push('byRiskAdjustedReturn');
+    if (entry.template === bestWinRate.template) badges.push('byProbability');
+    return { ...entry, badges };
+  });
+
+  return { categoryWinners, rankingWithBadges };
+}
+
 export const recommendService = {
   /**
    * Recomienda y ordena las 4 estrategias (Straddle, Strangle, Calendar, Diagonal) para un ticker.
@@ -236,7 +291,8 @@ export const recommendService = {
     const usable = ranking.filter((entry) => !entry.error);
     if (!usable.length) throw badRequest(`No se pudo armar ninguna estrategia para ${symbol}: ${ranking.map((e) => e.error).join(' | ')}`);
 
-    const winner = usable[0];
+    const { categoryWinners, rankingWithBadges } = buildCategoryWinners(usable);
+    const winner = rankingWithBadges[0];
     return {
       symbol,
       asOf: new Date().toISOString(),
@@ -257,10 +313,11 @@ export const recommendService = {
         nearExpiration,
         farExpiration,
       },
-      // Cada fila lleva su reporte completo (histograma, riesgo extendido) para que el front pueda mostrar su detalle al hacer clic.
-      ranking,
+      categoryWinners,
+      // Cada fila lleva su reporte completo y las insignias de liderazgo por categoría.
+      ranking: rankingWithBadges,
       winner: { template: winner.template, name: winner.name, score: winner.score, metrics: winner.metrics, legs: winner.legs, report: winner.report },
-      explanation: explain(winner, usable[1], signals, usable),
+      explanation: explain(winner, rankingWithBadges[1], signals, rankingWithBadges),
     };
   },
 };

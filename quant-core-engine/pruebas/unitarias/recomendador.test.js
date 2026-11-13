@@ -6,6 +6,7 @@ import { clamp, composite, marketSignals, templateFit, volSide } from '../../api
 import { riskFilter, RISK_RULES } from '../../api/src/services/autoTrade.service.js';
 import { backtestLegs } from '../../api/src/services/backtest.service.js';
 import { aiService, extractJson, normalizeVerdict } from '../../api/src/services/ai.service.js';
+import { buildCategoryWinners } from '../../api/src/services/recommend.service.js';
 import { config } from '../../api/src/config.js';
 
 /** Serie sintética: 120 cierres con una oscilación suave para no depender de datos reales. */
@@ -145,6 +146,48 @@ test('IA: usa el modelo de respaldo si el principal falla', async () => {
     globalThis.fetch = savedFetch;
     Object.assign(config.ai, saved);
   }
+});
+
+test('buildCategoryWinners asigna ganadores por categoría e insignias', () => {
+  const sampleUsable = [
+    {
+      template: 'short-strangle',
+      name: 'Venta de Strangle',
+      score: 75,
+      scoreParts: { probProfit: 0.16, expectedValue: 0.25, fit: 0.34 },
+      metrics: { probProfit: 0.80, expectedValue: 30, cvar95: 120 },
+    },
+    {
+      template: 'diagonal',
+      name: 'Diagonal Spread',
+      score: 70,
+      scoreParts: { probProfit: 0.11, expectedValue: 0.35, fit: 0.24 },
+      metrics: { probProfit: 0.55, expectedValue: 90, cvar95: 70 },
+    },
+    {
+      template: 'calendar',
+      name: 'Calendar Spread',
+      score: 65,
+      scoreParts: { probProfit: 0.10, expectedValue: 0.15, fit: 0.40 },
+      metrics: { probProfit: 0.50, expectedValue: 10, cvar95: 50 },
+    },
+  ];
+
+  const { categoryWinners, rankingWithBadges } = buildCategoryWinners(sampleUsable);
+  assert.equal(categoryWinners.byComposite.template, 'short-strangle');
+  assert.equal(categoryWinners.byProbability.template, 'short-strangle');
+  assert.equal(categoryWinners.byRiskAdjustedReturn.template, 'diagonal');
+  assert.equal(categoryWinners.byFit.template, 'calendar');
+
+  const strangleRow = rankingWithBadges.find((r) => r.template === 'short-strangle');
+  assert.ok(strangleRow.badges.includes('byComposite'));
+  assert.ok(strangleRow.badges.includes('byProbability'));
+
+  const diagonalRow = rankingWithBadges.find((r) => r.template === 'diagonal');
+  assert.ok(diagonalRow.badges.includes('byRiskAdjustedReturn'));
+
+  const calendarRow = rankingWithBadges.find((r) => r.template === 'calendar');
+  assert.ok(calendarRow.badges.includes('byFit'));
 });
 
 // ---------------------------------------------------------------- buscador de tickers
