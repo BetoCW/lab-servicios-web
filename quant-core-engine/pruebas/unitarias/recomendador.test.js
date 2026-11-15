@@ -48,10 +48,10 @@ test('composite: más probabilidad y mejor valor esperado dan más puntaje', () 
   // valor esperado 0 -> componente 0.5 exacto
   close(composite({ probProfit: 0, expectedValue: 0, cvar95: 100, fit: 0 }).parts.expectedValue, 0.5);
 
-  // Verificación de ponderación 20% prob / 40% evScore / 40% fit
-  // probProfit: 1 (0.20), ev: 0 -> evScore: 0.5 (0.40 * 0.5 = 0.20), fit: 0 -> total 40.0
+  // Verificación de ponderación 40% prob / 30% evScore / 30% fit
+  // probProfit: 1 (0.40), ev: 0 -> evScore: 0.5 (0.30 * 0.5 = 0.15), fit: 0 -> total 55.0
   const balanced = composite({ probProfit: 1, expectedValue: 0, cvar95: 100, fit: 0 });
-  close(balanced.score, 40.0);
+  close(balanced.score, 55.0);
 
   // CVaR mayor penaliza más que un VaR menor
   const withVaR = composite({ probProfit: 0.5, expectedValue: 50, var95: 100, fit: 0.5 });

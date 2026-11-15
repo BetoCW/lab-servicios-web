@@ -195,7 +195,7 @@ export function buildCategoryWinners(usable) {
       name: bestComposite.name,
       value: bestComposite.score,
       label: `${bestComposite.score} pts`,
-      description: 'Ganadora del algoritmo equilibrado (20 % probabilidad + 40 % EV/CVaR + 40 % encaje).',
+      description: 'Ganadora del algoritmo equilibrado (40 % probabilidad + 30 % EV/CVaR + 30 % encaje).',
     },
   };
 
@@ -296,7 +296,7 @@ export const recommendService = {
     return {
       symbol,
       asOf: new Date().toISOString(),
-      method: 'Puntaje = 20 % prob. de ganancia + 40 % valor esperado/CVaR + 40 % encaje con el mercado (lib/scoring.js).',
+      method: 'Puntaje = 40 % prob. de ganancia + 30 % valor esperado/CVaR + 30 % encaje con el mercado (lib/scoring.js).',
       signals: {
         spot,
         hv30Pct: round(signals.hv30 * 100, 1),

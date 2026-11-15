@@ -103,7 +103,7 @@ export function templateFit({ ivToHv, termSlope, signals }) {
 
 /**
  * Puntaje final 0–100 de una estrategia.
- *   score = 100 · ( 0.20·probabilidad de ganancia + 0.40·puntaje de valor esperado + 0.40·encaje )
+ *   score = 100 · ( 0.40·probabilidad de ganancia + 0.30·puntaje de valor esperado + 0.30·encaje )
  *   puntaje de valor esperado = 0.5 + 0.5·tanh( valor esperado / pérdida CVaR95 )
  *     → 0.5 si el valor esperado es 0; sube hacia 1 si gana mucho respecto al riesgo; baja hacia 0 si pierde.
  *
@@ -118,6 +118,6 @@ export function templateFit({ ivToHv, termSlope, signals }) {
 export function composite({ probProfit, expectedValue, cvar95, var95, fit }) {
   const tailRisk = cvar95 ?? var95 ?? 1;
   const evScore = 0.5 + 0.5 * Math.tanh(expectedValue / Math.max(Math.abs(tailRisk), 1));
-  const score = 100 * (0.2 * probProfit + 0.4 * evScore + 0.4 * fit);
+  const score = 100 * (0.4 * probProfit + 0.3 * evScore + 0.3 * fit);
   return { score: Math.round(score * 10) / 10, parts: { probability: probProfit, expectedValue: evScore, fit } };
 }

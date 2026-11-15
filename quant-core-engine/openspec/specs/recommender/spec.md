@@ -7,7 +7,7 @@ Permite evaluar, comparar y recomendar sistemáticamente estrategias cuantitativ
 ## Requirements
 
 ### Requirement: Recomendación optimizada por puntaje multicriterio con CVaR
-El sistema SHALL recomendar entre Straddle, Strangle, Calendar y Diagonal para un ticker usando datos reales de Alpaca y el motor Rust/WASM, retornando un ranking 0–100 (20 % probabilidad, 40 % EV/CVaR, 40 % fit), un desglose explícito de líderes por metodología (`categoryWinners: { byFit, byRiskAdjustedReturn, byProbability, byComposite }`) e insignias (`badges`) en cada fila del ranking con las categorías que lidera.
+El sistema SHALL recomendar entre Straddle, Strangle, Calendar y Diagonal para un ticker usando datos reales de Alpaca y el motor Rust/WASM, retornando un ranking 0–100 (40 % probabilidad, 30 % EV/CVaR, 30 % fit), un desglose explícito de líderes por metodología (`categoryWinners: { byFit, byRiskAdjustedReturn, byProbability, byComposite }`) e insignias (`badges`) en cada fila del ranking con las categorías que lidera.
 
 #### Scenario: Ponderación de riesgo de cola con CVaR
 - **WHEN** se ejecuta el análisis Monte Carlo de una estrategia candidata
@@ -26,11 +26,11 @@ El sistema SHALL recomendar entre Straddle, Strangle, Calendar y Diagonal para u
 - **THEN** el campo `explanation` lo señala explícitamente y la etiqueta como la menos desfavorable entre las candidatas
 
 ### Requirement: Alineación de backtest y calibración histórica
-El microservicio de estrategias SHALL evaluar la calibración histórica y el porcentaje de acierto del recomendador utilizando la función de puntaje rebalanceada con `cvar95` en intervalos de 5 días hábiles a lo largo del historial disponible.
+El microservicio de estrategias SHALL evaluar la calibración histórica y el porcentaje de acierto del recomendador utilizando la función de puntaje con `cvar95` en intervalos de 5 días hábiles a lo largo del historial disponible.
 
 #### Scenario: Evaluación de rendimiento histórico
 - **WHEN** un cliente consulta `GET /strategies/recommend/backtest?symbol={symbol}`
-- **THEN** el sistema evalúa cada punto temporal con las ponderaciones 20 % probabilidad, 40 % valor esperado/CVaR y 40 % encaje, reportando `winRatePct` y `avgPnl` de la opción ganadora
+- **THEN** el sistema evalúa cada punto temporal con las ponderaciones 40 % probabilidad, 30 % valor esperado/CVaR y 30 % encaje, reportando `winRatePct` y `avgPnl` de la opción ganadora
 
 ### Requirement: Recomendación ordenada por puntaje
 El sistema SHALL recomendar entre Straddle, Strangle, Calendar y Diagonal para un ticker usando datos reales de Alpaca y el motor Rust/WASM, ordenando por un puntaje 0–100 (40 % probabilidad de ganancia, 30 % valor esperado frente al riesgo, 30 % encaje con el mercado) y explicando por qué gana la primera.
