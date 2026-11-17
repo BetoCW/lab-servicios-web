@@ -57,6 +57,7 @@ b, th { font-weight: 600; }
 input, select, button { font: inherit; color: var(--text); }
 input, select { background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px; min-width: 0; transition: border-color var(--t); }
 button { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: var(--r-sm); padding: 6px 11px; cursor: pointer; font-weight: 500; transition: filter var(--t), background var(--t); }
+button { white-space: nowrap; }
 button:hover { filter: brightness(1.08); }
 button.ghost { background: var(--accent-soft); color: var(--accent); }
 button.danger { background: var(--bad-soft); color: var(--bad); }
@@ -131,8 +132,8 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 #work { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr) var(--side); gap: 10px; padding: 10px 10px 8px; min-height: 0; }
 #rail, #center, #side { min-height: 0; display: flex; flex-direction: column; }
 .pnl { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
-.ph { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line); flex: none; }
-.ph b { font-family: var(--display); font-variation-settings: 'opsz' 48; font-size: 15px; color: var(--text); letter-spacing: -.005em; }
+.ph { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line); flex: none; }
+.ph b { white-space: nowrap; font-family: var(--display); font-variation-settings: 'opsz' 48; font-size: 15px; color: var(--text); letter-spacing: -.005em; }
 .ph .acts { display: flex; gap: 5px; align-items: center; }
 .body { overflow: auto; flex: 1; min-height: 0; }
 
@@ -154,7 +155,7 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 #mkQuote { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; flex: none; overflow: hidden; }
 #mkQuote .kpi { background: none; border-right: 1px solid var(--line); border-radius: 0; padding: 6px 12px; margin: 0; min-width: 0; }
 #mkQuote .kpi:last-child { border-right: 0; }
-#mkQuote .kpi span { text-transform: uppercase; letter-spacing: .05em; font-size: 10px; }
+#mkQuote .kpi span { text-transform: uppercase; letter-spacing: .05em; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #mkQuote .kpi b { font-size: 17px; font-weight: 500; white-space: nowrap; }
 #mkQuote .kpi b.t { font-family: var(--font); font-weight: 600; font-size: 13px; }
 #mkQuote .skel { height: 30px; margin: 8px 12px; }
@@ -239,6 +240,16 @@ dialog > .dh { display: flex; justify-content: space-between; align-items: cente
 #dlgStrat { position: fixed; margin: 0; right: 14px; bottom: calc(var(--foot) + var(--dock) + 14px); left: auto; top: auto; width: min(560px, 94vw); z-index: 40; }
 dialog#dlgStrat:not([open]) { display: none; }
 
+/* tutorial paso a paso (botón ▶): foco recortado con sombra + tarjeta flotante */
+#tourSpot { position: fixed; z-index: 95; border-radius: var(--r); box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px rgba(5, 8, 12, .62); pointer-events: none; transition: all 220ms; }
+#tourPop { position: fixed; z-index: 96; width: min(350px, 92vw); background: var(--panel); border: 1px solid var(--accent); border-radius: var(--r); box-shadow: var(--shadow); padding: 12px 14px; animation: rise var(--t) both; }
+#tourPop .sec { font: 500 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+#tourPop h3 { font-family: var(--display); font-weight: 600; font-size: 16px; margin: 2px 0 6px; }
+#tourPop p { margin: 0 0 6px; }
+#tourPop ol { margin: 0 0 6px; padding-left: 18px; } #tourPop li { margin: 2px 0; }
+#tourPop .nav { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+#tourPop .dots { display: flex; gap: 3px; margin-right: auto; } #tourPop .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); } #tourPop .dots i.on { background: var(--accent); }
+
 /* =====================================================================================
    RESPONSIVE
    < 1100 px: el riel pasa a franja horizontal de chips sobre la gráfica.
@@ -288,6 +299,7 @@ dialog#dlgStrat:not([open]) { display: none; }
   <div class="pill" id="acct">Paper · sin conexión</div>
   <span class="dot" id="connDot" title="sin conexión" role="status" aria-label="estado de conexión"></span>
   <button class="ghost ic" id="btnGear" aria-label="Ajustes" title="Ajustes de conexión">⚙</button>
+  <button class="ic" id="btnTour" title="Tutorial paso a paso" aria-label="Iniciar tutorial">▶ Tutorial</button>
 </header>
 
 <!-- Ajustes: URL de la API, Conectar y estrategia guardada en la gráfica (escondidos para no estorbar) -->
@@ -341,7 +353,7 @@ dialog#dlgStrat:not([open]) { display: none; }
 <!-- 5) DOCK INFERIOR: Órdenes | Estrategias guardadas | Cadena de opciones (cada panel con su scroll) -->
 <section id="dock">
   <div class="pnl dp">
-    <div class="ph"><b>Órdenes</b><span class="acts"><button class="sm" id="btnNewOrder">＋ Nueva</button><button class="ghost sm" id="orRefresh">↻</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></div>
+    <div class="ph"><b>Órdenes</b><span class="acts"><select id="orStatus" aria-label="Filtro de órdenes"><option value="open">Abiertas</option><option value="all">Historial</option></select><button class="sm" id="btnNewOrder">＋ Nueva</button><button class="ghost sm" id="orRefresh">↻</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></div>
     <div class="body"><table id="orTable"></table></div>
   </div>
   <div class="pnl dp">
@@ -1189,7 +1201,7 @@ $('#autoRun').onclick = busy($('#autoRun'), async () => {
 
 // ------------------------------------------------------------- 4. órdenes
 async function loadOrders() {
-  const list = await api('GET', '/orders?status=all&limit=20');
+  const list = await api('GET', `/orders?status=${$('#orStatus').value}&limit=20`);
   const tone = (s) => ({ filled: 'ok', canceled: 'bad', rejected: 'bad', expired: 'bad', replaced: '' }[s] ?? 'warn');
   const open = (s) => ['new', 'accepted', 'pending_new', 'partially_filled'].includes(s);
   $('#orTable').innerHTML = list.length ? `
@@ -1200,7 +1212,7 @@ async function loadOrders() {
       <td class="${o.side ?? ''}">${o.side ?? o.orderClass ?? '—'}</td><td class="n">${o.qty}</td><td class="n">${num(o.limitPrice)}</td>
       <td><span class="badge ${tone(o.status)}">${o.status}</span></td>
       <td>${open(o.status) ? `${o.orderClass !== 'mleg' ? '<button class="ghost sm" data-act="patch">Precio</button> ' : ''}<button class="danger sm" data-act="cancel">Cancelar</button>` : ''}</td>
-    </tr>`).join('')}` : '<tr><td class="empty">No hay órdenes.</td></tr>';
+    </tr>`).join('')}` : `<tr><td class="empty">${$('#orStatus').value === 'open' ? 'No hay órdenes abiertas. Elige “Historial” para ver las anteriores.' : 'No hay órdenes.'}</td></tr>`;
 }
 $('#orForm').onsubmit = (e) => {
   e.preventDefault();
@@ -1226,6 +1238,7 @@ $('#orTable').onclick = async (e) => {
   await loadOrders();
 };
 $('#orRefresh').onclick = busy($('#orRefresh'), loadOrders);
+$('#orStatus').onchange = () => loadOrders().catch(() => {});
 $('#orCancelAll').onclick = async () => {
   if (!confirm('¿Cancelar todas las órdenes abiertas?')) return;
   await api('DELETE', '/orders');
@@ -1412,6 +1425,64 @@ setDock(store.get('f0.dock', 'on') === 'off');
 // RSI y MACD plegables: en ventanas bajas arrancan plegados para darle todo el alto a las velas.
 document.querySelectorAll('.pane > button').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('off'); });
 if (innerHeight < 900) document.querySelectorAll('.pane').forEach((p) => p.classList.add('off'));
+
+// ------------------------------------------------------------- tutorial paso a paso (botón ▶ arriba a la derecha)
+// Cada paso resalta un panel y explica qué hacer ahí. Los pasos siguen el flujo de trabajo: elegir → analizar → decidir → operar.
+const TOUR = [
+  { sec: '1 · Elegir activo', el: '#mkSymbol', t: 'Escribe el ticker', h: '<p>Todo empieza aquí. Escribe un ticker (<b>SPY</b>) o el nombre de una empresa (<b>apple</b>) y elige de la lista.</p><p class="muted">Al cambiarlo se recarga toda la pantalla: cotización, gráfica, recomendador y cadena.</p>' },
+  { sec: '1 · Elegir activo', el: '#rail', t: 'Watchlists', h: '<ol><li>Clic en un símbolo para abrirlo.</li><li><b>＋</b> crea una lista nueva.</li><li><b>⋯</b> renombra, agrega o elimina.</li></ol>' },
+  { sec: '1 · Elegir activo', el: '#acct', t: 'Tu cuenta paper', h: '<p>Efectivo y poder de compra de la cuenta de práctica de Alpaca. El punto verde indica que la API está conectada; <b>⚙</b> cambia la URL.</p>' },
+  { sec: '2 · Analizar', el: '#mkQuote', t: 'Cotización', h: '<p>Precio, cambio contra el cierre, bid/ask, RSI, tendencia con volatilidad histórica y próximos vencimientos de opciones.</p>' },
+  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica en vivo', h: '<ol><li>Elige la temporalidad (5Min, 1Day…) arriba; <b>En vivo</b> refresca cada 5 s.</li><li>Velas con SMA20, EMA9 y Bollinger.</li><li>RSI y MACD se pliegan con su barra.</li><li>Las piernas de la estrategia elegida aparecen como líneas (verde compra, rojo venta).</li></ol>' },
+  { sec: '3 · Decidir', el: '#recCard', t: 'Recomendador', h: '<ol><li>El motor simula 4 estrategias con Monte Carlo y las ordena por puntaje.</li><li>Clic en una fila para ver sus números y dibujarla en la gráfica.</li><li><b>Ver más</b>: riesgo completo. <b>Backtest</b>: qué tan seguido acertó el último año.</li><li><b>Armar y guardar</b> la manda a Estrategias guardadas.</li></ol>' },
+  { sec: '3 · Decidir', el: '#autoCard', t: 'Ejecutar automático', h: '<p>Recomienda, pasa el filtro de riesgo y el de la IA, y solo entonces envía la orden a Alpaca <b>paper</b>.</p><p class="muted">Marca <b>Solo simular</b> para ver el resultado sin enviar nada.</p>' },
+  { sec: '4 · Operar', el: '#dock .dp:nth-child(3)', t: 'Cadena de opciones', h: '<ol><li>Muestra la cadena guardada del ticker; cambia el vencimiento arriba.</li><li><b>Gestionar cadenas</b> → Ingestar desde Alpaca si no existe o está vieja.</li><li><b>+C</b> / <b>+V</b> agregan piernas a una estrategia manual.</li></ol>', dock: true },
+  { sec: '4 · Operar', el: '#dock .dp:nth-child(2)', t: 'Estrategias guardadas', h: '<ol><li><b>＋ Armar manual</b>: con piernas +C/+V o una plantilla.</li><li><b>Riesgo</b>: motor Rust/WASM (VaR, matriz de P&L, estrés).</li><li><b>En gráfica</b>: dibuja sus strikes.</li><li><b>Enviar a Alpaca</b> manda la orden multi-pierna.</li></ol>', dock: true },
+  { sec: '4 · Operar', el: '#dock .dp:nth-child(1)', t: 'Órdenes', h: '<p>Órdenes abiertas en Alpaca paper; cambia a <b>Historial</b> para ver las anteriores. <b>＋ Nueva</b> para una orden simple, <b>Precio</b> para modificarla y <b>Cancelar</b>.</p>', dock: true },
+  { sec: 'Listo', el: '#foot', t: 'Pie de página', h: '<p><b>Ocultar panel inferior</b> le da todo el alto a la gráfica. <b>Peticiones</b> muestra cada llamada a la API con su respuesta.</p><p class="muted">Vuelve a ver este recorrido con <b>▶ Tutorial</b>.</p>' },
+];
+let tourAt = -1;
+function tourShow(i) {
+  if (i < 0 || i >= TOUR.length) return tourEnd();
+  tourAt = i;
+  const s = TOUR[i];
+  if (s.dock) setDock(false);
+  const el = $(s.el);
+  el.scrollIntoView({ block: 'start' });
+  const spot = $('#tourSpot') ?? document.body.appendChild(Object.assign(document.createElement('div'), { id: 'tourSpot' }));
+  const pop = $('#tourPop') ?? document.body.appendChild(Object.assign(document.createElement('div'), { id: 'tourPop', role: 'dialog', ariaLabel: 'Tutorial' }));
+  pop.innerHTML = `<div class="sec">${s.sec} · paso ${i + 1} de ${TOUR.length}</div><h3>${s.t}</h3>${s.h}
+    <div class="nav"><span class="dots">${TOUR.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</span>
+    <button class="ghost sm" data-tour="end">Salir</button>${i ? '<button class="ghost sm" data-tour="prev">← Anterior</button>' : ''}<button class="sm" data-tour="next">${i === TOUR.length - 1 ? 'Terminar' : 'Siguiente →'}</button></div>`;
+  tourPlace();
+  pop.querySelector('[data-tour=next]').focus();
+}
+// Coloca el foco sobre el panel y la tarjeta donde quepa: abajo, arriba, a la izquierda o a la derecha.
+function tourPlace() {
+  if (tourAt < 0) return;
+  const r = $(TOUR[tourAt].el).getBoundingClientRect(), pop = $('#tourPop'), g = 6, W = innerWidth, H = innerHeight;
+  Object.assign($('#tourSpot').style, { left: `${r.left - g}px`, top: `${r.top - g}px`, width: `${r.width + g * 2}px`, height: `${r.height + g * 2}px` });
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let x = r.left, y;
+  if (H - r.bottom > h + 16) y = r.bottom + 12;
+  else if (r.top > h + 16) y = r.top - h - 12;
+  else { y = r.top; x = r.left > w + 16 ? r.left - w - 12 : r.right + 12; }
+  pop.style.left = `${Math.max(8, Math.min(x, W - w - 8))}px`;
+  pop.style.top = `${Math.max(8, Math.min(y, H - h - 8))}px`;
+}
+function tourEnd() { tourAt = -1; $('#tourSpot')?.remove(); $('#tourPop')?.remove(); $('#btnTour').focus(); }
+$('#btnTour').onclick = () => tourShow(0);
+document.addEventListener('click', (e) => {
+  const a = e.target.dataset?.tour;
+  if (a) a === 'end' ? tourEnd() : tourShow(tourAt + (a === 'next' ? 1 : -1));
+});
+document.addEventListener('keydown', (e) => {
+  if (tourAt < 0) return;
+  if (e.key === 'Escape') tourEnd();
+  else if (e.key === 'ArrowRight') tourShow(tourAt + 1);
+  else if (e.key === 'ArrowLeft' && tourAt) tourShow(tourAt - 1);
+});
+addEventListener('resize', tourPlace);
 
 connect();
 </script>
