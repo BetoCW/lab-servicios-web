@@ -119,7 +119,7 @@ export const openapi = {
     '/strategies/recommend': {
       get: op('Strategies', 'Recomendar la mejor estrategia (Straddle, Strangle, Calendar, Diagonal) para un ticker', {
         description:
-          'Con datos reales de Alpaca y el motor Rust/WASM evalúa las 4 estrategias, las ordena por puntaje (40 % prob. de ganancia + 30 % valor esperado/riesgo + 30 % encaje con el mercado) y explica por qué gana la primera. Incluye VaR/CVaR, drawdown, Sharpe/Sortino, beta, estrés e intervalos del 95 %.',
+          'Con datos reales de Alpaca y el motor Rust/WASM simula trayectorias con volatilidad histórica de 30 días (hv30, o promedio de IV como respaldo), evalúa las 4 estrategias, las ordena por puntaje (40 % prob. de ganancia + 30 % valor esperado/CVaR + 30 % encaje con el mercado) con compuerta estricta para valor esperado positivo, expone `actionable` y explica por qué gana la primera. Incluye VaR/CVaR, drawdown, Sharpe/Sortino, beta, estrés e intervalos del 95 %.',
         parameters: [
           { name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } },
           { name: 'paths', in: 'query', schema: { type: 'integer', default: 20000, minimum: 2000, maximum: 100000 } },
@@ -130,7 +130,7 @@ export const openapi = {
     '/strategies/recommend/backtest': {
       get: op('Strategies', 'Backtest del recomendador: % de acierto histórico y calibración', {
         description:
-          'Re-juega el último año del ticker cada 5 días hábiles y mide en qué % de las veces habría ganado la primera opción a 30 días, y si la probabilidad anunciada coincide con la real. La IV histórica se aproxima con la volatilidad histórica de largo plazo.',
+          'Re-juega el último año del ticker cada 5 días hábiles aproximando la IV con la volatilidad histórica de largo plazo para valuar piernas y simulando Monte Carlo con hv30 del punto temporal. Mide en qué % de las veces habría ganado la primera opción a 30 días y si la probabilidad anunciada coincide con la real.',
         parameters: [{ name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } }],
         responses: ok({ type: 'object' }),
       }),

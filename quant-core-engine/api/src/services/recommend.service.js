@@ -141,14 +141,14 @@ function explain(winner, second, signals, all = []) {
         : `la volatilidad implícita (${round(signals.iv * 100, 1)} %) está cerca de la histórica (${round(signals.hv30 * 100, 1)} %), sin ventaja clara en volatilidad`;
   const trend = signals.trendStrength > 0.005 ? 'con impulso alcista' : signals.trendStrength < -0.005 ? 'con impulso bajista' : 'sin tendencia marcada';
   const gap = second ? ` Superó a ${second.name} por ${round(winner.score - second.score, 1)} puntos.` : '';
-  // Honestidad: se aclara cuando el valor esperado de la ganadora es negativo, y si otra estrategia lo tiene positivo.
+  // Honestidad: se aclara cuando ninguna estrategia alcanza valor esperado positivo.
   const betterEv = all.filter((entry) => entry !== winner && entry.metrics.expectedValue > 0);
   const caveat =
     winner.metrics.expectedValue > 0
       ? ''
       : betterEv.length
-        ? ` Ojo: su valor esperado es negativo; ganó por probabilidad de ganancia y encaje con el mercado, pero ${betterEv.map((entry) => entry.name).join(' y ')} ${betterEv.length > 1 ? 'tienen' : 'tiene'} valor esperado positivo. Compara el detalle antes de decidir.`
-        : ' Ojo: su valor esperado es negativo, así que es la menos mala de las cuatro, no una operación con ventaja estadística.';
+        ? ` Ojo: su valor esperado es negativo; ${betterEv.map((entry) => entry.name).join(' y ')} ${betterEv.length > 1 ? 'tienen' : 'tiene'} valor esperado positivo.`
+        : ' Sin ventaja estadística positiva: ninguna de las cuatro estrategias alcanza valor esperado > 0; es solo la menos desfavorable.';
   return (
     `${winner.name} obtuvo ${winner.score} puntos: gana en ${round(winner.metrics.probProfit * 100, 1)} % de las simulaciones, ` +
     `su valor esperado es $${winner.metrics.expectedValue} y su peor caso simulado es $${winner.metrics.worstSimulated}. ` +
@@ -244,6 +244,8 @@ export const recommendService = {
     const side = volSide(signals.ivToHv);
     const fits = templateFit({ ivToHv: signals.ivToHv, termSlope: signals.termSlope, signals });
     const candidates = [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal'];
+    const hasHv30 = Number.isFinite(marketView.hv30) && marketView.hv30 > 0;
+    const simQuery = hasHv30 ? { paths, seed: 42, simulationVol: marketView.hv30, simulationVolSource: 'hv30' } : { paths, seed: 42 };
 
     const evaluated = await Promise.all(
       candidates.map(async (template) => {
@@ -253,7 +255,7 @@ export const recommendService = {
           const report = await riskService.analyzeLegs(
             { name: built.name, underlying: symbol, qty: 1 },
             legs,
-            { paths, seed: 42 },
+            simQuery,
             { stock: market.stock, snaps: market.snaps, history },
           );
           const mc = report.monteCarlo;
@@ -293,10 +295,13 @@ export const recommendService = {
 
     const { categoryWinners, rankingWithBadges } = buildCategoryWinners(usable);
     const winner = rankingWithBadges[0];
+    const actionable = winner.metrics.expectedValue > 0;
+    const simulationVolSource = winner.report?.inputs?.simulationVolSource ?? (hasHv30 ? 'hv30' : 'iv-avg');
     return {
       symbol,
       asOf: new Date().toISOString(),
-      method: 'Puntaje = 40 % prob. de ganancia + 30 % valor esperado/CVaR + 30 % encaje con el mercado (lib/scoring.js).',
+      actionable,
+      method: 'Simulación con hv30 (respaldo IV promedio); puntaje = 40 % prob. de ganancia + 30 % EV/CVaR + 30 % encaje con compuerta para EV > 0 (lib/scoring.js).',
       signals: {
         spot,
         hv30Pct: round(signals.hv30 * 100, 1),
@@ -310,13 +315,14 @@ export const recommendService = {
         bollingerPosition: round(signals.bollingerPosition, 2),
         rsi14: round(signals.rsi14, 1),
         volView: side === 'short' ? 'IV cara: se vende volatilidad' : 'IV barata o neutra: se compra volatilidad',
+        simulationVolSource,
         nearExpiration,
         farExpiration,
       },
       categoryWinners,
       // Cada fila lleva su reporte completo y las insignias de liderazgo por categoría.
       ranking: rankingWithBadges,
-      winner: { template: winner.template, name: winner.name, score: winner.score, metrics: winner.metrics, legs: winner.legs, report: winner.report },
+      winner: { template: winner.template, name: winner.name, score: winner.score, actionable, metrics: winner.metrics, legs: winner.legs, report: winner.report },
       explanation: explain(winner, rankingWithBadges[1], signals, rankingWithBadges),
     };
   },

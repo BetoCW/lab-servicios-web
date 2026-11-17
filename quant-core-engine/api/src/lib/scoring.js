@@ -101,11 +101,18 @@ export function templateFit({ ivToHv, termSlope, signals }) {
   };
 }
 
+export const SCORE_WEIGHTS = { probProfit: 0.4, expectedValue: 0.3, fit: 0.3 };
+export const POSITIVE_EV_BASE = 30;
+export const POSITIVE_EV_SPAN = 70;
+export const NON_POSITIVE_EV_MAX_SCALE = 30;
+
 /**
- * Puntaje final 0–100 de una estrategia.
- *   score = 100 · ( 0.40·probabilidad de ganancia + 0.30·puntaje de valor esperado + 0.30·encaje )
- *   puntaje de valor esperado = 0.5 + 0.5·tanh( valor esperado / pérdida CVaR95 )
- *     → 0.5 si el valor esperado es 0; sube hacia 1 si gana mucho respecto al riesgo; baja hacia 0 si pierde.
+ * Puntaje final 0–100 de una estrategia con compuerta monotónica de valor esperado positivo.
+ *   raw = 0.40·probabilidad de ganancia + 0.30·puntaje de valor esperado + 0.30·encaje
+ *   puntaje de valor esperado = 0.5 + 0.5·tanh( valor esperado / |pérdida CVaR95| )
+ *   Si EV > 0  → 30 + 70·raw  (tramo (40.5, 100])
+ *   Si EV ≤ 0  → 30·raw       (tramo [0, 25.5])
+ *   Garantiza que ninguna estrategia con EV ≤ 0 supere en puntaje a una con EV > 0.
  *
  * @param {object} input
  * @param {number} input.probProfit - Probabilidad de ganancia (0–1) del Monte Carlo.
@@ -118,6 +125,7 @@ export function templateFit({ ivToHv, termSlope, signals }) {
 export function composite({ probProfit, expectedValue, cvar95, var95, fit }) {
   const tailRisk = cvar95 ?? var95 ?? 1;
   const evScore = 0.5 + 0.5 * Math.tanh(expectedValue / Math.max(Math.abs(tailRisk), 1));
-  const score = 100 * (0.4 * probProfit + 0.3 * evScore + 0.3 * fit);
-  return { score: Math.round(score * 10) / 10, parts: { probability: probProfit, expectedValue: evScore, fit } };
+  const raw = SCORE_WEIGHTS.probProfit * probProfit + SCORE_WEIGHTS.expectedValue * evScore + SCORE_WEIGHTS.fit * fit;
+  const scaled = expectedValue > 0 ? POSITIVE_EV_BASE + POSITIVE_EV_SPAN * raw : NON_POSITIVE_EV_MAX_SCALE * raw;
+  return { score: Math.round(scaled * 10) / 10, parts: { probability: probProfit, expectedValue: evScore, fit } };
 }

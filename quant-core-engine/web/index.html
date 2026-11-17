@@ -955,19 +955,21 @@ function renderRecTable(rows) {
       <tr>
         <th class="th-sort ${recSortCriterion === 'composite' ? 'sorted' : ''}" data-sort="composite" title="Ordenar por puntaje equilibrado"># Estrategia</th>
         <th class="n th-sort ${recSortCriterion === 'fit' ? 'sorted' : ''}" data-sort="fit" title="Ordenar por encaje con tendencia y volatilidad">Fit</th>
-        <th class="n th-sort ${recSortCriterion === 'ev' ? 'sorted' : ''}" data-sort="ev" title="Ordenar por retorno ajustado a CVaR">EV/CVaR</th>
+        <th class="n th-sort ${recSortCriterion === 'ev' ? 'sorted' : ''}" data-sort="ev" title="Valor esperado en dólares (ordena por retorno ajustado EV/CVaR)">EV ($)</th>
         <th class="n th-sort ${recSortCriterion === 'prob' ? 'sorted' : ''}" data-sort="prob" title="Ordenar por probabilidad de ganancia">Prob.</th>
         <th>Insignias</th>
       </tr>
-      ${sorted.map((x, i) => x.error
-        ? `<tr style="--i:${i}"><td>${x.rank}</td><td colspan="4" class="muted">${esc(x.name)}: ${esc(x.error)}</td></tr>`
-        : `<tr data-template="${esc(x.template)}" style="--i:${i}">
+      ${sorted.map((x, i) => {
+        if (x.error) return `<tr style="--i:${i}"><td>${x.rank}</td><td colspan="4" class="muted">${esc(x.name)}: ${esc(x.error)}</td></tr>`;
+        const evCvarRatio = x.metrics.cvar95 ? (x.metrics.expectedValue / Math.abs(x.metrics.cvar95)).toFixed(2) : null;
+        return `<tr data-template="${esc(x.template)}" style="--i:${i}">
             <td><b>${esc(x.name)}</b> <span class="n muted">${x.score}</span><div class="bar"><i style="--w:${Math.max(0, Math.min(100, x.score))}%"></i></div></td>
             <td class="n">${Math.round((x.scoreParts?.fit ?? 0) * 100)}%</td>
-            <td class="n ${x.metrics.expectedValue >= 0 ? 'buy' : 'sell'}">${signed(x.metrics.expectedValue)}</td>
+            <td class="n ${x.metrics.expectedValue >= 0 ? 'buy' : 'sell'}" title="${evCvarRatio != null ? `EV/CVaR95: ${evCvarRatio}` : 'Sin CVaR95'}">${signed(x.metrics.expectedValue)}${evCvarRatio != null ? `<div class="muted" style="font-size:10px">${evCvarRatio}× CVaR</div>` : ''}</td>
             <td class="n">${(x.metrics.probProfit * 100).toFixed(0)}%</td>
             <td>${(x.badges || []).map((b) => badgeMap[b] || '').join('')}</td>
-          </tr>`).join('')}
+          </tr>`;
+      }).join('')}
     </table></div>`;
 }
 
@@ -1004,12 +1006,17 @@ async function recommend(symbol, mine = ticket) {
         </div>
       </div>` : '';
 
+    const noEdgeBanner = d.actionable === false
+      ? `<div class="badge warn" style="display:block;padding:6px 10px;margin:0 0 8px;white-space:normal">Sin ventaja estadística positiva (todas las candidatas tienen EV ≤ 0). No recomendable operar; se muestra la menos desfavorable.</div>`
+      : '';
+
     $('#recOut').innerHTML = `
+      ${noEdgeBanner}
       ${categoryCardsHtml}
       <div id="recTableWrap">${renderRecTable(d.ranking)}</div>
       <p class="why"><b>Por qué gana la 1ª:</b> ${esc(firstSentence)}</p>
       <details class="det"><summary class="muted">Ver explicación completa</summary><p>${esc(d.explanation)}</p><p class="muted">${esc(d.method)}</p></details>
-      <details class="det sig"><summary class="muted">Señales del mercado · ${esc(s.volView)}</summary>
+      <details class="det sig"><summary class="muted">Señales del mercado · ${esc(s.volView)}${s.simulationVolSource ? ` · sim: ${esc(s.simulationVolSource)}` : ''}</summary>
         <div class="kpis">
           <div class="kpi"><span>Precio</span><b>${money(s.spot)}</b><span>RSI ${num(s.rsi14, 1)}</span></div>
           <div class="kpi"><span>IV vs HV</span><b>${num(s.ivPct, 1)}% / ${num(s.hv30Pct, 1)}%</b><span>razón ${num(s.ivToHv)}</span></div>

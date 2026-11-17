@@ -123,8 +123,11 @@ export const riskService = {
       vol: leg.vol,
       multiplier: leg.multiplier,
     }));
-    // Volatilidad del subyacente para la simulación: IV promedio ponderado de las piernas.
-    const underlyingVol = legsIn.reduce((accum, leg) => accum + leg.vol, 0) / legsIn.length;
+    // Volatilidad de simulación: explícita (ej. hv30 en el recomendador) o IV promedio de las piernas como respaldo.
+    const avgLegIv = legsIn.reduce((accum, leg) => accum + leg.vol, 0) / legsIn.length;
+    const hasSimulationVol = Number.isFinite(query.simulationVol) && query.simulationVol > 0;
+    const underlyingVol = hasSimulationVol ? Number(query.simulationVol) : avgLegIv;
+    const simulationVolSource = hasSimulationVol ? (query.simulationVolSource ?? 'hv30') : 'iv-avg';
     const mc = monteCarlo(engineLegs, { spot, rate: RATE, vol: underlyingVol, horizonDays, paths, seed, bins: 40 });
     const monteCarloDurationMs = performance.now() - startTime;
     const matrix = pnlMatrix(engineLegs, { spot, rate: RATE, horizonDays: 0, spotShocks: SPOT_SHOCKS, volShocks: VOL_SHOCKS });
@@ -190,6 +193,7 @@ export const riskService = {
         spot,
         rate: RATE,
         underlyingVol: round(underlyingVol),
+        simulationVolSource,
         horizonDays: round(horizonDays, 2),
         paths,
         seed,

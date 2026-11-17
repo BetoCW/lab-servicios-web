@@ -86,7 +86,7 @@ export const backtestService = {
     for (let i = WARMUP; i + HOLD_TRADING_DAYS < closes.length; i += STEP) {
       const spot = closes[i];
       const signals = marketSignals(closes.slice(0, i + 1));
-      if (!Number.isFinite(signals.hvLongRun) || !Number.isFinite(signals.hv30)) continue;
+      if (!Number.isFinite(signals.hvLongRun) || !Number.isFinite(signals.hv30) || signals.hv30 <= 0) continue;
       const iv = signals.hvLongRun; // aproximación de la IV de ese día (ver nota del encabezado)
       const ivToHv = iv / signals.hv30;
       const side = volSide(ivToHv);
@@ -95,7 +95,8 @@ export const backtestService = {
 
       const candidates = [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal'].map((template) => {
         const legs = backtestLegs(template, spot, iv);
-        const mc = monteCarlo(legs, { spot, rate: RATE, vol: iv, horizonDays: 30, paths: MC_PATHS, seed: 7 });
+        // Las piernas se valúan con la IV aproximada, pero las trayectorias simulan con la volatilidad realizada hv30.
+        const mc = monteCarlo(legs, { spot, rate: RATE, vol: signals.hv30, horizonDays: 30, paths: MC_PATHS, seed: 7 });
         const { score } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] });
         const realizedPnl = pnlMatrix(legs, { spot, rate: RATE, horizonDays: 30, spotShocks: [move], volShocks: [0] })[0][0];
         return { template, score, predictedProb: mc.probProfit, realizedPnl, won: realizedPnl > 0 };

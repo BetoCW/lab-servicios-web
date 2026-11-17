@@ -6,7 +6,10 @@ import { clamp, composite, marketSignals, templateFit, volSide } from '../../api
 import { riskFilter, RISK_RULES } from '../../api/src/services/autoTrade.service.js';
 import { backtestLegs } from '../../api/src/services/backtest.service.js';
 import { aiService, extractJson, normalizeVerdict } from '../../api/src/services/ai.service.js';
-import { buildCategoryWinners } from '../../api/src/services/recommend.service.js';
+import { buildCategoryWinners, recommendService } from '../../api/src/services/recommend.service.js';
+import { riskService } from '../../api/src/services/risk.service.js';
+import { backtestService } from '../../api/src/services/backtest.service.js';
+import { alpaca } from '../../api/src/lib/alpaca.js';
 import { config } from '../../api/src/config.js';
 
 /** Serie sintética: 120 cierres con una oscilación suave para no depender de datos reales. */
@@ -48,10 +51,15 @@ test('composite: más probabilidad y mejor valor esperado dan más puntaje', () 
   // valor esperado 0 -> componente 0.5 exacto
   close(composite({ probProfit: 0, expectedValue: 0, cvar95: 100, fit: 0 }).parts.expectedValue, 0.5);
 
-  // Verificación de ponderación 40% prob / 30% evScore / 30% fit
-  // probProfit: 1 (0.40), ev: 0 -> evScore: 0.5 (0.30 * 0.5 = 0.15), fit: 0 -> total 55.0
-  const balanced = composite({ probProfit: 1, expectedValue: 0, cvar95: 100, fit: 0 });
-  close(balanced.score, 55.0);
+  // Verificación de escala segmentada monotónica:
+  // probProfit: 1 (0.40), ev: 0 -> evScore: 0.5 (0.15), fit: 0 -> raw 0.55; por ser EV <= 0 escala * 30 = 16.5
+  const nonPositive = composite({ probProfit: 1, expectedValue: 0, cvar95: 100, fit: 0 });
+  close(nonPositive.score, 16.5);
+
+  // Compuerta estricta: incluso con probProfit=0 y fit=0, un EV > 0 supera a cualquier EV <= 0 con prob=1 y fit=1
+  const positiveLowProb = composite({ probProfit: 0.05, expectedValue: 1, cvar95: 500, fit: 0.05 });
+  const negativeHighProb = composite({ probProfit: 1, expectedValue: -1, cvar95: 500, fit: 1 });
+  assert.ok(positiveLowProb.score > negativeHighProb.score, 'EV > 0 siempre supera a EV <= 0');
 
   // CVaR mayor penaliza más que un VaR menor
   const withVaR = composite({ probProfit: 0.5, expectedValue: 50, var95: 100, fit: 0.5 });
@@ -218,4 +226,118 @@ test('buscador: sin texto devuelve los más usados y respeta el límite', () => 
   const popular = rankAssets(catalog, '');
   assert.deepEqual(popular.map((x) => x.symbol), ['SPY', 'QQQ', 'AAPL', 'TSLA']);
   assert.equal(rankAssets(catalog, 'a', { limit: 2 }).length, 2);
+});
+
+// ---------------------------------------------------------------- medida física (hv30) y actionable
+const futureIso = (days) => new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+const makeOcc = (root, iso, type, strike) => {
+  const yymmdd = iso.slice(2, 4) + iso.slice(5, 7) + iso.slice(8, 10);
+  const cp = type === 'call' ? 'C' : 'P';
+  const k = String(Math.round(strike * 1000)).padStart(8, '0');
+  return `${root}${yymmdd}${cp}${k}`;
+};
+
+test('riskService.analyzeLegs: usa simulationVol explícita y refleja ventaja de IV > HV en short straddle', async () => {
+  const exp = futureIso(30);
+  const callSym = makeOcc('TEST', exp, 'call', 100);
+  const putSym = makeOcc('TEST', exp, 'put', 100);
+  const legs = [
+    { symbol: callSym, side: 'sell', ratio_qty: 1 },
+    { symbol: putSym, side: 'sell', ratio_qty: 1 },
+  ];
+  const prefetched = {
+    stock: { latestTrade: { p: 100 } },
+    snaps: {
+      [callSym]: { latestQuote: { bp: 5.5, ap: 5.7 }, impliedVolatility: 0.5 },
+      [putSym]: { latestQuote: { bp: 5.3, ap: 5.5 }, impliedVolatility: 0.5 },
+    },
+    history: { closes: wave, spyCloses: wave },
+  };
+  const withHv = await riskService.analyzeLegs(
+    { name: 'Short straddle', underlying: 'TEST', qty: 1 },
+    legs,
+    { paths: 4000, seed: 42, simulationVol: 0.15, simulationVolSource: 'hv30' },
+    prefetched,
+  );
+  assert.equal(withHv.inputs.simulationVolSource, 'hv30');
+  assert.equal(withHv.inputs.underlyingVol, 0.15);
+  assert.ok(withHv.monteCarlo.mean > 0, `Short straddle con IV=0.50 y HV=0.15 debe tener EV > 0, obtuvo ${withHv.monteCarlo.mean}`);
+
+  const withoutHv = await riskService.analyzeLegs(
+    { name: 'Short straddle', underlying: 'TEST', qty: 1 },
+    legs,
+    { paths: 4000, seed: 42 },
+    prefetched,
+  );
+  assert.equal(withoutHv.inputs.simulationVolSource, 'iv-avg');
+  assert.equal(withoutHv.inputs.underlyingVol, 0.5);
+  assert.ok(withoutHv.monteCarlo.mean <= 0, 'Con IV=simVol en estrategia de crédito, EV debe ser <= 0');
+});
+
+test('recommendService.recommend: expone actionable=true con IV > HV30 y actionable=false si ninguna tiene EV > 0', async () => {
+  const saved = { ...alpaca };
+  const nearExp = futureIso(30);
+  const farExp = futureIso(60);
+  const spot = 100;
+  // Serie estable con hv30 baja (~10-12%) para controlar el régimen.
+  const lowVolCloses = Array.from({ length: 120 }, (_, i) => 100 + 0.4 * Math.sin(i / 4));
+  const hv30 = marketSignals(lowVolCloses).hv30;
+
+  const nearContracts = [
+    { symbol: makeOcc('ZZSIM', nearExp, 'call', 100), type: 'call', strike_price: '100', expiration_date: nearExp },
+    { symbol: makeOcc('ZZSIM', nearExp, 'put', 100), type: 'put', strike_price: '100', expiration_date: nearExp },
+    { symbol: makeOcc('ZZSIM', nearExp, 'call', 105), type: 'call', strike_price: '105', expiration_date: nearExp },
+    { symbol: makeOcc('ZZSIM', nearExp, 'put', 95), type: 'put', strike_price: '95', expiration_date: nearExp },
+  ];
+  const farContracts = [
+    { symbol: makeOcc('ZZSIM', farExp, 'call', 100), type: 'call', strike_price: '100', expiration_date: farExp },
+  ];
+
+  const buildSnaps = (ivNear, ivFar) => ({
+    [nearContracts[0].symbol]: { latestQuote: { bp: 4.5, ap: 4.7 }, impliedVolatility: ivNear, greeks: { delta: 0.5 } },
+    [nearContracts[1].symbol]: { latestQuote: { bp: 4.3, ap: 4.5 }, impliedVolatility: ivNear, greeks: { delta: -0.5 } },
+    [nearContracts[2].symbol]: { latestQuote: { bp: 2.0, ap: 2.2 }, impliedVolatility: ivNear, greeks: { delta: 0.25 } },
+    [nearContracts[3].symbol]: { latestQuote: { bp: 1.9, ap: 2.1 }, impliedVolatility: ivNear, greeks: { delta: -0.25 } },
+    [farContracts[0].symbol]: { latestQuote: { bp: 6.0, ap: 6.2 }, impliedVolatility: ivFar, greeks: { delta: 0.55 } },
+  });
+
+  let mode = 'rich';
+  alpaca.stockSnapshot = async () => ({ latestTrade: { p: spot } });
+  alpaca.stockBars = async () => ({ bars: [...lowVolCloses].reverse().map((c) => ({ c })) });
+  alpaca.listOptionContracts = async (q) => (q.type === 'call' ? farContracts : nearContracts);
+  alpaca.optionSnapshots = async () =>
+    mode === 'rich'
+      ? buildSnaps(0.55, 0.5)
+      : buildSnaps(hv30 * 1.05, hv30 * 2.2); // ivToHv = 1.05 -> long side, con primas sobrevaloradas en todas
+
+  try {
+    const richRes = await recommendService.recommend('ZZRICH', { paths: 4000 });
+    assert.equal(richRes.actionable, true);
+    assert.equal(richRes.winner.actionable, true);
+    assert.equal(richRes.signals.simulationVolSource, 'hv30');
+    assert.ok(richRes.winner.metrics.expectedValue > 0);
+
+    mode = 'no-edge';
+    const noEdgeRes = await recommendService.recommend('ZZNOEDGE', { paths: 4000 });
+    assert.equal(noEdgeRes.actionable, false);
+    assert.equal(noEdgeRes.winner.actionable, false);
+    assert.ok(noEdgeRes.winner.metrics.expectedValue <= 0);
+    assert.match(noEdgeRes.explanation, /Sin ventaja estadística positiva/);
+  } finally {
+    Object.assign(alpaca, saved);
+  }
+});
+
+test('backtestService.run: simula cada ventana con hv30 y produce calibración válida', async () => {
+  const saved = { ...alpaca };
+  const series = Array.from({ length: 160 }, (_, i) => 100 + 3 * Math.sin(i / 5) + i * 0.04);
+  alpaca.stockBars = async () => ({ bars: [...series].reverse().map((c) => ({ c })) });
+  try {
+    const bt = await backtestService.run('ZZBT');
+    assert.ok(bt.samples > 0);
+    assert.equal(typeof bt.topPick.winRatePct, 'number');
+    assert.equal(bt.calibration.length, 4);
+  } finally {
+    Object.assign(alpaca, saved);
+  }
 });
