@@ -156,7 +156,7 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 #mkQuote .kpi { background: none; border-right: 1px solid var(--line); border-radius: 0; padding: 6px 12px; margin: 0; min-width: 0; }
 #mkQuote .kpi:last-child { border-right: 0; }
 #mkQuote .kpi span { text-transform: uppercase; letter-spacing: .05em; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#mkQuote .kpi b { font-size: 17px; font-weight: 500; white-space: nowrap; }
+#mkQuote .kpi b { font-size: 17px; font-weight: 500; white-space: nowrap; display: block; overflow: hidden; text-overflow: ellipsis; }
 #mkQuote .kpi b.t { font-family: var(--font); font-weight: 600; font-size: 13px; }
 #mkQuote .skel { height: 30px; margin: 8px 12px; }
 .chartbox { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-top: 8px; }
@@ -1434,7 +1434,7 @@ const TOUR = [
   { sec: '1 · Elegir activo', el: '#acct', t: 'Tu cuenta paper', h: '<p>Efectivo y poder de compra de la cuenta de práctica de Alpaca. El punto verde indica que la API está conectada; <b>⚙</b> cambia la URL.</p>' },
   { sec: '2 · Analizar', el: '#mkQuote', t: 'Cotización', h: '<p>Precio, cambio contra el cierre, bid/ask, RSI, tendencia con volatilidad histórica y próximos vencimientos de opciones.</p>' },
   { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica en vivo', h: '<ol><li>Elige la temporalidad (5Min, 1Day…) arriba; <b>En vivo</b> refresca cada 5 s.</li><li>Velas con SMA20, EMA9 y Bollinger.</li><li>RSI y MACD se pliegan con su barra.</li><li>Las piernas de la estrategia elegida aparecen como líneas (verde compra, rojo venta).</li></ol>' },
-  { sec: '3 · Decidir', el: '#recCard', t: 'Recomendador', h: '<ol><li>El motor simula 4 estrategias con Monte Carlo y las ordena por puntaje.</li><li>Clic en una fila para ver sus números y dibujarla en la gráfica.</li><li><b>Ver más</b>: riesgo completo. <b>Backtest</b>: qué tan seguido acertó el último año.</li><li><b>Armar y guardar</b> la manda a Estrategias guardadas.</li></ol>' },
+  { sec: '3 · Decidir', el: '#recCard', t: 'Recomendador', h: '<ol><li>El motor simula 4 estrategias con Monte Carlo y las ordena por puntaje; si ninguna tiene valor esperado positivo, lo avisa.</li><li>Las 3 tarjetas muestran la mejor por técnica, por retorno/CVaR y por probabilidad. Clic en una tarjeta, una fila o un encabezado (para reordenar).</li><li>La elegida se dibuja en la gráfica.</li><li><b>Ver más</b>: riesgo completo. <b>Backtest</b>: qué tan seguido acertó el último año.</li><li><b>Armar y guardar</b> la manda a Estrategias guardadas.</li></ol>' },
   { sec: '3 · Decidir', el: '#autoCard', t: 'Ejecutar automático', h: '<p>Recomienda, pasa el filtro de riesgo y el de la IA, y solo entonces envía la orden a Alpaca <b>paper</b>.</p><p class="muted">Marca <b>Solo simular</b> para ver el resultado sin enviar nada.</p>' },
   { sec: '4 · Operar', el: '#dock .dp:nth-child(3)', t: 'Cadena de opciones', h: '<ol><li>Muestra la cadena guardada del ticker; cambia el vencimiento arriba.</li><li><b>Gestionar cadenas</b> → Ingestar desde Alpaca si no existe o está vieja.</li><li><b>+C</b> / <b>+V</b> agregan piernas a una estrategia manual.</li></ol>', dock: true },
   { sec: '4 · Operar', el: '#dock .dp:nth-child(2)', t: 'Estrategias guardadas', h: '<ol><li><b>＋ Armar manual</b>: con piernas +C/+V o una plantilla.</li><li><b>Riesgo</b>: motor Rust/WASM (VaR, matriz de P&L, estrés).</li><li><b>En gráfica</b>: dibuja sus strikes.</li><li><b>Enviar a Alpaca</b> manda la orden multi-pierna.</li></ol>', dock: true },
@@ -1460,7 +1460,11 @@ function tourShow(i) {
 // Coloca el foco sobre el panel y la tarjeta donde quepa: abajo, arriba, a la izquierda o a la derecha.
 function tourPlace() {
   if (tourAt < 0) return;
-  const r = $(TOUR[tourAt].el).getBoundingClientRect(), pop = $('#tourPop'), g = 6, W = innerWidth, H = innerHeight;
+  const el = $(TOUR[tourAt].el), pop = $('#tourPop'), g = 6, W = innerWidth, H = innerHeight;
+  // Paneles más altos que su columna con scroll (#side): el foco se recorta a la parte visible.
+  const box = el.parentElement.closest('#side')?.getBoundingClientRect(), e = el.getBoundingClientRect();
+  const top = Math.max(e.top, box?.top ?? -Infinity), bottom = Math.min(e.bottom, box?.bottom ?? Infinity);
+  const r = { left: e.left, right: e.right, width: e.width, top, bottom, height: bottom - top };
   Object.assign($('#tourSpot').style, { left: `${r.left - g}px`, top: `${r.top - g}px`, width: `${r.width + g * 2}px`, height: `${r.height + g * 2}px` });
   const w = pop.offsetWidth, h = pop.offsetHeight;
   let x = r.left, y;
