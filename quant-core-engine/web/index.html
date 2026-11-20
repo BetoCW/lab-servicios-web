@@ -162,6 +162,11 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 .chartbox { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-top: 8px; }
 .history-controls { padding: 8px 12px; border-bottom: 1px solid var(--line); }
 .history-controls input[type="number"] { width: 90px; }
+#signalControls { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px 12px 2px; }
+#signalControls label { flex-direction: row; align-items: center; gap: 5px; background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 2px 7px; cursor: pointer; }
+#signalControls input { accent-color: var(--accent); margin: 0; }
+#signalSummary { padding: 2px 12px 5px; font-size: 11px; }
+#signalSummary span { margin-right: 10px; white-space: nowrap; }
 #mkHistoryStatus { padding: 4px 12px; font-size: 12px; }
 #chPrice { flex: 1; min-height: 120px; }
 .pane { flex: none; border-top: 1px solid var(--line); }
@@ -335,6 +340,14 @@ dialog#dlgStrat:not([open]) { display: none; }
         <button type="submit">Consultar histórico</button>
         <span class="muted" id="mkHistoryHelp">Sin fin: hasta la actualidad. Sin inicio: período automático.</span>
       </form>
+      // Agregue las señales dentro de un div
+      <div id="signalControls" aria-label="Señales por indicador">
+        <label><input type="checkbox" data-signal="averages" checked> Medias y cruces</label>
+        <label><input type="checkbox" data-signal="rsi" checked> RSI</label>
+        <label><input type="checkbox" data-signal="macd" checked> MACD</label>
+        <label><input type="checkbox" data-signal="bollinger" checked> Bollinger</label>
+      </div>
+      <div id="signalSummary" class="muted" aria-live="polite"></div>
       <div id="mkHistoryStatus" class="muted" role="status" aria-live="polite"></div>
       <div id="chPrice"></div>
       <div class="pane" id="paneRsi"><button type="button" data-pane="paneRsi"><span>RSI 14</span><span>▾</span></button><div class="chart" id="chRsi"></div></div>
@@ -415,12 +428,13 @@ dialog#dlgStrat:not([open]) { display: none; }
   <div class="dh">Cadenas de opciones <span class="muted">GET/POST /option-chains</span> <button class="ghost sm" data-close>✕</button></div>
   <form class="row" id="chForm">
     <label>Subyacente <input name="underlying" required value="SPY" size="10" data-ticker data-options="1" autocomplete="off" placeholder="apple, SPY…"></label>
-    <label>Vence desde <input name="expiration_from" type="date"></label>
-    <label>Vence hasta <input name="expiration_to" type="date"></label>
+    <label>Vence desde (opcional) <input name="expiration_from" type="date"></label>
+    <label>Vence hasta (opcional) <input name="expiration_to" type="date"></label>
     <label>Tipo <select name="option_type"><option value="">ambos</option><option>call</option><option>put</option></select></label>
     <label>Strike mín <input name="strike_min" type="number" step="any" size="6"></label>
     <label>Strike máx <input name="strike_max" type="number" step="any" size="6"></label>
     <button>Ingestar desde Alpaca</button>
+    <span class="muted">Fechas vacías = sin filtro de vencimiento; cada ingesta guarda hasta 300 contratos.</span>
   </form>
   <div class="scroll" style="margin-top:10px;max-height:40vh;overflow:auto"><table id="chTable"></table></div>
 </dialog>
@@ -588,10 +602,6 @@ $('#wlList').onsubmit = (e) => {
 };
 
 // ------------------------------------------------------------- 2. cadenas
-const iso = (d) => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
-$('#chForm').expiration_from.value = iso(1);
-$('#chForm').expiration_to.value = iso(14);
-
 async function loadChains() {
   const list = window.chains = await api('GET', '/option-chains');
   $('#chTable').innerHTML = list.length ? `
@@ -606,6 +616,10 @@ async function loadChains() {
 $('#chForm').onsubmit = (e) => {
   e.preventDefault();
   busy(e.submitter, async () => {
+    // Los límites vacíos se omiten de la petición; si ambos existen, el inicio no puede superar el fin.
+    const from = e.target.elements.expiration_from, to = e.target.elements.expiration_to;
+    to.setCustomValidity(from.value && to.value && from.value > to.value ? 'La fecha final debe ser igual o posterior a la inicial.' : '');
+    if (!e.target.reportValidity()) return;
     const f = formData(e.target);
     for (const k of ['strike_min', 'strike_max']) if (f[k]) f[k] = Number(f[k]);
     const chain = await api('POST', '/option-chains', f);
@@ -613,6 +627,8 @@ $('#chForm').onsubmit = (e) => {
     showChain(chain);
   })();
 };
+$('#chForm').elements.expiration_from.onchange = () => $('#chForm').elements.expiration_to.setCustomValidity('');
+$('#chForm').elements.expiration_to.onchange = () => $('#chForm').elements.expiration_to.setCustomValidity('');
 $('#chTable').onclick = async (e) => {
   const act = e.target.dataset.act;
   const id = e.target.closest('[data-id]')?.dataset.id;
@@ -1261,6 +1277,70 @@ const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v
 // lightweight-charts dibuja en UTC: se corre el tiempo a la zona local del navegador.
 const localTime = (t) => t - new Date(t * 1000).getTimezoneOffset() * 60;
 let charts = null, overlay = [];
+let marketSignals = [];
+/////// SE TOMAN LAS SEñales de mercado----------------------------------------------------------------
+const SIGNALS = {
+  averages: { label: 'EMA9/SMA20', marker: 'EMA/SMA' },
+  rsi: { label: 'RSI', marker: 'RSI' },
+  macd: { label: 'MACD', marker: 'MACD' },
+  bollinger: { label: 'Bollinger', marker: 'BB' },
+};
+
+// EMA/SMA y MACD señalan cruces; RSI señala la salida de sobreventa/sobrecompra;
+// Bollinger señala cuando el cierre vuelve dentro de la banda tras salir de ella.
+function buildMarketSignals(bars, indicators) {
+  const signals = [];
+  const add = (key, index, side) => {
+    const bar = bars[index];
+    signals.push({
+      key, index, side, time: localTime(bar.time),
+      date: new Date(bar.time * 1000).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
+    });
+  };
+  const crosses = (key, fast, slow) => {
+    for (let i = 1; i < bars.length; i++) {
+      if ([fast[i - 1], slow[i - 1], fast[i], slow[i]].some((v) => v == null)) continue;
+      if (fast[i - 1] <= slow[i - 1] && fast[i] > slow[i]) add(key, i, 'buy');
+      else if (fast[i - 1] >= slow[i - 1] && fast[i] < slow[i]) add(key, i, 'sell');
+    }
+  };
+
+  crosses('averages', indicators.ema9, indicators.sma20);
+  crosses('macd', indicators.macd, indicators.signal);
+  for (let i = 1; i < bars.length; i++) {
+    const previousRsi = indicators.rsi14[i - 1], currentRsi = indicators.rsi14[i];
+    if (previousRsi != null && currentRsi != null) {
+      if (previousRsi <= 30 && currentRsi > 30) add('rsi', i, 'buy');
+      else if (previousRsi >= 70 && currentRsi < 70) add('rsi', i, 'sell');
+    }
+    const previousLower = indicators.bbLower[i - 1], lower = indicators.bbLower[i];
+    const previousUpper = indicators.bbUpper[i - 1], upper = indicators.bbUpper[i];
+    if (previousLower != null && lower != null && bars[i - 1].close <= previousLower && bars[i].close > lower) add('bollinger', i, 'buy');
+    else if (previousUpper != null && upper != null && bars[i - 1].close >= previousUpper && bars[i].close < upper) add('bollinger', i, 'sell');
+  }
+  return signals.sort((a, b) => a.index - b.index);
+}
+
+function renderMarketSignals() {
+  if (!charts) return;
+  // Los filtros controlan tanto las flechas históricas como la fecha más reciente de cada indicador.
+  const enabled = (key) => $(`#signalControls [data-signal="${key}"]`).checked;
+  const visible = marketSignals.filter((signal) => enabled(signal.key));
+  charts.series.candles.setMarkers(visible.map((signal) => ({
+    time: signal.time,
+    position: signal.side === 'buy' ? 'belowBar' : 'aboveBar',
+    color: css(signal.side === 'buy' ? '--ok' : '--bad'),
+    shape: signal.side === 'buy' ? 'arrowUp' : 'arrowDown',
+    text: `${SIGNALS[signal.key].marker} ${signal.side === 'buy' ? 'C' : 'V'}`,
+  })));
+  const latest = Object.keys(SIGNALS).flatMap((key) => {
+    const signal = visible.findLast((item) => item.key === key);
+    return signal ? [`<span class="${signal.side}">${SIGNALS[key].label}: ${signal.side === 'buy' ? 'COMPRA' : 'VENTA'} · ${esc(signal.date)}</span>`] : [];
+  });
+  $('#signalSummary').innerHTML = latest.length ? `Última señal · ${latest.join(' · ')}` : 'Sin señales en el rango seleccionado.';
+}
+
+$('#signalControls').onchange = renderMarketSignals;
 
 // Autoscale del eje de precios ampliado para que entren los strikes dibujados (el zoom manual sigue funcionando).
 function includeStrikes(original) {
@@ -1312,6 +1392,8 @@ function makeCharts() {
     for (const [k, v] of Object.entries({ sma20: '--text', ema9: '--accent', bbUpper: '--muted', bbLower: '--muted', rsi14: '--accent', macd: '--accent', signal: '--muted' })) series[k].applyOptions({ color: css(v) });
     rsi70.applyOptions({ color: css('--bad') }); rsi30.applyOptions({ color: css('--ok') });
     drawOverlay();
+    // Se renderizan las señales de mercado
+    renderMarketSignals();
     loadBars(ticker(), ticket).catch(() => {}); // repinta volumen e histograma MACD (colores por barra)
   };
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => setTimeout(retheme, 50));
@@ -1355,6 +1437,8 @@ async function loadBars(sym, mine, live = false) {
     for (const k of ['sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram']) {
       series[k].setData(d.indicators[k].flatMap((v, i) => v == null ? [] : [{ time: time[i], value: v, ...(k === 'histogram' ? { color: v >= 0 ? css('--ok') : css('--bad') } : {}) }]));
     }
+    marketSignals = buildMarketSignals(d.bars, d.indicators);
+    renderMarketSignals();
     if (key !== lastKey) { charts.price.timeScale().fitContent(); lastKey = key; drawOverlay(); }
     const dateLabel = (b) => new Date(b.time * 1000).toLocaleDateString();
     $('#mkHistoryStatus').textContent = `${d.bars.length} de hasta ${params.get('limit')} velas · ${dateLabel(d.bars[0])} — ${dateLabel(d.bars.at(-1))} · Las más recientes del rango${params.has('end') ? '' : ' hasta la actualidad'}`;
@@ -1471,10 +1555,10 @@ const TOUR = [
   { sec: '1 · Elegir activo', el: '#rail', t: 'Watchlists', h: '<ol><li>Clic en un símbolo para abrirlo.</li><li><b>＋</b> crea una lista nueva.</li><li><b>⋯</b> renombra, agrega o elimina.</li></ol>' },
   { sec: '1 · Elegir activo', el: '#acct', t: 'Tu cuenta paper', h: '<p>Efectivo y poder de compra de la cuenta de práctica de Alpaca. El punto verde indica que la API está conectada; <b>⚙</b> cambia la URL.</p>' },
   { sec: '2 · Analizar', el: '#mkQuote', t: 'Cotización', h: '<p>Precio, cambio contra el cierre, bid/ask, RSI, tendencia con volatilidad histórica y próximos vencimientos de opciones.</p>' },
-  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica e histórico', h: '<ol><li>Elige minutos, horas, días, semanas o meses arriba.</li><li>Indica la cantidad máxima de velas y las fechas, y pulsa <b>Consultar histórico</b>. Sin fecha de fin se consulta hasta la actualidad; se muestran las velas más recientes del rango.</li><li><b>En vivo</b> refresca cada 5 s cuando no hay fecha de fin.</li><li>Velas con SMA20, EMA9 y Bollinger. RSI y MACD se pliegan con su barra.</li><li>Las piernas de la estrategia elegida aparecen como líneas (verde compra, rojo venta).</li></ol>' },
+  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica e histórico', h: '<ol><li>Elige minutos, horas, días, semanas o meses arriba.</li><li>Indica la cantidad máxima de velas y las fechas, y pulsa <b>Consultar histórico</b>. Sin fecha de fin se consulta hasta la actualidad; se muestran las velas más recientes del rango.</li><li>Los filtros de señales muestran compras y ventas de cruces EMA/SMA, RSI, MACD y Bollinger; la última fecha aparece debajo.</li><li><b>En vivo</b> refresca cada 5 s cuando no hay fecha de fin.</li><li>RSI y MACD se pliegan con su barra. Las piernas de la estrategia aparecen como líneas (verde compra, rojo venta).</li></ol>' },
   { sec: '3 · Decidir', el: '#recCard', t: 'Recomendador', h: '<ol><li>El motor simula 4 estrategias con Monte Carlo y las ordena por puntaje; si ninguna tiene valor esperado positivo, lo avisa.</li><li>Las 3 tarjetas muestran la mejor por técnica, por retorno/CVaR y por probabilidad. Clic en una tarjeta, una fila o un encabezado (para reordenar).</li><li>La elegida se dibuja en la gráfica.</li><li><b>Ver más</b>: riesgo completo. <b>Backtest</b>: qué tan seguido acertó el último año.</li><li><b>Armar y guardar</b> la manda a Estrategias guardadas.</li></ol>' },
   { sec: '3 · Decidir', el: '#autoCard', t: 'Ejecutar automático', h: '<p>Recomienda, pasa el filtro de riesgo y el de la IA, y solo entonces envía la orden a Alpaca <b>paper</b>.</p><p class="muted">Marca <b>Solo simular</b> para ver el resultado sin enviar nada.</p>' },
-  { sec: '4 · Operar', el: '#dock .dp:nth-child(3)', t: 'Cadena de opciones', h: '<ol><li>Muestra la cadena guardada del ticker; cambia el vencimiento arriba.</li><li><b>Gestionar cadenas</b> → Ingestar desde Alpaca si no existe o está vieja.</li><li><b>+C</b> / <b>+V</b> agregan piernas a una estrategia manual.</li></ol>', dock: true },
+  { sec: '4 · Operar', el: '#dock .dp:nth-child(3)', t: 'Cadena de opciones', h: '<ol><li>Muestra la cadena guardada del ticker; cambia el vencimiento arriba.</li><li><b>Gestionar cadenas</b> → define un rango de vencimientos opcional e ingesta desde Alpaca.</li><li><b>+C</b> / <b>+V</b> agregan piernas a una estrategia manual.</li></ol>', dock: true },
   { sec: '4 · Operar', el: '#dock .dp:nth-child(2)', t: 'Estrategias guardadas', h: '<ol><li><b>＋ Armar manual</b>: con piernas +C/+V o una plantilla.</li><li><b>Riesgo</b>: motor Rust/WASM (VaR, matriz de P&L, estrés).</li><li><b>En gráfica</b>: dibuja sus strikes.</li><li><b>Enviar a Alpaca</b> manda la orden multi-pierna.</li></ol>', dock: true },
   { sec: '4 · Operar', el: '#dock .dp:nth-child(1)', t: 'Órdenes', h: '<p>Órdenes abiertas en Alpaca paper; cambia a <b>Historial</b> para ver las anteriores. <b>＋ Nueva</b> para una orden simple, <b>Precio</b> para modificarla y <b>Cancelar</b>.</p>', dock: true },
   { sec: 'Listo', el: '#foot', t: 'Pie de página', h: '<p><b>Ocultar panel inferior</b> le da todo el alto a la gráfica. <b>Peticiones</b> muestra cada llamada a la API con su respuesta.</p><p class="muted">Vuelve a ver este recorrido con <b>▶ Tutorial</b>.</p>' },
