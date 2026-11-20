@@ -118,6 +118,13 @@ blackScholes([{ type: 'call', spot: 42, strike: 40, t: 0.5, rate: 0.1, vol: 0.2 
 
 - Pestaña **Gráfica en vivo** del front: velas de Alpaca (feed IEX, tiempo real) que se refrescan cada 5 s,
   con SMA20, EMA9, Bollinger, RSI14 y MACD calculados en el microservicio (`GET /api/v1/market/{symbol}/bars`).
+  La gráfica inicia en días y permite minutos, horas, semanas y meses. En **Consultar histórico**
+  se eligen de 1 a 1000 velas y fechas de inicio/fin opcionales (días completos en la zona local).
+  Sin fin se consulta hasta la actualidad; sin inicio se usa una ventana automática según la
+  temporalidad, relativa al fin. Se muestran las velas más recientes dentro del rango, hasta la
+  cantidad indicada o las disponibles. Los rangos con fin fijo no se refrescan en vivo.
+  La API acepta `timeframe=1Week|1Month` además de los intervalos anteriores, `limit`, `start` y
+  `end`; las fechas pueden ser `YYYY-MM-DD` (UTC, fin inclusivo) o timestamps RFC3339 con zona.
   *Superponer estrategia* dibuja los strikes de una estrategia guardada sobre el precio.
 - Pestaña **Estrategias** → *Plantilla*: arma **straddle, strangle (long/short), calendar y diagonal** desde
   la cadena abierta ([`web/templates.js`](web/templates.js)): ATM por strike, OTM por delta 0.25 / 0.30. Para

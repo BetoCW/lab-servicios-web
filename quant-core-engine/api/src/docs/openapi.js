@@ -212,8 +212,10 @@ export const openapi = {
       get: op('Market', 'Velas en vivo + indicadores (SMA20, EMA9, Bollinger, RSI14, MACD)', {
         parameters: [
           { name: 'symbol', in: 'path', required: true, schema: { type: 'string', example: 'SPY' } },
-          { name: 'timeframe', in: 'query', schema: { type: 'string', enum: ['1Min', '5Min', '15Min', '1Hour', '1Day'], default: '5Min' } },
-          { name: 'limit', in: 'query', schema: { type: 'integer', default: 300, minimum: 50, maximum: 1000 } },
+          { name: 'timeframe', in: 'query', schema: { type: 'string', enum: ['1Min', '5Min', '15Min', '1Hour', '1Day', '1Week', '1Month'], default: '5Min' } },
+          { name: 'limit', in: 'query', description: 'Máximo de velas, las más recientes dentro del rango.', schema: { type: 'integer', default: 300, minimum: 1, maximum: 1000 } },
+          { name: 'start', in: 'query', description: 'Inicio inclusivo: YYYY-MM-DD (UTC) o timestamp RFC3339. Si se omite, se calcula un período según la temporalidad respecto al fin.', schema: { type: 'string' } },
+          { name: 'end', in: 'query', description: 'Fin inclusivo: YYYY-MM-DD (día completo UTC) o timestamp RFC3339. Si se omite, hasta la actualidad.', schema: { type: 'string' } },
         ],
         responses: ok({ type: 'object' }),
       }),

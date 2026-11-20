@@ -160,6 +160,9 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 #mkQuote .kpi b.t { font-family: var(--font); font-weight: 600; font-size: 13px; }
 #mkQuote .skel { height: 30px; margin: 8px 12px; }
 .chartbox { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-top: 8px; }
+.history-controls { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.history-controls input[type="number"] { width: 90px; }
+#mkHistoryStatus { padding: 4px 12px; font-size: 12px; }
 #chPrice { flex: 1; min-height: 120px; }
 .pane { flex: none; border-top: 1px solid var(--line); }
 .pane > button { display: flex; width: 100%; justify-content: space-between; background: var(--panel2); color: var(--muted); border-radius: 0; padding: 2px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
@@ -292,7 +295,7 @@ dialog#dlgStrat:not([open]) { display: none; }
   <form id="mkForm" autocomplete="off">
     <input name="symbol" id="mkSymbol" data-ticker autocomplete="off" aria-label="Ticker" placeholder="Ticker o empresa" size="8">
     <button class="ghost ic" aria-label="Cargar ticker" title="Cargar (Enter)">↵</button>
-    <select id="mkTf" aria-label="Temporalidad"><option>1Min</option><option selected>5Min</option><option>15Min</option><option>1Hour</option><option>1Day</option></select>
+    <select id="mkTf" aria-label="Temporalidad"><option value="1Min">1 minuto</option><option value="5Min">5 minutos</option><option value="15Min">15 minutos</option><option value="1Hour">1 hora</option><option value="1Day" selected>Días</option><option value="1Week">Semanas</option><option value="1Month">Meses</option></select>
     <label class="live"><input type="checkbox" id="mkLive" checked> En vivo</label>
   </form>
   <div class="sp"></div>
@@ -325,6 +328,14 @@ dialog#dlgStrat:not([open]) { display: none; }
   <section id="center">
     <div class="pnl" id="mkQuote"></div>
     <div class="pnl chartbox">
+      <form id="mkHistory" class="row history-controls">
+        <label>Velas (máximo)<input id="mkLimit" type="number" min="1" max="1000" step="1" value="300" required></label>
+        <label>Fecha de inicio<input id="mkStart" type="date"></label>
+        <label>Fecha de fin (opcional)<input id="mkEnd" type="date" aria-describedby="mkHistoryHelp"></label>
+        <button type="submit">Consultar histórico</button>
+        <span class="muted" id="mkHistoryHelp">Sin fin: hasta la actualidad. Sin inicio: período automático.</span>
+      </form>
+      <div id="mkHistoryStatus" class="muted" role="status" aria-live="polite"></div>
       <div id="chPrice"></div>
       <div class="pane" id="paneRsi"><button type="button" data-pane="paneRsi"><span>RSI 14</span><span>▾</span></button><div class="chart" id="chRsi"></div></div>
       <div class="pane" id="paneMacd"><button type="button" data-pane="paneMacd"><span>MACD 12/26/9</span><span>▾</span></button><div class="chart" id="chMacd"></div></div>
@@ -1305,31 +1316,58 @@ function makeCharts() {
   };
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => setTimeout(retheme, 50));
   window.rethemeCharts = retheme; // expuesta también para probarla a mano
-  return { price, series };
+  return { price, series, all };
 }
 
-let lastKey = '';
+let lastKey = '', barsRequest = 0;
+
+function historyParams() {
+  if (!$('#mkHistory').reportValidity()) throw new Error('Revisa los filtros del histórico');
+  const start = $('#mkStart').value, end = $('#mkEnd').value;
+  if (start && end && start > end) throw new Error('La fecha de inicio debe ser anterior o igual a la fecha de fin');
+  const params = new URLSearchParams({ timeframe: $('#mkTf').value, limit: $('#mkLimit').value });
+  // Los días elegidos incluyen la jornada completa en la zona local del usuario.
+  if (start) params.set('start', new Date(`${start}T00:00:00`).toISOString());
+  if (end) params.set('end', new Date(`${end}T23:59:59.999`).toISOString());
+  return params;
+}
 
 // Velas + indicadores de la gráfica. Solo se piden aquí (las tarjetas salen de /market/overview).
 // `live` = refresco silencioso del temporizador: sin bitácora ni alert; actualiza solo precio y bid/ask.
 async function loadBars(sym, mine, live = false) {
-  const tf = $('#mkTf').value, path = `/market/${encodeURIComponent(sym)}/bars?timeframe=${tf}&limit=300`;
-  // Si falla, la tarjeta de cotización (overview) ya avisa; aquí solo se propaga sin alert.
-  const d = live ? await fetch(`${base()}/api/v1${path}`).then((r) => r.ok ? r.json() : Promise.reject()) : await api('GET', path, undefined, true);
-  if (mine !== ticket) return; // el usuario cambió de ticker mientras llegaba: se descarta
-  charts ??= makeCharts();
-  const { series } = charts;
-  const time = d.bars.map((b) => localTime(b.time));
-  series.candles.setData(d.bars.map((b, i) => ({ time: time[i], open: b.open, high: b.high, low: b.low, close: b.close })));
-  series.volume.setData(d.bars.map((b, i) => ({ time: time[i], value: b.volume, color: b.close >= b.open ? css('--ok') + '55' : css('--bad') + '55' })));
-  for (const k of ['sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram']) {
-    series[k].setData(d.indicators[k].flatMap((v, i) => v == null ? [] : [{ time: time[i], value: v, ...(k === 'histogram' ? { color: v >= 0 ? css('--ok') : css('--bad') } : {}) }]));
+  const requestId = ++barsRequest;
+  try {
+    const params = historyParams(), tf = params.get('timeframe');
+    const key = `${sym}|${params}`, path = `/market/${encodeURIComponent(sym)}/bars?${params}`;
+    if (!live) $('#mkHistoryStatus').textContent = 'Cargando histórico…';
+    const d = live ? await fetch(`${base()}/api/v1${path}`).then(async (r) => {
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.message || 'No se pudo cargar el histórico');
+      return body;
+    }) : await api('GET', path, undefined, true);
+    if (mine !== ticket || requestId !== barsRequest || key !== `${ticker()}|${historyParams()}`) return;
+    charts ??= makeCharts();
+    charts.all.forEach((c) => c.applyOptions({ timeScale: { timeVisible: !['1Day', '1Week', '1Month'].includes(tf) } }));
+    const { series } = charts;
+    const time = d.bars.map((b) => localTime(b.time));
+    series.candles.setData(d.bars.map((b, i) => ({ time: time[i], open: b.open, high: b.high, low: b.low, close: b.close })));
+    series.volume.setData(d.bars.map((b, i) => ({ time: time[i], value: b.volume, color: b.close >= b.open ? css('--ok') + '55' : css('--bad') + '55' })));
+    for (const k of ['sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram']) {
+      series[k].setData(d.indicators[k].flatMap((v, i) => v == null ? [] : [{ time: time[i], value: v, ...(k === 'histogram' ? { color: v >= 0 ? css('--ok') : css('--bad') } : {}) }]));
+    }
+    if (key !== lastKey) { charts.price.timeScale().fitContent(); lastKey = key; drawOverlay(); }
+    const dateLabel = (b) => new Date(b.time * 1000).toLocaleDateString();
+    $('#mkHistoryStatus').textContent = `${d.bars.length} de hasta ${params.get('limit')} velas · ${dateLabel(d.bars[0])} — ${dateLabel(d.bars.at(-1))} · Las más recientes del rango${params.has('end') ? '' : ' hasta la actualidad'}`;
+    if (live) paintPrice(d.quote);
+  } catch (err) {
+    if (mine === ticket && requestId === barsRequest) $('#mkHistoryStatus').textContent = `No se pudo cargar el histórico: ${err.message}`;
+    throw err;
   }
-  const key = `${sym}|${tf}`;
-  if (key !== lastKey) { charts.price.timeScale().fitContent(); lastKey = key; drawOverlay(); }
-  if (live) paintPrice(d.quote);
 }
 $('#mkTf').onchange = () => loadBars(ticker(), ticket).catch(() => {});
+$('#mkHistory').onsubmit = (e) => { e.preventDefault(); loadBars(ticker(), ticket).catch(() => {}); };
+// Un período con fin fijo no necesita refresco automático.
+$('#mkEnd').onchange = () => { $('#mkLive').disabled = !!$('#mkEnd').value; };
 
 // Precio, % del día y bid/ask (lo único que cambia con el modo en vivo). Bid o ask en 0/null -> "—".
 function paintPrice(q) {
@@ -1386,7 +1424,7 @@ $('#mkForm').onsubmit = (e) => { e.preventDefault(); setTicker(ticker()); };
 // no solapa peticiones. El recomendador NO se refresca aquí (se carga una vez por cambio de ticker).
 let liveBusy = false;
 setInterval(async () => {
-  if (!$('#mkLive').checked || document.hidden || liveBusy) return;
+  if (!$('#mkLive').checked || $('#mkEnd').value || document.hidden || liveBusy) return;
   liveBusy = true;
   try { await loadBars(ticker(), ticket, true); } catch {} finally { liveBusy = false; }
 }, 5000);
@@ -1433,7 +1471,7 @@ const TOUR = [
   { sec: '1 · Elegir activo', el: '#rail', t: 'Watchlists', h: '<ol><li>Clic en un símbolo para abrirlo.</li><li><b>＋</b> crea una lista nueva.</li><li><b>⋯</b> renombra, agrega o elimina.</li></ol>' },
   { sec: '1 · Elegir activo', el: '#acct', t: 'Tu cuenta paper', h: '<p>Efectivo y poder de compra de la cuenta de práctica de Alpaca. El punto verde indica que la API está conectada; <b>⚙</b> cambia la URL.</p>' },
   { sec: '2 · Analizar', el: '#mkQuote', t: 'Cotización', h: '<p>Precio, cambio contra el cierre, bid/ask, RSI, tendencia con volatilidad histórica y próximos vencimientos de opciones.</p>' },
-  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica en vivo', h: '<ol><li>Elige la temporalidad (5Min, 1Day…) arriba; <b>En vivo</b> refresca cada 5 s.</li><li>Velas con SMA20, EMA9 y Bollinger.</li><li>RSI y MACD se pliegan con su barra.</li><li>Las piernas de la estrategia elegida aparecen como líneas (verde compra, rojo venta).</li></ol>' },
+  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica e histórico', h: '<ol><li>Elige minutos, horas, días, semanas o meses arriba.</li><li>Indica la cantidad máxima de velas y las fechas, y pulsa <b>Consultar histórico</b>. Sin fecha de fin se consulta hasta la actualidad; se muestran las velas más recientes del rango.</li><li><b>En vivo</b> refresca cada 5 s cuando no hay fecha de fin.</li><li>Velas con SMA20, EMA9 y Bollinger. RSI y MACD se pliegan con su barra.</li><li>Las piernas de la estrategia elegida aparecen como líneas (verde compra, rojo venta).</li></ol>' },
   { sec: '3 · Decidir', el: '#recCard', t: 'Recomendador', h: '<ol><li>El motor simula 4 estrategias con Monte Carlo y las ordena por puntaje; si ninguna tiene valor esperado positivo, lo avisa.</li><li>Las 3 tarjetas muestran la mejor por técnica, por retorno/CVaR y por probabilidad. Clic en una tarjeta, una fila o un encabezado (para reordenar).</li><li>La elegida se dibuja en la gráfica.</li><li><b>Ver más</b>: riesgo completo. <b>Backtest</b>: qué tan seguido acertó el último año.</li><li><b>Armar y guardar</b> la manda a Estrategias guardadas.</li></ol>' },
   { sec: '3 · Decidir', el: '#autoCard', t: 'Ejecutar automático', h: '<p>Recomienda, pasa el filtro de riesgo y el de la IA, y solo entonces envía la orden a Alpaca <b>paper</b>.</p><p class="muted">Marca <b>Solo simular</b> para ver el resultado sin enviar nada.</p>' },
   { sec: '4 · Operar', el: '#dock .dp:nth-child(3)', t: 'Cadena de opciones', h: '<ol><li>Muestra la cadena guardada del ticker; cambia el vencimiento arriba.</li><li><b>Gestionar cadenas</b> → Ingestar desde Alpaca si no existe o está vieja.</li><li><b>+C</b> / <b>+V</b> agregan piernas a una estrategia manual.</li></ol>', dock: true },
