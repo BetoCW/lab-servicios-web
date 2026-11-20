@@ -22,6 +22,7 @@ function page() {
     ticker: () => 'AAPL', ticket: 1,
     api: (_, path) => new Promise((resolve) => calls.push({ path, resolve })),
     localTime: (time) => time, css: () => '#000000', drawOverlay: () => {},
+    marketSignals: [], renderMarketSignals: () => {},
     charts: {
       all: [{ applyOptions() {} }], price: { timeScale: () => ({ fitContent() {} }) },
       series: Object.fromEntries(['candles', 'volume', 'sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram'].map((k) => [k, {
@@ -29,6 +30,11 @@ function page() {
       }])),
     },
   });
+  const signalStart = html.indexOf('function buildMarketSignals(');
+  const signalEnd = html.indexOf('function renderMarketSignals()', signalStart);
+  assert.notEqual(signalStart, -1, 'buildMarketSignals debe existir en la página');
+  assert.notEqual(signalEnd, -1, 'renderMarketSignals debe existir después de buildMarketSignals');
+  vm.runInContext(html.slice(signalStart, signalEnd), context);
   const source = html.slice(html.indexOf("let lastKey = ''"), html.indexOf('// Precio, % del día'));
   vm.runInContext(source, context);
   return { context, elements, calls, candles };
@@ -48,6 +54,36 @@ test('gráfica: envía cantidad, temporalidad y fechas locales; omite fin vacío
   assert.equal(elements['#mkLive'].disabled, true);
   elements['#mkStart'].value = '2026-02-01';
   assert.throws(() => vm.runInContext('historyParams()', context), /fecha de inicio/);
+});
+
+test('gráfica: cada indicador genera señales de compra y venta con fecha', () => {
+  const { context } = page();
+  const closes = [100, 100, 100, 100, 100, 100, 20, 35, 30];
+  const bars = closes.map((close, index) => ({
+    time: Date.UTC(2026, 0, index + 1, 12) / 1000,
+    close,
+  }));
+  const indicators = {
+    ema9: [1, 2, 0, 0, 0, 0, 0, 0, 0],
+    sma20: Array(9).fill(1),
+    macd: [0, 2, 2, 0, 0, 0, 0, 0, 0],
+    signal: Array(9).fill(1),
+    rsi14: [50, 50, 50, 50, 50, 28, 32, 72, 68],
+    bbLower: Array(9).fill(30),
+    bbUpper: [200, 200, 200, 200, 200, 101, 100, 34, 34],
+  };
+  const signals = vm.runInContext(
+    `buildMarketSignals(${JSON.stringify(bars)}, ${JSON.stringify(indicators)})`,
+    context,
+  );
+  assert.deepEqual(Array.from(signals, ({ key, side }) => [key, side]), [
+    ['averages', 'buy'], ['macd', 'buy'],
+    ['averages', 'sell'], ['macd', 'sell'],
+    ['rsi', 'buy'], ['bollinger', 'buy'],
+    ['rsi', 'sell'], ['bollinger', 'sell'],
+  ]);
+  assert.equal(signals[0].date, new Date(bars[1].time * 1000).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }));
+  assert.ok(signals.every(({ date }) => typeof date === 'string' && date.length > 0));
 });
 
 test('gráfica: descarta respuestas anteriores al cambiar el rango', async () => {
