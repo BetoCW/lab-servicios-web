@@ -161,6 +161,74 @@ function explain(winner, second, signals, all = []) {
  * @param {Array<object>} usable - Lista de estrategias válidas evaluadas en orden de rank.
  * @returns {{ categoryWinners: object, rankingWithBadges: Array<object> }}
  */
+/**
+ * Explica pata por pata por qué se eligió cada contrato (strike, vencimiento y papel en la estrategia).
+ * @param {string} template - Plantilla ('long-straddle', 'calendar', ...).
+ * @param {Array<{symbol: string, side: 'buy'|'sell'}>} legs - Piernas armadas por build().
+ * @param {Array<object>} quotes - Cotizaciones normalizadas (toQuote) de las que salieron las piernas.
+ * @param {number} spot - Precio actual del subyacente.
+ * @returns {Array<object>} Una explicación por pierna, en el mismo orden que `legs`.
+ */
+function explainLegs(template, legs, quotes, spot) {
+  const bySymbol = new Map(quotes.map((quote) => [quote.symbol, quote]));
+  const isStraddle = template.endsWith('straddle');
+  const isStrangle = template.endsWith('strangle');
+  const isShort = template.startsWith('short');
+
+  return legs.map((leg) => {
+    const quote = bySymbol.get(leg.symbol);
+    const action = leg.side === 'buy' ? 'Compra' : 'Venta';
+    if (!quote) return { symbol: leg.symbol, action };
+
+    const days = Math.round(daysUntil(quote.expiration));
+    const isFarLeg = (template === 'calendar' || template === 'diagonal') && leg.side === 'buy';
+    const isCall = quote.type === 'call';
+    const delta = quote.delta != null ? round(Math.abs(quote.delta), 2) : null;
+
+    let strikeReason;
+    if (isStraddle) {
+      strikeReason = isCall
+        ? `Strike ${quote.strike}: el más cercano al precio actual ($${round(spot)}), para quedar en el dinero.`
+        : `Strike ${quote.strike}: el mismo de la call, para que ambas patas sean simétricas.`;
+    } else if (isStrangle) {
+      strikeReason = delta != null
+        ? `Strike ${quote.strike}: delta ${delta}, el más cercano a 0.25 (fuera del dinero).`
+        : `Strike ${quote.strike}: ≈5 % fuera del dinero (Alpaca no trajo griegas).`;
+    } else if (isFarLeg) {
+      strikeReason = `Strike ${quote.strike}: el más cercano al precio actual ($${round(spot)}), en el dinero.`;
+    } else if (template === 'calendar') {
+      strikeReason = `Strike ${quote.strike}: el mismo de la pata lejana, para que se compensen.`;
+    } else {
+      strikeReason = delta != null
+        ? `Strike ${quote.strike}: delta ${delta}, el más cercano a 0.30 (fuera del dinero).`
+        : `Strike ${quote.strike}: ≈4 % fuera del dinero (Alpaca no trajo griegas).`;
+    }
+
+    let role;
+    if (isStraddle || isStrangle) {
+      role = isShort
+        ? `Cobra la prima; pierde si el precio ${isCall ? 'sube' : 'cae'} con fuerza.`
+        : `Gana si el precio ${isCall ? 'sube' : 'cae'} más de lo que costó la prima.`;
+    } else if (isFarLeg) {
+      role = 'Limita el riesgo de la venta cercana y conserva valor cuando esta vence.';
+    } else {
+      role = 'Cobra la prima, que se desgasta rápido con el paso del tiempo (theta).';
+    }
+
+    return {
+      symbol: quote.symbol,
+      action,
+      type: quote.type,
+      strike: quote.strike,
+      expiration: quote.expiration,
+      days,
+      mid: round(quote.mid),
+      summary: `${action} ${quote.type} ${quote.strike} · vence en ${days} días`,
+      strikeReason,
+      role,
+    };
+  }); 
+}
 export function buildCategoryWinners(usable) {
   if (!usable.length) return { categoryWinners: {}, rankingWithBadges: [] };
   const bestFit = [...usable].sort((a, b) => (b.scoreParts?.fit ?? 0) - (a.scoreParts?.fit ?? 0))[0];
@@ -264,6 +332,7 @@ export const recommendService = {
             template,
             name: TEMPLATES[template],
             legs,
+            legExplanations: explainLegs(template, legs, quotes, spot),
             score,
             scoreParts: parts,
             metrics: {
@@ -322,7 +391,7 @@ export const recommendService = {
       categoryWinners,
       // Cada fila lleva su reporte completo y las insignias de liderazgo por categoría.
       ranking: rankingWithBadges,
-      winner: { template: winner.template, name: winner.name, score: winner.score, actionable, metrics: winner.metrics, legs: winner.legs, report: winner.report },
+      winner: { template: winner.template, name: winner.name, score: winner.score, actionable, metrics: winner.metrics, legs: winner.legs, legExplanations: winner.legExplanations, report: winner.report },
       explanation: explain(winner, rankingWithBadges[1], signals, rankingWithBadges),
     };
   },
