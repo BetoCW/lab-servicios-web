@@ -124,3 +124,22 @@ ruta -> controlador -> servicio (reglas) -> repositorio (mongodb | supabase) -> 
 | GET / PUT / DELETE | `/catalogs/:key/values/:valueId` | Consulta, cambio y baja de un valor (con descendientes) |
 
 Ejemplos listos para REST Client en `request/catalogs.http`. Documentación en `/api/v1/api-docs`.
+
+## T3-Actividad 2: optimización, pruebas y monitoreo
+
+Técnicas aplicadas en `src/app.js` a todas las APIs: compresión, ETag/Cache-Control, Helmet, límite de
+peticiones (`RATE_LIMIT`, 300/min por defecto), logs JSON con `X-Request-Id` (pino) y métricas Prometheus.
+
+| Endpoint | Para qué |
+|---|---|
+| `GET /health` | el proceso está vivo |
+| `GET /ready` | MongoDB y Supabase responden |
+| `GET /metrics` | métricas Prometheus (duración por ruta, peticiones por motor de BD) |
+
+```bash
+npm run test:micro                                   # 16 pruebas funcionales y de contrato (servidor encendido)
+RATE_LIMIT=1000000 npm run dev  &&  npm run load     # prueba de carga con autocannon
+docker compose -f monitoring/docker-compose.yml up -d  # Prometheus :9090 y Grafana :3001
+```
+
+Evidencias (capturas) en `docs/evidencias-t3/`.
