@@ -66,13 +66,16 @@ export function gatewayApp(urls = config.services) {
     if (!targetUrl) return next();
 
     req.metricRoute = `/${routePrefix}`;
+    // El análisis con IA puede probar el modelo principal y sus respaldos.
+    const timeoutMs = ['strategies', 'ai'].includes(routePrefix)
+      ? 30_000 + config.ai.timeoutMs * (1 + config.ai.fallbackModels.length) : 30_000;
     let upstreamResponse;
     try {
       upstreamResponse = await fetch(`${targetUrl}${req.originalUrl}`, {
         method: req.method,
         headers: { 'content-type': 'application/json' },
         body: ['GET', 'HEAD', 'DELETE'].includes(req.method) ? undefined : JSON.stringify(req.body ?? {}),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch {
       throw new HttpError(503, `El microservicio ${targetService} no responde`);

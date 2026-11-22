@@ -11,9 +11,32 @@ import { riskService } from '../../api/src/services/risk.service.js';
 import { backtestService } from '../../api/src/services/backtest.service.js';
 import { alpaca } from '../../api/src/lib/alpaca.js';
 import { config } from '../../api/src/config.js';
+import { DEFAULT_CORES, parseCores, scoreCores } from '../../api/src/lib/cores.js';
 
 /** Serie sintética: 120 cierres con una oscilación suave para no depender de datos reales. */
 const wave = Array.from({ length: 120 }, (_, i) => 100 + 5 * Math.sin(i / 6) + i * 0.05);
+
+test('cores: valida selección y normaliza orden, espacios y duplicados', () => {
+  assert.deepEqual(parseCores(undefined), DEFAULT_CORES);
+  assert.deepEqual(parseCores('ai, technical,ai'), ['technical', 'ai']);
+  assert.deepEqual(parseCores(['ai']), ['ai']);
+  for (const value of ['', [], null, {}, 'unknown', 'technical,', ['ai', 1]]) {
+    assert.throws(() => parseCores(value), { status: 400 });
+  }
+});
+
+test('cores: solo votan los activos; IA sola ignora la compuerta EV y los otros votos', () => {
+  const parts = { fit: 0.1, probability: 0.2, expectedValue: 0.3, ai: 1 };
+  assert.equal(scoreCores(parts, ['ai'], -100), 100);
+  assert.equal(scoreCores({ ...parts, fit: 1, probability: 1, expectedValue: 1 }, ['ai'], 100), 100);
+  assert.equal(scoreCores(parts, ['technical'], -100), 10);
+  assert.equal(scoreCores(parts, ['probability'], -100), 20);
+  close(scoreCores(parts, ['technical', 'risk'], 100), 44);
+  const input = { probProfit: 0.2, expectedValue: -50, cvar95: 100, fit: 0.1 };
+  const original = composite(input);
+  assert.equal(scoreCores(original.parts, DEFAULT_CORES, input.expectedValue), original.score);
+  assert.throws(() => scoreCores({}, ['ai'], 1), { status: 400 });
+});
 
 test('clamp limita al intervalo', () => {
   assert.equal(clamp(5), 1);
@@ -276,6 +299,12 @@ test('riskService.analyzeLegs: usa simulationVol explícita y refleja ventaja de
 
 test('recommendService.recommend: expone actionable=true con IV > HV30 y actionable=false si ninguna tiene EV > 0', async () => {
   const saved = { ...alpaca };
+  const savedAi = aiService.validateRisk;
+  let aiCalls = 0;
+  aiService.validateRisk = async () => {
+    aiCalls++;
+    return { verdict: 'approved', reason: 'Revisión simulada', model: 'prueba' };
+  };
   const nearExp = futureIso(30);
   const farExp = futureIso(60);
   const spot = 100;
@@ -316,6 +345,21 @@ test('recommendService.recommend: expone actionable=true con IV > HV30 y actiona
     assert.equal(richRes.winner.actionable, true);
     assert.equal(richRes.signals.simulationVolSource, 'hv30');
     assert.ok(richRes.winner.metrics.expectedValue > 0);
+    assert.equal(aiCalls, 0, 'IA desactivada no se consulta');
+    const aiOnly = await recommendService.recommend('ZZAI', { paths: 2000, cores: 'ai' });
+    assert.deepEqual(aiOnly.cores, ['ai']);
+    assert.equal(aiCalls, 6, 'sin técnico se evalúan ambas direcciones');
+    assert.equal(aiOnly.ranking.length, 6);
+    assert.ok(aiOnly.ranking.every((entry) => entry.score === 100 && entry.scoreParts.fit === null));
+    assert.deepEqual(Object.keys(aiOnly.categoryWinners), ['byComposite']);
+    assert.ok(aiOnly.ranking.every((entry) => entry.badges.every((badge) => badge === 'byComposite')));
+    const probOnly = await recommendService.recommend('ZZPROB', { paths: 2000, cores: ['probability'] });
+    assert.ok(probOnly.ranking.every((entry) => entry.score === Math.round(entry.metrics.probProfit * 1000) / 10));
+    assert.equal(aiCalls, 6, 'los otros cores no activan IA');
+    aiService.validateRisk = async () => ({ verdict: 'unavailable', reason: 'sin conexión' });
+    await assert.rejects(recommendService.recommend('ZZFAIL', { paths: 2000, cores: 'ai' }), /core IA.*sin conexión/);
+    await assert.rejects(recommendService.recommend('ZZBAD', { cores: [] }), { status: 400 });
+    await assert.rejects(backtestService.run('ZZBT', { cores: 'ai' }), /no admite IA/);
 
     mode = 'no-edge';
     const noEdgeRes = await recommendService.recommend('ZZNOEDGE', { paths: 4000 });
@@ -325,6 +369,7 @@ test('recommendService.recommend: expone actionable=true con IV > HV30 y actiona
     assert.match(noEdgeRes.explanation, /Sin ventaja estadística positiva/);
   } finally {
     Object.assign(alpaca, saved);
+    aiService.validateRisk = savedAi;
   }
 });
 

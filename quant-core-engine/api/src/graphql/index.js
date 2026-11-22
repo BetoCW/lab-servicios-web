@@ -58,7 +58,7 @@ const typeDefs = /* GraphQL */ `
     rank: Int! name: String! score: Float! probProfit: Float expectedValue: Float
     worstSimulated: Float var95: Float marginRegT: Float error: String
   }
-  type Recommendation { symbol: String! explanation: String! volView: String! ranking: [RankedStrategy!]! }
+  type Recommendation { symbol: String! cores: [String!]! explanation: String! volView: String! ranking: [RankedStrategy!]! }
 
   input WatchlistInput { name: String! symbols: [String!] }
   input OrderInput {
@@ -86,7 +86,7 @@ const typeDefs = /* GraphQL */ `
     strategies(status: String, underlying: String): [Strategy!]!
     strategy(id: ID!): Strategy
     strategyRisk(id: ID!, paths: Int, seed: Int): StrategyRisk
-    recommendStrategies(symbol: String!): Recommendation!
+    recommendStrategies(symbol: String!, cores: [String!]): Recommendation!
   }
 
   type Mutation {
@@ -150,10 +150,11 @@ const resolvers = {
         monteCarloMs: riskAnalysisResult.performance.monteCarloMs,
       };
     }),
-    recommendStrategies: wrap(async (_, { symbol }) => {
-      const recommendation = await recommendService.recommend(symbol);
+    recommendStrategies: wrap(async (_, { symbol, cores }) => {
+      const recommendation = await recommendService.recommend(symbol, { cores });
       return {
         symbol: recommendation.symbol,
+        cores: recommendation.cores,
         explanation: recommendation.explanation,
         volView: recommendation.signals.volView,
         ranking: recommendation.ranking.map((entry) => ({

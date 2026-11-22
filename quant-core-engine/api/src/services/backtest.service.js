@@ -29,6 +29,7 @@ import { monteCarlo, pnlMatrix } from '@core/quant-engine';
 import { badRequest } from '../lib/errors.js';
 import { composite, marketSignals, templateFit, volSide } from '../lib/scoring.js';
 import { getHistory } from './riskExtended.service.js';
+import { parseCores, scoreCores } from '../lib/cores.js';
 
 const RATE = Number(process.env.RISK_FREE_RATE ?? 0.04);
 const WARMUP = 80; // días de historia mínima antes del primer punto de prueba
@@ -76,7 +77,9 @@ export const backtestService = {
    * @returns {Promise<object>} Muestras, % de acierto de la primera opción, acierto por estrategia y calibración.
    * @throws {import('../lib/errors.js').HttpError} Si el ticker es inválido o hay poca historia.
    */
-  async run(rawSymbol) {
+  async run(rawSymbol, query = {}) {
+    const cores = parseCores(query.cores);
+    if (cores.includes('ai')) throw badRequest('El backtest no admite IA: no se dispone de veredictos históricos. Selecciona cores cuantitativos.');
     const symbol = String(rawSymbol ?? '').trim().toUpperCase();
     if (!/^[A-Z][A-Z.]{0,9}$/.test(symbol)) throw badRequest('symbol debe ser un ticker válido (ej. AAPL)');
     const { closes } = await getHistory(symbol);
@@ -93,11 +96,14 @@ export const backtestService = {
       const fits = templateFit({ ivToHv, termSlope: null, signals });
       const move = closes[i + HOLD_TRADING_DAYS] / spot - 1;
 
-      const candidates = [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal'].map((template) => {
+      const templates = cores.includes('technical') ? [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal']
+        : ['long-straddle', 'short-straddle', 'long-strangle', 'short-strangle', 'calendar', 'diagonal'];
+      const candidates = templates.map((template) => {
         const legs = backtestLegs(template, spot, iv);
         // Las piernas se valúan con la IV aproximada, pero las trayectorias simulan con la volatilidad realizada hv30.
         const mc = monteCarlo(legs, { spot, rate: RATE, vol: signals.hv30, horizonDays: 30, paths: MC_PATHS, seed: 7 });
-        const { score } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] });
+        const { parts } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] });
+        const score = scoreCores(parts, cores, mc.mean);
         const realizedPnl = pnlMatrix(legs, { spot, rate: RATE, horizonDays: 30, spotShocks: [move], volShocks: [0] })[0][0];
         return { template, score, predictedProb: mc.probProfit, realizedPnl, won: realizedPnl > 0 };
       });
@@ -136,6 +142,7 @@ export const backtestService = {
 
     return {
       symbol,
+      cores,
       method: `Cada ${STEP} días hábiles, últimos ${closes.length} días; mantener ${HOLD_TRADING_DAYS} días hábiles (≈ 30 días calendario).`,
       limitation: 'La IV histórica no está disponible en el plan gratuito de Alpaca: se aproxima con la volatilidad histórica de largo plazo del ticker. Es una estimación, no cotizaciones reales pasadas.',
       samples: samples.length,

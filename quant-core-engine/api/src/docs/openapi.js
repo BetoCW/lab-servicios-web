@@ -119,10 +119,11 @@ export const openapi = {
     '/strategies/recommend': {
       get: op('Strategies', 'Recomendar la mejor estrategia (Straddle, Strangle, Calendar, Diagonal) para un ticker', {
         description:
-          'Con datos reales de Alpaca y el motor Rust/WASM simula trayectorias con volatilidad histórica de 30 días (hv30, o promedio de IV como respaldo), evalúa las 4 estrategias, las ordena por puntaje (40 % prob. de ganancia + 30 % valor esperado/CVaR + 30 % encaje con el mercado) con compuerta estricta para valor esperado positivo, expone `actionable` y explica por qué gana la primera. Incluye VaR/CVaR, drawdown, Sharpe/Sortino, beta, estrés e intervalos del 95 %.',
+          'Simula con hv30 y ordena por los cores seleccionados. Predeterminado: technical,probability,risk (30/40/30). Pesos normalizados entre activos; IA puntúa approved=1, caution=0.5, rejected=0 y un fallo impide completar el análisis. Sin technical se evalúan seis variantes, sin filtrar compra/venta por IV/HV. La compuerta de EV positivo pertenece a risk. Las métricas son insumos compartidos; actionable indica EV positivo de la ganadora.',
         parameters: [
           { name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } },
           { name: 'paths', in: 'query', schema: { type: 'integer', default: 20000, minimum: 2000, maximum: 100000 } },
+          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk', example: 'ai' }, description: 'Lista separada por comas: technical, probability, risk, ai. Debe seleccionar al menos uno.' },
         ],
         responses: ok({ type: 'object' }),
       }),
@@ -131,7 +132,8 @@ export const openapi = {
       get: op('Strategies', 'Backtest del recomendador: % de acierto histórico y calibración', {
         description:
           'Re-juega el último año del ticker cada 5 días hábiles aproximando la IV con la volatilidad histórica de largo plazo para valuar piernas y simulando Monte Carlo con hv30 del punto temporal. Mide en qué % de las veces habría ganado la primera opción a 30 días y si la probabilidad anunciada coincide con la real.',
-        parameters: [{ name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } }],
+        parameters: [{ name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } },
+          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk' }, description: 'Mismos cores del ranking; ai devuelve 400 porque no hay veredictos históricos.' }],
         responses: ok({ type: 'object' }),
       }),
     },
@@ -144,6 +146,7 @@ export const openapi = {
           required: ['symbol'],
           properties: {
             symbol: { type: 'string', example: 'AAPL' },
+            cores: { type: 'array', minItems: 1, items: { type: 'string', enum: ['technical', 'probability', 'risk', 'ai'] }, description: 'Cores del ranking. Los filtros de seguridad de riesgo e IA para operar siguen siendo obligatorios.' },
             dryRun: { type: 'boolean', default: false },
             confirm: { type: 'boolean', description: 'Obligatorio en true para enviar la orden (no hace falta con dryRun)' },
           },

@@ -14,6 +14,7 @@ import { aiService } from '../services/ai.service.js';
 import { assertUuid, badRequest } from '../lib/errors.js';
 import { alpaca } from '../lib/alpaca.js';
 import { memo } from '../lib/cache.js';
+import { parseCores } from '../lib/cores.js';
 
 const uuid = (req, _res, next) => {
   assertUuid(req.params.id);
@@ -57,7 +58,7 @@ optionChainsRouter.delete('/:id', uuid, async (req, res) => {
 // Recomendador con cache de 20 s: es la peticion mas cara (~10 llamadas a Alpaca + 80 000 simulaciones);
 // repetir el clic o abrir otra pestana con el mismo ticker no la vuelve a pagar. /auto NO usa este cache.
 const RECOMMEND_TTL_MS = 20_000;
-const recommendCached = memo(RECOMMEND_TTL_MS, (symbol, query) => recommendService.recommend(symbol, query), (symbol, query) => `${String(symbol).toUpperCase()}|${query?.paths ?? ''}`);
+const recommendCached = memo(RECOMMEND_TTL_MS, (symbol, query) => recommendService.recommend(symbol, query), (symbol, query) => `${String(symbol).toUpperCase()}|${query?.paths ?? ''}|${parseCores(query?.cores).join(',')}`);
 
 // ---------------------------------------------------------------- 4. strategies
 const strategiesRouter = Router();

@@ -167,6 +167,11 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 #signalControls input { accent-color: var(--accent); margin: 0; }
 #signalSummary { padding: 2px 12px 5px; font-size: 11px; }
 #signalSummary span { margin-right: 10px; white-space: nowrap; }
+#signalDetails { padding: 4px 12px; flex: none; }
+#signalDetails .scroll { max-height: 180px; overflow: auto; }
+#coreControls { margin: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+#coreControls label { display: flex; flex-direction: row; align-items: center; gap: 4px; }
+#coreControls input { margin: 0; accent-color: var(--accent); }
 #mkHistoryStatus { padding: 4px 12px; font-size: 12px; }
 #chPrice { flex: 1; min-height: 120px; }
 .pane { flex: none; border-top: 1px solid var(--line); }
@@ -340,7 +345,7 @@ dialog#dlgStrat:not([open]) { display: none; }
         <button type="submit">Consultar histórico</button>
         <span class="muted" id="mkHistoryHelp">Sin fin: hasta la actualidad. Sin inicio: período automático.</span>
       </form>
-      // Agregue las señales dentro de un div
+      <!-- Filtros de señales históricas del análisis técnico -->
       <div id="signalControls" aria-label="Señales por indicador">
         <label><input type="checkbox" data-signal="averages" checked> Medias y cruces</label>
         <label><input type="checkbox" data-signal="rsi" checked> RSI</label>
@@ -348,6 +353,10 @@ dialog#dlgStrat:not([open]) { display: none; }
         <label><input type="checkbox" data-signal="bollinger" checked> Bollinger</label>
       </div>
       <div id="signalSummary" class="muted" aria-live="polite"></div>
+      <details id="signalDetails"><summary>Detalle del análisis técnico · compras y ventas</summary>
+        <p class="muted">Señales al cierre de cada vela. Flecha verde: compra; roja: venta. La fecha corresponde a la temporalidad elegida; la vela en curso puede cambiar.</p>
+        <div class="scroll"><table><thead><tr><th>Fecha y hora</th><th>Señal</th><th>Indicador</th><th>Precio de cierre</th><th>Motivo</th></tr></thead><tbody id="signalRows"></tbody></table></div>
+      </details>
       <div id="mkHistoryStatus" class="muted" role="status" aria-live="polite"></div>
       <div id="chPrice"></div>
       <div class="pane" id="paneRsi"><button type="button" data-pane="paneRsi"><span>RSI 14</span><span>▾</span></button><div class="chart" id="chRsi"></div></div>
@@ -359,6 +368,13 @@ dialog#dlgStrat:not([open]) { display: none; }
   <aside id="side">
     <div class="pnl" id="recCard">
       <div class="ph"><b>Recomendador</b><span class="acts"><button class="ghost sm" id="recRun" title="Volver a calcular">Recalcular</button><button class="ghost sm" id="recBacktest" title="Qué tan seguido acertó en el último año">Backtest</button></span></div>
+      <fieldset id="coreControls"><legend>Cores para el análisis</legend>
+        <label><input type="checkbox" value="technical" checked> Técnico</label>
+        <label><input type="checkbox" value="probability" checked> Probabilidad</label>
+        <label><input type="checkbox" value="risk" checked> Rendimiento / riesgo</label>
+        <label><input type="checkbox" value="ai"> IA</label>
+      </fieldset>
+      <p class="pad muted" style="margin:0">El puntaje usa solo los cores marcados. Las métricas son insumos compartidos. Al operar, los filtros de seguridad de riesgo e IA siguen siendo obligatorios.</p>
       <div id="recOut"><div class="pad muted">Elige un ticker arriba.</div></div>
       <div id="recSel" class="sel" hidden></div>
     </div>
@@ -943,6 +959,7 @@ function recDetail(entry) {
   // Modal con el detalle completo (se abre con "Ver más").
   $('#recDetail').innerHTML = `
     <h2>${esc(entry.name)} · detalle <span class="muted">Monte Carlo y riesgo extendido</span></h2>
+    ${entry.ai ? `<p><b>Core IA:</b> ${esc(verdictBadge[entry.ai.verdict]?.[1] ?? entry.ai.verdict)} · ${esc(entry.ai.reason)} <span class="muted">(${esc(entry.ai.model ?? '—')})</span></p>` : ''}
     <div class="kpis">
       <div class="kpi"><span>Mejor / peor caso</span><b>${signed(m.bestSimulated)}</b><span>${signed(m.worstSimulated)}</span></div>
       <div class="kpi"><span>VaR 95% · CVaR 95%</span><b>${money(m.var95)}</b><span>${money(m.cvar95)}</span></div>
@@ -970,7 +987,20 @@ $('#recSel').onclick = async (e) => {
   } catch { e.target.disabled = false; }
 };
 
-let recSortCriterion = 'composite';
+let recSortCriterion = 'composite', recRequest = 0;
+function selectedCores() {
+  return Array.from(document.querySelectorAll('#coreControls input:checked'), (input) => input.value);
+}
+function coreParams() {
+  const cores = selectedCores();
+  if (!cores.length) throw new Error('Selecciona al menos un core para analizar.');
+  return new URLSearchParams({ cores: cores.join(',') }).toString();
+}
+$('#coreControls').onchange = () => {
+  recSortCriterion = 'composite';
+  $('#autoOut').innerHTML = '';
+  recommend(ticker(), ticket);
+};
 
 function renderRecTable(rows) {
   const badgeMap = {
@@ -1003,7 +1033,7 @@ function renderRecTable(rows) {
         const evCvarRatio = x.metrics.cvar95 ? (x.metrics.expectedValue / Math.abs(x.metrics.cvar95)).toFixed(2) : null;
         return `<tr data-template="${esc(x.template)}" style="--i:${i}">
             <td><b>${esc(x.name)}</b> <span class="n muted">${x.score}</span><div class="bar"><i style="--w:${Math.max(0, Math.min(100, x.score))}%"></i></div></td>
-            <td class="n">${Math.round((x.scoreParts?.fit ?? 0) * 100)}%</td>
+            <td class="n">${x.scoreParts?.fit == null ? '—' : `${Math.round(x.scoreParts.fit * 100)}%`}</td>
             <td class="n ${x.metrics.expectedValue >= 0 ? 'buy' : 'sell'}" title="${evCvarRatio != null ? `EV/CVaR95: ${evCvarRatio}` : 'Sin CVaR95'}">${signed(x.metrics.expectedValue)}${evCvarRatio != null ? `<div class="muted" style="font-size:10px">${evCvarRatio}× CVaR</div>` : ''}</td>
             <td class="n">${(x.metrics.probProfit * 100).toFixed(0)}%</td>
             <td>${(x.badges || []).map((b) => badgeMap[b] || '').join('')}</td>
@@ -1014,43 +1044,33 @@ function renderRecTable(rows) {
 
 // Pide GET /strategies/recommend, pinta el ranking compacto y elige la primera fila válida.
 async function recommend(symbol, mine = ticket) {
+  const requestId = ++recRequest;
   $('#recSel').hidden = true;
+  window.recEntry = null;
+  window.recRanking = [];
+  setOverlay([]);
   // esqueleto discreto mientras se simulan las 4 estrategias
   $('#recOut').innerHTML = '<div class="pad" style="display:grid;gap:8px">' + '<span class="skel" style="height:16px"></span>'.repeat(5) + '</div>';
   try {
-    const d = await api('GET', `/strategies/recommend?symbol=${encodeURIComponent(symbol)}`, undefined, true);
-    if (mine !== ticket) return; // el usuario ya cambió de ticker: se descarta la respuesta vieja
+    const params = coreParams();
+    const d = await api('GET', `/strategies/recommend?symbol=${encodeURIComponent(symbol)}&${params}`, undefined, true);
+    if (mine !== ticket || requestId !== recRequest || params !== coreParams()) return;
     const s = d.signals;
     window.recRanking = d.ranking;
     window.recCategoryWinners = d.categoryWinners;
     const firstSentence = String(d.explanation).split(/(?<=\.)\s/)[0]; // UNA frase; el texto largo va en el desplegable
     const cw = d.categoryWinners || {};
 
-    const categoryCardsHtml = cw.byFit ? `
-      <div class="cat-cards">
-        <div class="cat-card" data-cat="byFit" title="${esc(cw.byFit.description)}">
-          <div class="ctitle">Régimen / Técnica</div>
-          <div class="cname">${esc(cw.byFit.name)}</div>
-          <div class="cval">${esc(cw.byFit.label)}</div>
-        </div>
-        <div class="cat-card" data-cat="byRiskAdjustedReturn" title="${esc(cw.byRiskAdjustedReturn.description)}">
-          <div class="ctitle">Retorno / CVaR</div>
-          <div class="cname">${esc(cw.byRiskAdjustedReturn.name)}</div>
-          <div class="cval">${esc(cw.byRiskAdjustedReturn.label)}</div>
-        </div>
-        <div class="cat-card" data-cat="byProbability" title="${esc(cw.byProbability.description)}">
-          <div class="ctitle">Prob. Pura</div>
-          <div class="cname">${esc(cw.byProbability.name)}</div>
-          <div class="cval">${esc(cw.byProbability.label)}</div>
-        </div>
-      </div>` : '';
+    const categoryCardsHtml = `<div class="cat-cards">${Object.entries({ byFit: 'Régimen / Técnica', byRiskAdjustedReturn: 'Retorno / CVaR', byProbability: 'Probabilidad' })
+      .filter(([key]) => cw[key]).map(([key, title]) => `<div class="cat-card" data-cat="${key}" title="${esc(cw[key].description)}"><div class="ctitle">${title}</div><div class="cname">${esc(cw[key].name)}</div><div class="cval">${esc(cw[key].label)}</div></div>`).join('')}</div>`;
 
     const noEdgeBanner = d.actionable === false
-      ? `<div class="badge warn" style="display:block;padding:6px 10px;margin:0 0 8px;white-space:normal">Sin ventaja estadística positiva (todas las candidatas tienen EV ≤ 0). No recomendable operar; se muestra la menos desfavorable.</div>`
+      ? `<div class="badge warn" style="display:block;padding:6px 10px;margin:0 0 8px;white-space:normal">La estrategia ganadora no tiene valor esperado positivo. No es apta para ejecución automática.</div>`
       : '';
 
     $('#recOut').innerHTML = `
       ${noEdgeBanner}
+      <p class="muted">Cores activos: ${esc(d.cores.join(', '))}</p>
       ${categoryCardsHtml}
       <div id="recTableWrap">${renderRecTable(d.ranking)}</div>
       <p class="why"><b>Por qué gana la 1ª:</b> ${esc(firstSentence)}</p>
@@ -1092,7 +1112,7 @@ async function recommend(symbol, mine = ticket) {
 
     const first = d.ranking.find((x) => !x.error);
     if (first) recDetail(first);
-  } catch (err) { if (mine === ticket) $('#recOut').innerHTML = `<div class="pad muted">Este ticker no tiene opciones listadas o no se pudo recomendar (${esc(err.message)}).</div>`; }
+  } catch (err) { if (mine === ticket && requestId === recRequest) $('#recOut').innerHTML = `<div class="pad muted">No se pudo completar el análisis: ${esc(err.message)}</div>`; }
 }
 $('#recRun').onclick = busy($('#recRun'), () => recommend(ticker(), ticket));
 
@@ -1101,7 +1121,7 @@ $('#recBacktest').onclick = busy($('#recBacktest'), async () => {
   const symbol = ticker();
   verMas($('#recBt'));
   $('#recBt').innerHTML = '<span class="muted">Re-jugando el último año…</span>';
-  const b = await api('GET', `/strategies/recommend/backtest?symbol=${encodeURIComponent(symbol)}`);
+  const b = await api('GET', `/strategies/recommend/backtest?symbol=${encodeURIComponent(symbol)}&${coreParams()}`);
   $('#recBt').innerHTML = `
     <h2>Backtest de ${esc(b.symbol)} <span class="muted">GET /strategies/recommend/backtest</span></h2>
     <div class="kpis">
@@ -1126,7 +1146,8 @@ $('#autoRun').onclick = busy($('#autoRun'), async () => {
   const symbol = ticker(), dryRun = $('#autoDry').checked;
   if (!dryRun && !confirm(`Se enviará una orden multi-pierna a Alpaca PAPER (dinero simulado) si ${symbol} pasa los dos filtros.\nEsto no garantiza ganancias. ¿Continuar?`)) return;
   $('#autoOut').innerHTML = '<span class="muted">Recomendando, validando riesgo y consultando a la IA…</span>';
-  const r = await api('POST', '/strategies/auto', { symbol, dryRun, confirm: !dryRun }); // confirm:true solo si la persona aceptó el aviso (el backend lo exige)
+  coreParams();
+  const r = await api('POST', '/strategies/auto', { symbol, cores: selectedCores(), dryRun, confirm: !dryRun }); // confirm:true solo si la persona aceptó el aviso (el backend lo exige)
   const [cls, label] = verdictBadge[r.filters.ai.verdict] ?? ['', r.filters.ai.verdict];
   $('#autoOut').innerHTML = `
     <p style="margin:0 0 6px"><b>${esc(r.strategy)}</b> en ${esc(r.symbol)} — <span class="badge ${r.executed ? 'ok' : 'warn'}">${r.executed ? 'Orden enviada (paper)' : 'No se envió orden'}</span></p>
@@ -1278,7 +1299,6 @@ const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v
 const localTime = (t) => t - new Date(t * 1000).getTimezoneOffset() * 60;
 let charts = null, overlay = [];
 let marketSignals = [];
-/////// SE TOMAN LAS SEñales de mercado----------------------------------------------------------------
 const SIGNALS = {
   averages: { label: 'EMA9/SMA20', marker: 'EMA/SMA' },
   rsi: { label: 'RSI', marker: 'RSI' },
@@ -1294,6 +1314,14 @@ function buildMarketSignals(bars, indicators) {
     const bar = bars[index];
     signals.push({
       key, index, side, time: localTime(bar.time),
+      price: bar.close,
+      timestamp: new Date(bar.time * 1000).toLocaleString('es-MX'),
+      reason: {
+        averages: side === 'buy' ? 'Cruce alcista: EMA9 supera SMA20' : 'Cruce bajista: EMA9 cae bajo SMA20',
+        macd: side === 'buy' ? 'Cruce alcista: MACD supera su señal' : 'Cruce bajista: MACD cae bajo su señal',
+        rsi: side === 'buy' ? 'RSI sale de sobreventa (supera 30)' : 'RSI sale de sobrecompra (cae bajo 70)',
+        bollinger: side === 'buy' ? 'Precio recupera la banda inferior' : 'Precio vuelve bajo la banda superior',
+      }[key],
       date: new Date(bar.time * 1000).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
     });
   };
@@ -1331,13 +1359,14 @@ function renderMarketSignals() {
     position: signal.side === 'buy' ? 'belowBar' : 'aboveBar',
     color: css(signal.side === 'buy' ? '--ok' : '--bad'),
     shape: signal.side === 'buy' ? 'arrowUp' : 'arrowDown',
-    text: `${SIGNALS[signal.key].marker} ${signal.side === 'buy' ? 'C' : 'V'}`,
+    text: `${SIGNALS[signal.key].marker} ${signal.side === 'buy' ? 'COMPRA' : 'VENTA'} ${signal.date}`,
   })));
   const latest = Object.keys(SIGNALS).flatMap((key) => {
     const signal = visible.findLast((item) => item.key === key);
     return signal ? [`<span class="${signal.side}">${SIGNALS[key].label}: ${signal.side === 'buy' ? 'COMPRA' : 'VENTA'} · ${esc(signal.date)}</span>`] : [];
   });
   $('#signalSummary').innerHTML = latest.length ? `Última señal · ${latest.join(' · ')}` : 'Sin señales en el rango seleccionado.';
+  $('#signalRows').innerHTML = [...visible].reverse().map((signal) => `<tr><td>${esc(signal.timestamp)}</td><td class="${signal.side}">${signal.side === 'buy' ? 'COMPRA' : 'VENTA'}</td><td>${SIGNALS[signal.key].label}</td><td>${num(signal.price)}</td><td>${esc(signal.reason)}</td></tr>`).join('') || '<tr><td colspan="5">Sin señales para los filtros y el rango seleccionados.</td></tr>';
 }
 
 $('#signalControls').onchange = renderMarketSignals;

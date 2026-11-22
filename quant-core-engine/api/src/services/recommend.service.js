@@ -30,6 +30,8 @@ import { normalizeSymbol } from '../lib/symbol.js';
 import { composite, marketSignals, templateFit, volSide } from '../lib/scoring.js';
 import { getHistory } from './riskExtended.service.js';
 import { riskService } from './risk.service.js';
+import { aiService } from './ai.service.js';
+import { DEFAULT_CORES, parseCores, scoreCores } from '../lib/cores.js';
 
 const { build, TEMPLATES } = globalThis.F0Templates;
 const DAY_MS = 86_400_000;
@@ -222,6 +224,7 @@ export const recommendService = {
    */
   async recommend(rawSymbol, query = {}) {
     const symbol = normalizeSymbol(rawSymbol);
+    const cores = parseCores(query.cores);
     const paths = Math.min(Math.max(Number(query.paths ?? 20000), 2000), 100000);
 
     const market = await loadMarket(symbol);
@@ -242,8 +245,10 @@ export const recommendService = {
       farExpiration,
     };
     const side = volSide(signals.ivToHv);
-    const fits = templateFit({ ivToHv: signals.ivToHv, termSlope: signals.termSlope, signals });
-    const candidates = [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal'];
+    const fits = cores.includes('technical') ? templateFit({ ivToHv: signals.ivToHv, termSlope: signals.termSlope, signals }) : {};
+    // Sin core técnico no se descartan compras/ventas por su criterio de volatilidad.
+    const candidates = cores.includes('technical') ? [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal']
+      : ['long-straddle', 'short-straddle', 'long-strangle', 'short-strangle', 'calendar', 'diagonal'];
     const hasHv30 = Number.isFinite(marketView.hv30) && marketView.hv30 > 0;
     const simQuery = hasHv30 ? { paths, seed: 42, simulationVol: marketView.hv30, simulationVolSource: 'hv30' } : { paths, seed: 42 };
 
@@ -259,13 +264,21 @@ export const recommendService = {
             { stock: market.stock, snaps: market.snaps, history },
           );
           const mc = report.monteCarlo;
-          const { score, parts } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] });
+          const { parts } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] ?? 0 });
+          const ai = cores.includes('ai') ? await aiService.validateRisk({ symbol, strategy: built.name,
+            probProfit: mc.probProfit, expectedValue: mc.mean, var95: mc.var95, cvar95: mc.cvar95,
+            worstSimulated: mc.min, marginRegT: report.margin.regT, extended: report.extended }) : null;
+          if (ai?.verdict === 'unavailable') throw Object.assign(new Error(ai.reason), { coreUnavailable: true });
+          if (ai) parts.ai = { approved: 1, caution: 0.5, rejected: 0 }[ai.verdict];
+          const score = scoreCores(parts, cores, mc.mean);
+          if (!cores.includes('technical')) parts.fit = null;
           return {
             template,
             name: TEMPLATES[template],
             legs,
             score,
             scoreParts: parts,
+            ai,
             metrics: {
               probProfit: mc.probProfit,
               expectedValue: mc.mean,
@@ -282,11 +295,13 @@ export const recommendService = {
             report,
           };
         } catch (error) {
-          return { template, name: TEMPLATES[template], error: error.message, score: -1 };
+          return { template, name: TEMPLATES[template], error: error.message, coreUnavailable: error.coreUnavailable === true, score: -1 };
         }
       }),
     );
 
+    const unavailable = evaluated.find((entry) => entry.coreUnavailable);
+    if (unavailable) throw badRequest(`No se pudo completar el core IA: ${unavailable.error}`);
     const ranking = evaluated
       .sort((a, b) => b.score - a.score)
       .map((entry, index) => ({ rank: index + 1, ...entry }));
@@ -294,14 +309,20 @@ export const recommendService = {
     if (!usable.length) throw badRequest(`No se pudo armar ninguna estrategia para ${symbol}: ${ranking.map((e) => e.error).join(' | ')}`);
 
     const { categoryWinners, rankingWithBadges } = buildCategoryWinners(usable);
+    const categories = { byFit: 'technical', byRiskAdjustedReturn: 'risk', byProbability: 'probability' };
+    for (const [category, core] of Object.entries(categories)) {
+      if (!cores.includes(core)) delete categoryWinners[category];
+    }
+    for (const entry of rankingWithBadges) entry.badges = entry.badges.filter((badge) => !categories[badge] || cores.includes(categories[badge]));
     const winner = rankingWithBadges[0];
     const actionable = winner.metrics.expectedValue > 0;
     const simulationVolSource = winner.report?.inputs?.simulationVolSource ?? (hasHv30 ? 'hv30' : 'iv-avg');
     return {
       symbol,
+      cores,
       asOf: new Date().toISOString(),
       actionable,
-      method: 'Simulación con hv30 (respaldo IV promedio); puntaje = 40 % prob. de ganancia + 30 % EV/CVaR + 30 % encaje con compuerta para EV > 0 (lib/scoring.js).',
+      method: `Cores activos: ${cores.join(', ')}. Pesos normalizados entre los seleccionados; compuerta EV > 0 solo con risk. Las métricas cuantitativas son insumos compartidos.`,
       signals: {
         spot,
         hv30Pct: round(signals.hv30 * 100, 1),
@@ -323,7 +344,9 @@ export const recommendService = {
       // Cada fila lleva su reporte completo y las insignias de liderazgo por categoría.
       ranking: rankingWithBadges,
       winner: { template: winner.template, name: winner.name, score: winner.score, actionable, metrics: winner.metrics, legs: winner.legs, report: winner.report },
-      explanation: explain(winner, rankingWithBadges[1], signals, rankingWithBadges),
+      explanation: cores.length === DEFAULT_CORES.length && DEFAULT_CORES.every((core) => cores.includes(core))
+        ? explain(winner, rankingWithBadges[1], signals, rankingWithBadges)
+        : `${winner.name} obtuvo ${winner.score} puntos usando ${cores.join(', ')}.${winner.ai ? ` IA: ${winner.ai.reason}` : ''} Probabilidad simulada ${(winner.metrics.probProfit * 100).toFixed(1)} %; valor esperado $${winner.metrics.expectedValue}.`,
     };
   },
 };

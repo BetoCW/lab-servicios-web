@@ -84,6 +84,41 @@ test('gráfica: cada indicador genera señales de compra y venta con fecha', () 
   ]);
   assert.equal(signals[0].date, new Date(bars[1].time * 1000).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }));
   assert.ok(signals.every(({ date }) => typeof date === 'string' && date.length > 0));
+  assert.equal(signals[0].price, 100);
+  assert.match(signals[0].reason, /Cruce alcista/);
+  assert.match(signals[2].reason, /Cruce bajista/);
+  assert.ok(signals.every(({ timestamp, reason }) => timestamp.length > 0 && reason.length > 0));
+});
+
+test('gráfica: detalle y flechas respetan filtros e incluyen compra/venta, fecha y precio', () => {
+  const elements = { '#signalControls': {}, '#signalSummary': {}, '#signalRows': {} };
+  const filters = { averages: true, macd: false, rsi: false, bollinger: false };
+  let markers;
+  const signals = [
+    { key: 'averages', side: 'buy', time: 1, date: '01 ene 2026', timestamp: '01/01/2026 12:00', price: 101, reason: 'Cruce alcista' },
+    { key: 'macd', side: 'sell', time: 2, date: '02 ene 2026', timestamp: '02/01/2026 12:00', price: 99, reason: 'Cruce bajista' },
+  ];
+  const context = vm.createContext({
+    $: (selector) => selector.startsWith('#signalControls ')
+      ? { checked: filters[selector.match(/data-signal="(.*?)"/)[1]] } : elements[selector],
+    charts: { series: { candles: { setMarkers: (value) => { markers = value; } } } },
+    marketSignals: signals, css: () => '#000', esc: String, num: String,
+    SIGNALS: { averages: { label: 'EMA9/SMA20', marker: 'EMA/SMA' }, macd: { label: 'MACD', marker: 'MACD' }, rsi: {}, bollinger: {} },
+  });
+  vm.runInContext(html.slice(html.indexOf('function renderMarketSignals()'), html.indexOf('// Autoscale del eje')), context);
+  vm.runInContext('renderMarketSignals()', context);
+  assert.equal(markers.length, 1);
+  assert.match(markers[0].text, /COMPRA 01 ene 2026/);
+  assert.match(elements['#signalRows'].innerHTML, /101.*Cruce alcista/);
+  assert.doesNotMatch(elements['#signalRows'].innerHTML, /Cruce bajista/);
+  filters.macd = true;
+  vm.runInContext('renderMarketSignals()', context);
+  assert.equal(markers[1].shape, 'arrowDown');
+  assert.match(elements['#signalRows'].innerHTML, /VENTA/);
+  filters.averages = filters.macd = false;
+  vm.runInContext('renderMarketSignals()', context);
+  assert.equal(markers.length, 0);
+  assert.match(elements['#signalRows'].innerHTML, /Sin señales/);
 });
 
 test('gráfica: descarta respuestas anteriores al cambiar el rango', async () => {

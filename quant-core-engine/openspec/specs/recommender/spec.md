@@ -74,3 +74,27 @@ El sistema SHALL exponer `POST /ai/validate-risk` en el servicio `ai` (:3065) qu
 #### Scenario: Simulación
 - **WHEN** `dryRun = true`
 - **THEN** se calculan ambos filtros pero no se envía ninguna orden
+# Cores seleccionables
+
+El recomendador admite `cores` en REST (lista separada por comas), GraphQL
+(arreglo) y ejecución automática (arreglo). Valores: `technical`, `probability`,
+`risk`, `ai`. Por defecto usa los tres primeros, conservando el puntaje anterior.
+Los pesos 30/40/30/30 se normalizan entre los seleccionados; la compuerta de EV
+positivo solo participa con `risk`. Las métricas cuantitativas son insumos
+compartidos, incluso al usar únicamente IA.
+
+- Dado un conjunto vacío o desconocido, cuando se solicita análisis, entonces
+  devuelve 400 antes de consultar proveedores.
+- Dado solo IA, cuando se analizan estrategias, entonces se consideran las seis
+  variantes (compra/venta de straddle y strangle, calendar y diagonal), sin filtro
+  técnico; approved/caution/rejected aportan 1/0.5/0 al puntaje y cada resultado
+  conserva motivo y modelo. Si IA está indisponible, no se sustituye por otro core.
+- Dados cores sin IA, cuando se recomienda, entonces no se consulta OpenRouter.
+- Dados conjuntos distintos, cuando se consultan con caché, entonces no comparten
+  resultados. El orden o duplicación de cores no cambia la clave.
+- Dada una selección modificada mientras hay una petición en curso, cuando llega
+  la respuesta anterior, entonces la pantalla la descarta.
+- Dado backtest con IA, entonces devuelve 400 indicando que no hay veredictos
+  históricos; con cores cuantitativos respeta sus votos y candidatos.
+- Dada ejecución automática, entonces usa los cores elegidos para el ranking,
+  manteniendo obligatorios los filtros de seguridad de riesgo e IA al operar.

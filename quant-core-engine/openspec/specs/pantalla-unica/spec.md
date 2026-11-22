@@ -37,3 +37,14 @@ El sistema SHALL deduplicar peticiones idénticas simultáneas y cachear: snapsh
 #### Scenario: Ejecución simultánea o recurrente dentro del intervalo protegido
 - **WHEN** se invoca `POST /strategies/auto` mientras hay una ejecución en curso o dentro de los 60 s posteriores para el mismo ticker
 - **THEN** la petición es rechazada con código HTTP 429
+# Detalle de señales técnicas
+
+- Dado un cruce alcista o bajista de EMA9/SMA20 o MACD/señal, una salida de
+  sobreventa/sobrecompra del RSI, o un retorno al interior de Bollinger, cuando
+  se consulta histórico, entonces la gráfica marca compra/venta en su vela y
+  muestra la fecha. El detalle incluye fecha y hora local, cierre y motivo.
+- Dados filtros de indicadores desmarcados, entonces tanto las flechas como el
+  resumen y la tabla excluyen esas señales. Sin señales se informa explícitamente.
+- Las señales se calculan solo con el dato actual y anterior, sin datos futuros.
+  En temporalidades semanales/mensuales representan la vela de ese período; la
+  señal de la vela en curso puede cambiar con su cierre.

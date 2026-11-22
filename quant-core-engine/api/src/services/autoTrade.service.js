@@ -104,7 +104,7 @@ export const autoTradeService = {
 
   /** Cuerpo de `run` (separado para que el candado `running` siempre se libere en el finally). */
   async execute(body) {
-    const recommendation = await recommendService.recommend(body.symbol);
+    const recommendation = await recommendService.recommend(body.symbol, { cores: body.cores });
     const { winner } = recommendation;
 
     const account = await alpaca.account();
