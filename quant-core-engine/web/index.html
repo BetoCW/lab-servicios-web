@@ -104,7 +104,24 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 /* =====================================================================================
    APP-SHELL: barra superior · (riel | centro | lateral) · dock · pie. Ocupa el alto de la ventana.
    ===================================================================================== */
-#app { height: 100vh; height: 100dvh; display: grid; grid-template-rows: var(--top) minmax(0, 1fr) auto var(--foot); }
+#app { height: 100vh; height: 100dvh; display: grid; grid-template-rows: var(--top) auto minmax(0, 1fr) auto var(--foot); }
+
+/* 1b) barra de flujo: los 4 pasos del trabajo en orden. El paso actual va en rosa; los hechos llevan ✓. */
+#flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--panel); border-bottom: 1px solid var(--line); }
+#flow .step { display: flex; align-items: center; gap: 10px; background: none; color: var(--muted); border: 0; border-radius: 0; border-right: 1px solid var(--line); border-bottom: 2px solid transparent; padding: 7px 14px; text-align: left; font-weight: 400; white-space: normal; min-width: 0; }
+#flow .step:last-child { border-right: 0; }
+#flow .step:hover { filter: none; background: var(--panel2); }
+#flow .step i { font: normal 600 22px/1 var(--display); font-variation-settings: 'opsz' 72; color: var(--line); flex: none; width: 18px; text-align: center; }
+#flow .step b { display: block; color: var(--text); font-size: 13px; }
+#flow .step small { display: block; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#flow .step.now { border-bottom-color: var(--accent); background: var(--accent-soft); }
+#flow .step.now i { color: var(--accent); }
+#flow .step.done i { color: var(--ok); font-size: 16px; }
+/* número del paso dentro del encabezado de cada panel: liga el panel con la barra de flujo */
+.sn { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: normal 600 11px var(--mono); vertical-align: 2px; }
+/* resaltado breve del panel al pulsar un paso */
+.pulse { animation: pulse 1.1s ease-out; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 2px var(--accent), 0 0 0 0 var(--focus); } 100% { box-shadow: 0 0 0 2px transparent, 0 0 0 14px transparent; } }
 
 /* 1) barra superior */
 #top { display: flex; align-items: center; gap: 12px; padding: 0 14px; background: var(--panel); border-bottom: 1px solid var(--accent); min-width: 0; }
@@ -130,7 +147,13 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 .help code { background: rgba(0, 0, 0, .08); padding: 1px 4px; border-radius: 4px; }
 
 /* 2-4) zona de trabajo: riel de watchlists | centro | lateral del recomendador */
-#work { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr) var(--side); gap: 10px; padding: 10px 10px 8px; min-height: 0; }
+#work { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr) 6px var(--side); gap: 10px 4px; padding: 10px 10px 8px; min-height: 0; }
+#work > #rail { margin-right: 6px; }
+/* divisor arrastrable entre la gráfica y el recomendador (doble clic = expandir / regresar) */
+#split { cursor: col-resize; border-radius: 3px; position: relative; touch-action: none; }
+#split::after { content: ''; position: absolute; inset: 0 2px; border-radius: 2px; background: var(--line); transition: background var(--t); }
+#split:hover::after, #split:focus-visible::after, #split.drag::after { background: var(--accent); }
+body.resizing { cursor: col-resize; user-select: none; }
 #rail, #center, #side { min-height: 0; display: flex; flex-direction: column; }
 .pnl { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
 .ph { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line); flex: none; }
@@ -161,16 +184,21 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 #mkQuote .kpi b.t { font-family: var(--font); font-weight: 600; font-size: 13px; }
 #mkQuote .skel { height: 30px; margin: 8px 12px; }
 .chartbox { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-top: 8px; }
-.history-controls { padding: 8px 12px; border-bottom: 1px solid var(--line); }
-.history-controls input[type="number"] { width: 90px; }
+.history-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 6px 12px; border-bottom: 1px solid var(--line); }
+.history-controls label { flex-direction: row; align-items: center; gap: 6px; }
+.history-controls input { padding: 3px 6px; }
+.history-controls input[type="number"] { width: 70px; }
+.history-controls button { padding: 4px 10px; }
+.zoom button { min-width: 28px; }
 #signalControls { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px 12px 2px; }
 #signalControls label { flex-direction: row; align-items: center; gap: 5px; background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 2px 7px; cursor: pointer; }
 #signalControls input { accent-color: var(--accent); margin: 0; }
 #signalSummary { padding: 2px 12px 5px; font-size: 11px; }
 #signalSummary span { margin-right: 10px; white-space: nowrap; }
-#signalDetails { padding: 4px 12px; flex: none; }
+#signalDetails { padding: 4px 12px; flex: none; border-top: 1px solid var(--line); }
 #signalDetails .scroll { max-height: 180px; overflow: auto; }
-#coreControls { margin: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+#coreControls { margin: 8px 10px; display: flex; flex-wrap: wrap; gap: 8px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 10px 8px; }
+#coreControls legend { font-size: 12px; color: var(--muted); padding: 0 4px; }
 #coreControls label { display: flex; flex-direction: row; align-items: center; gap: 4px; }
 #coreControls input { margin: 0; accent-color: var(--accent); }
 #mkHistoryStatus { padding: 4px 12px; font-size: 12px; }
@@ -227,6 +255,23 @@ svg text { fill: var(--muted); font: 11px var(--mono); }
 .st .top1 { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
 .st .acts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
 .st details { margin-top: 2px; font-size: 12px; }
+/* despliegue animado de una estrategia guardada: filas de rejilla 0fr → 1fr (abre a la altura real del contenido) */
+.stx { display: flex; gap: 6px; align-items: center; width: 100%; margin-top: 4px; padding: 2px 0; background: none; color: var(--muted); font-weight: 400; font-size: 12px; text-align: left; white-space: normal; }
+.stx:hover { filter: none; color: var(--text); }
+.stx::before { content: '▸'; color: var(--accent); transition: transform 240ms ease; }
+.st.open .stx::before { transform: rotate(90deg); }
+.stbody { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 280ms ease; }
+.st.open .stbody { grid-template-rows: 1fr; }
+.stin { overflow: hidden; min-height: 0; font-size: 12px; }
+.st.open .stin { animation: rise 320ms 80ms both; }
+.payoff { margin: 8px 0 4px; }
+.payoff svg { display: block; width: 100%; height: auto; }
+.payoff .curve { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 700ms 120ms ease-out forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.payoff .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 6px 0; gap: 6px; }
+.payoff .kpi { padding: 4px 7px; } .payoff .kpi b { font-size: 13px; }
+.payoff .note { font-size: 11px; margin: 2px 0 0; }
+@media (prefers-reduced-motion: reduce) { .payoff .curve { animation: none; stroke-dashoffset: 0; } .st.open .stin { animation: none; } }
 .chh { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
 .chh select { padding: 2px 6px; }
 .chh .muted { margin-left: auto; }
@@ -269,10 +314,11 @@ dialog#dlgStrat:not([open]) { display: none; }
    < 1100 px: el riel pasa a franja horizontal de chips sobre la gráfica.
    <  800 px: todo apilado (gráfica, recomendador, dock) con scroll de página normal.
    ===================================================================================== */
-@media (max-width: 1450px) { .hs, .chh .muted { display: none; } }
+@media (max-width: 1450px) { .hs, .chh .muted { display: none; } #flow .step small { display: none; } }
 @media (max-width: 1100px) {
   :root { --side: 310px; }
-  #work { grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto minmax(0, 1fr); }
+  #work { grid-template-columns: minmax(0, 1fr) 6px var(--side); grid-template-rows: auto minmax(0, 1fr); }
+  #work > #rail { margin-right: 0; }
   #rail { grid-column: 1 / -1; flex-direction: row; align-items: center; }
   #rail .ph { border: 0; } #rail .ph b { display: none; }
   #wlList { display: flex; overflow-x: auto; overflow-y: hidden; align-items: center; }
@@ -288,6 +334,9 @@ dialog#dlgStrat:not([open]) { display: none; }
   #top { flex-wrap: wrap; padding: 8px 12px; height: auto; }
   #acct { display: none; }
   #work { display: flex; flex-direction: column; }
+  #split, #recWide { display: none; }
+  #flow { display: flex; overflow-x: auto; }
+  #flow .step { flex: none; }
   #center { min-height: 520px; } #chPrice { min-height: 300px; }
   #mkQuote { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #side { overflow: visible; }
@@ -316,6 +365,14 @@ dialog#dlgStrat:not([open]) { display: none; }
   <button class="ic" id="btnTour" title="Tutorial paso a paso" aria-label="Iniciar tutorial">▶ Tutorial</button>
 </header>
 
+<!-- 1b) FLUJO: por dónde empezar y qué sigue. Cada paso resalta su panel; el actual va en rosa. -->
+<nav id="flow" aria-label="Pasos del flujo de trabajo">
+  <button type="button" class="step" data-step="1"><i>1</i><span><b>Elige un activo</b><small>Escribe un ticker arriba o tócalo en tus watchlists</small></span></button>
+  <button type="button" class="step" data-step="2"><i>2</i><span><b>Lee la gráfica</b><small>Velas, histórico y señales de compra y venta</small></span></button>
+  <button type="button" class="step" data-step="3"><i>3</i><span><b>Decide la estrategia</b><small>El recomendador compara 4 y elige la mejor</small></span></button>
+  <button type="button" class="step" data-step="4"><i>4</i><span><b>Guarda y opera</b><small>Estrategias guardadas, cadena y órdenes abajo</small></span></button>
+</nav>
+
 <!-- Ajustes: URL de la API, Conectar y estrategia guardada en la gráfica (escondidos para no estorbar) -->
 <div class="menu" id="menuGear" hidden>
   <label>URL de la API <input id="apiUrl" size="30"></label>
@@ -331,7 +388,7 @@ dialog#dlgStrat:not([open]) { display: none; }
 <main id="work">
   <!-- 2) RIEL IZQUIERDO: watchlists como lista de símbolos. Clic = setTicker. -->
   <aside id="rail" class="pnl">
-    <div class="ph"><b>Watchlists</b><button class="ghost sm ic" id="btnNewWl" title="Nueva watchlist" aria-label="Nueva watchlist">＋</button></div>
+    <div class="ph"><b><i class="sn">1</i>Watchlists</b><button class="ghost sm ic" id="btnNewWl" title="Nueva watchlist" aria-label="Nueva watchlist">＋</button></div>
     <div id="wlList" class="body"></div>
   </aside>
 
@@ -339,12 +396,18 @@ dialog#dlgStrat:not([open]) { display: none; }
   <section id="center">
     <div class="pnl" id="mkQuote"></div>
     <div class="pnl chartbox">
-      <form id="mkHistory" class="row history-controls">
-        <label>Velas (máximo)<input id="mkLimit" type="number" min="1" max="1000" step="1" value="300" required></label>
-        <label>Fecha de inicio<input id="mkStart" type="date"></label>
-        <label>Fecha de fin (opcional)<input id="mkEnd" type="date" aria-describedby="mkHistoryHelp"></label>
+      <div class="ph"><b><i class="sn">2</i>Gráfica</b>
+        <span class="acts zoom" title="También: rueda del mouse para acercar, arrastrar para moverte">
+          <button type="button" class="ghost sm ic" id="zOut" aria-label="Alejar">−</button>
+          <button type="button" class="ghost sm ic" id="zIn" aria-label="Acercar">+</button>
+          <button type="button" class="ghost sm" id="zFit" title="Volver a las velas más recientes">Ajustar</button>
+        </span></div>
+      <form id="mkHistory" class="history-controls">
+        <label>Velas <input id="mkLimit" type="number" min="1" max="1000" step="1" value="300" required></label>
+        <label>Desde <input id="mkStart" type="date"></label>
+        <label>Hasta <input id="mkEnd" type="date" aria-describedby="mkHistoryHelp" title="Vacío = hasta hoy"></label>
         <button type="submit">Consultar histórico</button>
-        <span class="muted" id="mkHistoryHelp">Sin fin: hasta la actualidad. Sin inicio: período automático.</span>
+        <span class="muted" id="mkHistoryHelp" hidden>Sin fin: hasta la actualidad. Sin inicio: período automático.</span>
       </form>
       <!-- Filtros de señales históricas del análisis técnico -->
       <div id="signalControls" aria-label="Señales por indicador">
@@ -354,28 +417,30 @@ dialog#dlgStrat:not([open]) { display: none; }
         <label><input type="checkbox" data-signal="bollinger" checked> Bollinger</label>
       </div>
       <div id="signalSummary" class="muted" aria-live="polite"></div>
-      <details id="signalDetails"><summary>Detalle del análisis técnico · compras y ventas</summary>
-        <p class="muted">Señales al cierre de cada vela. Flecha verde: compra; roja: venta. La fecha corresponde a la temporalidad elegida; la vela en curso puede cambiar.</p>
-        <div class="scroll"><table><thead><tr><th>Fecha y hora</th><th>Señal</th><th>Indicador</th><th>Precio de cierre</th><th>Motivo</th></tr></thead><tbody id="signalRows"></tbody></table></div>
-      </details>
       <div id="mkHistoryStatus" class="muted" role="status" aria-live="polite"></div>
       <div id="chPrice"></div>
       <div class="pane" id="paneRsi"><button type="button" data-pane="paneRsi"><span>RSI 14</span><span>▾</span></button><div class="chart" id="chRsi"></div></div>
       <div class="pane" id="paneMacd"><button type="button" data-pane="paneMacd"><span>MACD 12/26/9</span><span>▾</span></button><div class="chart" id="chMacd"></div></div>
+      <details id="signalDetails"><summary>Detalle del análisis técnico · compras y ventas</summary>
+        <p class="muted">Señales al cierre de cada vela. Flecha verde: compra; roja: venta. La fecha corresponde a la temporalidad elegida; la vela en curso puede cambiar.</p>
+        <div class="scroll"><table><thead><tr><th>Fecha y hora</th><th>Señal</th><th>Indicador</th><th>Precio de cierre</th><th>Motivo</th></tr></thead><tbody id="signalRows"></tbody></table></div>
+      </details>
     </div>
   </section>
+
+  <!-- Divisor: arrastra para dar más o menos ancho al recomendador; doble clic lo expande o lo regresa -->
+  <div id="split" role="separator" aria-orientation="vertical" aria-label="Ancho del recomendador" tabindex="0" title="Arrastra para cambiar el ancho · doble clic para expandir o regresar"></div>
 
   <!-- 4) LATERAL DERECHO: recomendador y ejecución automática -->
   <aside id="side">
     <div class="pnl" id="recCard">
-      <div class="ph"><b>Recomendador</b><span class="acts"><button class="ghost sm" id="recRun" title="Volver a calcular">Recalcular</button><button class="ghost sm" id="recBacktest" title="Qué tan seguido acertó en el último año">Backtest</button></span></div>
-      <fieldset id="coreControls"><legend>Cores para el análisis</legend>
+      <div class="ph"><b><i class="sn">3</i>Recomendador</b><span class="acts"><button class="ghost sm" id="recRun" title="Volver a calcular">Recalcular</button><button class="ghost sm" id="recBacktest" title="Qué tan seguido acertó en el último año">Backtest</button><button class="ghost sm ic" id="recWide" title="Expandir el recomendador" aria-label="Expandir el recomendador">⤢</button></span></div>
+      <fieldset id="coreControls" title="El puntaje usa solo los cores marcados. Al operar, los filtros de riesgo e IA siguen siendo obligatorios."><legend>Cores para el análisis</legend>
         <label><input type="checkbox" value="technical" checked> Técnico</label>
         <label><input type="checkbox" value="probability" checked> Probabilidad</label>
         <label><input type="checkbox" value="risk" checked> Rendimiento / riesgo</label>
         <label><input type="checkbox" value="ai"> IA</label>
       </fieldset>
-      <p class="pad muted" style="margin:0">El puntaje usa solo los cores marcados. Las métricas son insumos compartidos. Al operar, los filtros de seguridad de riesgo e IA siguen siendo obligatorios.</p>
       <div id="recOut"><div class="pad muted">Elige un ticker arriba.</div></div>
       <div id="recSel" class="sel" hidden></div>
     </div>
@@ -394,15 +459,15 @@ dialog#dlgStrat:not([open]) { display: none; }
 <!-- 5) DOCK INFERIOR: Órdenes | Estrategias guardadas | Cadena de opciones (cada panel con su scroll) -->
 <section id="dock">
   <div class="pnl dp">
-    <div class="ph"><b>Órdenes</b><span class="acts"><select id="orStatus" aria-label="Filtro de órdenes"><option value="open">Abiertas</option><option value="all">Historial</option></select><button class="sm" id="btnNewOrder">＋ Nueva</button><button class="ghost sm" id="orRefresh">↻</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></div>
+    <div class="ph"><b><i class="sn">4</i>Órdenes</b><span class="acts"><select id="orStatus" aria-label="Filtro de órdenes"><option value="open">Abiertas</option><option value="all">Historial</option></select><button class="sm" id="btnNewOrder">＋ Nueva</button><button class="ghost sm" id="orRefresh">↻</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></div>
     <div class="body"><table id="orTable"></table></div>
   </div>
   <div class="pnl dp">
-    <div class="ph"><b>Estrategias guardadas</b><button class="sm" id="btnStrat">＋ Armar manual</button></div>
+    <div class="ph"><b><i class="sn">4</i>Estrategias guardadas</b><button class="sm" id="btnStrat">＋ Armar manual</button></div>
     <div class="body" id="stList"></div>
   </div>
   <div class="pnl dp">
-    <div class="ph"><b>Cadena de opciones</b><button class="ghost sm" id="btnChains">Gestionar cadenas</button></div>
+    <div class="ph"><b><i class="sn">4</i>Cadena de opciones</b><button class="ghost sm" id="btnChains">Gestionar cadenas</button></div>
     <div class="body" id="chDetail"></div>
   </div>
 </section>
@@ -745,17 +810,108 @@ async function loadStrategies() {
         <button class="ghost sm" data-act="risk">Riesgo</button>
         <button class="danger sm" data-act="delete">Eliminar</button>
       </div>
-      <details><summary class="muted">${s.legs.length} piernas · ${s.qty} × ${s.orderType}${s.limitPrice != null ? ' @ ' + s.limitPrice : ''}${s.pricing ? ` · total ${money(s.pricing.netTotal)}` : ''}</summary>
-        <table><tr><th>Lado</th><th>Contrato</th><th class="n">Strike</th><th>Vence</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">Mid</th><th class="n">Delta</th></tr>
+      <button type="button" class="stx" data-act="expand" aria-expanded="false">${s.legs.length} piernas · ${s.qty} × ${s.orderType}${s.limitPrice != null ? ' @ ' + s.limitPrice : ''}${s.pricing ? ` · total ${money(s.pricing.netTotal)}` : ''}</button>
+      <div class="stbody"><div class="stin">
+        <div class="payoff" data-payoff></div>
+        <div class="scroll"><table><tr><th>Lado</th><th>Contrato</th><th class="n">Strike</th><th>Vence</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">Mid</th><th class="n">Delta</th><th>Hoy</th></tr>
         ${s.legs.map((l) => `<tr><td class="${l.side}">${l.side === 'buy' ? 'Compra' : 'Venta'} ×${l.ratioQty}</td><td class="mono">${esc(l.symbol)}</td><td class="n">${num(l.strike)}</td><td>${l.expiration}</td>
-          <td class="n">${px(l.quote?.bid)}</td><td class="n">${px(l.quote?.ask)}</td><td class="n">${num(l.quote?.mid)}</td><td class="n">${num(l.quote?.delta, 3)}</td></tr>`).join('')}
-        </table>${s.alpacaOrderId ? `<p class="muted" style="margin:4px 0">orden <code>${s.alpacaOrderId.slice(0, 8)}</code></p>` : ''}</details>
+          <td class="n">${px(l.quote?.bid)}</td><td class="n">${px(l.quote?.ask)}</td><td class="n">${num(l.quote?.mid)}</td><td class="n">${num(l.quote?.delta, 3)}</td><td data-money="${l.type}|${l.strike}">—</td></tr>`).join('')}
+        </table></div>${s.alpacaOrderId ? `<p class="muted" style="margin:4px 0">orden <code>${s.alpacaOrderId.slice(0, 8)}</code></p>` : ''}
+      </div></div>
     </div>`).join('') : '<div class="empty">No hay estrategias. Pulsa “＋ Armar manual” o usa el recomendador.</div>';
+  // Las que estaban abiertas se quedan abiertas tras recargar la lista (enviar, renombrar…).
+  document.querySelectorAll('#stList .st').forEach((card) => { if (openStrats.has(card.dataset.id)) toggleStrat(card, true, false); });
+}
+
+// ---- despliegue de una estrategia guardada: animación + gráfica de P&L al vencimiento con strikes y precio de hoy
+const openStrats = new Set(), spotCache = {};
+async function spotOf(sym) {
+  if (quoteCache[sym]?.price) return quoteCache[sym].price;
+  if (!spotCache[sym]) spotCache[sym] = api('GET', `/market/overview?symbol=${encodeURIComponent(sym)}`, undefined, true).then((d) => d.quote.price).catch(() => { delete spotCache[sym]; return null; });
+  return spotCache[sym];
+}
+async function toggleStrat(card, open = !card.classList.contains('open'), animate = true) {
+  const id = card.dataset.id, s = (window.savedStrategies ?? []).find((x) => x.id === id);
+  card.classList.toggle('open', open);
+  card.querySelector('.stx').setAttribute('aria-expanded', open);
+  if (!animate) { // al recargar la lista se reabre sin animación
+    const body = card.querySelector('.stbody');
+    body.style.transition = 'none';
+    requestAnimationFrame(() => { body.style.transition = ''; });
+  }
+  open ? openStrats.add(id) : openStrats.delete(id);
+  if (open && animate) setTimeout(() => card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); // que se vea lo desplegado
+  const box = card.querySelector('[data-payoff]');
+  if (!open || !s || box.dataset.done) return;
+  box.dataset.done = '1';
+  box.innerHTML = '<span class="skel" style="height:120px"></span>';
+  const spot = await spotOf(s.underlying);
+  box.innerHTML = payoffHtml(s, spot);
+  // Columna "Hoy": qué tan lejos está cada strike del precio actual y si ya está dentro del dinero.
+  if (spot) card.querySelectorAll('[data-money]').forEach((td) => {
+    const [type, k] = td.dataset.money.split('|'), strike = Number(k), itm = type === 'call' ? spot > strike : spot < strike;
+    td.innerHTML = `<span class="badge ${itm ? 'ok' : ''}" title="Precio de hoy ${num(spot)}">${itm ? 'dentro' : 'fuera'} · ${((strike / spot - 1) * 100).toFixed(1)}%</span>`;
+  });
+}
+
+// P&L al vencimiento de las piernas: Σ lado × razón × (valor intrínseco − prima mid) × 100 × cantidad.
+function payoffHtml(s, spot) {
+  const legs = s.legs.filter((l) => l.strike != null && l.type);
+  if (!legs.length) return '<p class="muted">Sin datos de strike para graficar.</p>';
+  const mult = 100 * (s.qty || 1), missing = legs.some((l) => l.quote?.mid == null);
+  const pnl = (S) => legs.reduce((sum, l) => {
+    const intrinsic = l.type === 'call' ? Math.max(S - l.strike, 0) : Math.max(l.strike - S, 0);
+    return sum + (l.side === 'buy' ? 1 : -1) * (l.ratioQty || 1) * (intrinsic - (l.quote?.mid ?? 0)) * mult;
+  }, 0);
+  const ks = legs.map((l) => l.strike), ref = [...ks, ...(spot ? [spot] : [])];
+  // El rango cubre strikes, precio de hoy y la prima neta (para que se vean todos los puntos de equilibrio).
+  const net = Math.abs(legs.reduce((sum, l) => sum + (l.side === 'buy' ? 1 : -1) * (l.ratioQty || 1) * (l.quote?.mid ?? 0), 0));
+  const lo = Math.max(0, Math.min(...ref) * 0.92 - net * 1.3), hi = Math.max(...ref) * 1.08 + net * 1.3;
+  const xs = [...Array.from({ length: 121 }, (_, i) => lo + (hi - lo) * i / 120), ...ks].sort((a, b) => a - b);
+  const pts = xs.map((S) => [S, pnl(S)]);
+  const ys = pts.map((p) => p[1]), yMax = Math.max(0, ...ys), yMin = Math.min(0, ...ys), span = (yMax - yMin) || 1;
+  const W = 560, H = 190, L = 8, R = 8, T = 22, B = 26;
+  const X = (S) => L + (S - lo) / (hi - lo) * (W - L - R), Y = (v) => T + (yMax - v) / span * (H - T - B), y0 = Y(0);
+  const line = pts.map(([S, v], i) => `${i ? 'L' : 'M'}${X(S).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  const area = `${line}L${X(hi).toFixed(1)},${y0}L${X(lo).toFixed(1)},${y0}Z`;
+  // Puntos de equilibrio: donde la curva cruza el cero.
+  const be = [];
+  for (let i = 1; i < pts.length; i++) {
+    const [a, va] = pts[i - 1], [b, vb] = pts[i];
+    if ((va < 0 && vb >= 0) || (va > 0 && vb <= 0)) be.push(a + (b - a) * (0 - va) / (vb - va));
+  }
+  const uid = `po${s.id.slice(0, 8)}`, ok = css('--ok'), bad = css('--bad');
+  const strikes = legs.map((l, i) => `<line x1="${X(l.strike)}" x2="${X(l.strike)}" y1="${T}" y2="${H - B}" stroke="${l.side === 'buy' ? ok : bad}" stroke-width="1" stroke-dasharray="2 3" opacity=".7"/>
+    <text x="${X(l.strike)}" y="${H - B + 12 + (i % 2) * 10}" text-anchor="middle" fill="${l.side === 'buy' ? ok : bad}">${l.side === 'buy' ? 'C' : 'V'} ${l.type === 'call' ? 'call' : 'put'} ${num(l.strike, 0)}</text>`).join('');
+  const today = spot ? `<line x1="${X(spot)}" x2="${X(spot)}" y1="${T - 6}" y2="${H - B}" stroke="var(--text)" stroke-width="1.2"/>
+    <text x="${X(spot)}" y="${T - 9}" text-anchor="middle" fill="var(--text)">Hoy ${num(spot)} · ${money(pnl(spot))}</text>` : '';
+  const beMarks = be.map((v) => `<circle cx="${X(v)}" cy="${y0}" r="3.5" fill="var(--accent)"/>`).join('');
+  const inRangeMax = Math.max(...ys), inRangeMin = Math.min(...ys);
+  const exps = new Set(legs.map((l) => l.expiration));
+  return `
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ganancia o pérdida al vencimiento de ${esc(s.name)} según el precio de ${esc(s.underlying)}">
+      <defs><clipPath id="${uid}u"><rect x="0" y="0" width="${W}" height="${y0}"/></clipPath><clipPath id="${uid}d"><rect x="0" y="${y0}" width="${W}" height="${H}"/></clipPath></defs>
+      <path d="${area}" fill="${ok}" opacity=".16" clip-path="url(#${uid}u)"/>
+      <path d="${area}" fill="${bad}" opacity=".16" clip-path="url(#${uid}d)"/>
+      <line x1="${L}" x2="${W - R}" y1="${y0}" y2="${y0}" stroke="var(--line)"/>
+      ${strikes}${today}
+      <path class="curve" d="${line}" pathLength="1" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+      ${beMarks}
+    </svg>
+    <div class="kpis">
+      <div class="kpi"><span>Precio hoy</span><b>${spot ? num(spot) : '—'}</b></div>
+      <div class="kpi"><span>Equilibrio</span><b>${be.length ? be.map((v) => num(v)).join(' / ') : '—'}</b></div>
+      <div class="kpi" title="Dentro del rango dibujado"><span>Mejor en el rango</span><b class="buy">${signed(inRangeMax)}</b></div>
+      <div class="kpi" title="Dentro del rango dibujado"><span>Peor en el rango</span><b class="sell">${signed(inRangeMin)}</b></div>
+    </div>
+    <p class="muted note">Ganancia o pérdida al vencimiento según dónde cierre ${esc(s.underlying)} (eje horizontal: ${num(lo, 0)} a ${num(hi, 0)}). Líneas punteadas: strikes, verde compra y rojo venta; puntos rosas: equilibrio.
+      ${exps.size > 1 ? ' Las piernas vencen en fechas distintas: la curva es aproximada al primer vencimiento.' : ''}${missing ? ' Alguna pierna no tiene cotización: se tomó prima 0.' : ''}</p>`;
 }
 $('#stList').onclick = async (e) => {
   const act = e.target.dataset.act;
   const card = e.target.closest('[data-id]');
   if (!act || !card) return;
+  if (act === 'expand') return toggleStrat(card);
   const id = card.dataset.id;
   e.target.disabled = true;
   try {
@@ -991,6 +1147,7 @@ $('#recSel').onclick = async (e) => {
     });
     await loadStrategies();
     e.target.textContent = 'Guardada ✓';
+    flowAt(4); // siguiente paso: la estrategia ya está en el panel inferior
   } catch { e.target.disabled = false; }
 };
 
@@ -1361,12 +1518,15 @@ function renderMarketSignals() {
   // Los filtros controlan tanto las flechas históricas como la fecha más reciente de cada indicador.
   const enabled = (key) => $(`#signalControls [data-signal="${key}"]`).checked;
   const visible = marketSignals.filter((signal) => enabled(signal.key));
+  // Solo la señal más reciente de cada indicador lleva texto; las anteriores son flechas (su detalle está en la tabla).
+  // Con texto en todas, las etiquetas se enciman y tapan las velas.
+  const newest = new Set(Object.keys(SIGNALS).map((key) => visible.findLast((s) => s.key === key)).filter(Boolean));
   charts.series.candles.setMarkers(visible.map((signal) => ({
     time: signal.time,
     position: signal.side === 'buy' ? 'belowBar' : 'aboveBar',
     color: css(signal.side === 'buy' ? '--ok' : '--bad'),
     shape: signal.side === 'buy' ? 'arrowUp' : 'arrowDown',
-    text: `${SIGNALS[signal.key].marker} ${signal.side === 'buy' ? 'COMPRA' : 'VENTA'} ${signal.date}`,
+    text: newest.has(signal) ? `${SIGNALS[signal.key].marker} ${signal.side === 'buy' ? 'COMPRA' : 'VENTA'} ${signal.date}` : '',
   })));
   const latest = Object.keys(SIGNALS).flatMap((key) => {
     const signal = visible.findLast((item) => item.key === key);
@@ -1393,7 +1553,16 @@ const chartTheme = () => ({
 // Líneas de indicadores: marfil/tinta (SMA20), acento (EMA9, RSI, MACD) y salvia (bandas, señal): todo sale de las variables CSS.
 function makeCharts() {
   const LC = LightweightCharts;
-  const opts = { autoSize: true, ...chartTheme(), timeScale: { timeVisible: true, borderColor: css('--line') }, rightPriceScale: { borderColor: css('--line'), minimumWidth: 70 } };
+  // Zoom acotado: las velas no se estiran más de 26 px ni se aplastan a menos de 3; no se puede arrastrar al vacío
+  // antes de la primera vela; el eje de precio ya no se deforma al arrastrarlo (doble clic en un eje lo restablece).
+  const opts = {
+    autoSize: true, ...chartTheme(),
+    timeScale: { timeVisible: true, borderColor: css('--line'), rightOffset: 4, minBarSpacing: 3, maxBarSpacing: 26, fixLeftEdge: true, lockVisibleTimeRangeOnResize: true },
+    rightPriceScale: { borderColor: css('--line'), minimumWidth: 70 },
+    handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: false }, axisDoubleClickReset: { time: true, price: true } },
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    kineticScroll: { mouse: false, touch: true },
+  };
   const price = LC.createChart($('#chPrice'), opts), rsiC = LC.createChart($('#chRsi'), opts), macdC = LC.createChart($('#chMacd'), opts);
   const line = (chart, color, title, lineStyle = 0) => chart.addLineSeries({ color, lineWidth: 1, title, lineStyle, priceLineVisible: false, lastValueVisible: !!title });
   const series = {
@@ -1437,7 +1606,21 @@ function makeCharts() {
   return { price, series, all };
 }
 
-let lastKey = '', barsRequest = 0;
+let lastKey = '', barsRequest = 0, barCount = 0;
+
+// Vista inicial: las ~150 velas más recientes (con todas, 1000 velas quedaban aplastadas; con pocas, estiradas).
+function resetZoom() {
+  const ts = charts.price.timeScale();
+  if (!ts.setVisibleLogicalRange || !barCount) return ts.fitContent();
+  ts.setVisibleLogicalRange({ from: Math.max(-1, barCount - 150), to: barCount + 3 });
+}
+// Acercar (< 1) o alejar (> 1) alrededor del centro de lo que se ve.
+function zoomBy(factor) {
+  const ts = charts?.price.timeScale(), r = ts?.getVisibleLogicalRange();
+  if (!r) return;
+  const mid = (r.from + r.to) / 2, half = Math.max(8, ((r.to - r.from) / 2) * factor);
+  ts.setVisibleLogicalRange({ from: mid - half, to: mid + half });
+}
 
 function historyParams() {
   if (!$('#mkHistory').reportValidity()) throw new Error('Revisa los filtros del histórico');
@@ -1475,7 +1658,8 @@ async function loadBars(sym, mine, live = false) {
     }
     marketSignals = buildMarketSignals(d.bars, d.indicators);
     renderMarketSignals();
-    if (key !== lastKey) { charts.price.timeScale().fitContent(); lastKey = key; drawOverlay(); }
+    barCount = d.bars.length;
+    if (key !== lastKey) { resetZoom(); lastKey = key; drawOverlay(); }
     const dateLabel = (b) => new Date(b.time * 1000).toLocaleDateString();
     $('#mkHistoryStatus').textContent = `${d.bars.length} de hasta ${params.get('limit')} velas · ${dateLabel(d.bars[0])} — ${dateLabel(d.bars.at(-1))} · Las más recientes del rango${params.has('end') ? '' : ' hasta la actualidad'}`;
     if (live) paintPrice(d.quote);
@@ -1580,9 +1764,80 @@ const setDock = (off) => { $('#app').classList.toggle('dockOff', off); $('#btnDo
 $('#btnDock').onclick = () => setDock(!$('#app').classList.contains('dockOff'));
 setDock(store.get('f0.dock', 'on') === 'off');
 
+// Zoom de la gráfica con botones (además de rueda del mouse y arrastre).
+$('#zIn').onclick = () => zoomBy(0.7);
+$('#zOut').onclick = () => zoomBy(1.4);
+$('#zFit').onclick = () => charts && resetZoom();
+
+// Ancho del recomendador: arrastrar el divisor, flechas del teclado o doble clic / ⤢ para expandir y regresar.
+const SIDE_MIN = 300, SIDE_DEFAULT = 340;
+const sideMax = () => Math.max(SIDE_MIN, $('#work').clientWidth - ($('#rail').offsetWidth || 0) - 420);
+function setSide(px, save = true) {
+  const w = Math.round(Math.min(Math.max(px, SIDE_MIN), sideMax()));
+  document.documentElement.style.setProperty('--side', `${w}px`);
+  const wide = w > SIDE_DEFAULT + 60;
+  $('#recWide').textContent = wide ? '⤡' : '⤢';
+  $('#recWide').title = $('#recWide').ariaLabel = wide ? 'Regresar el recomendador a su ancho normal' : 'Expandir el recomendador';
+  if (save) store.set('f0.side', w);
+}
+const toggleWide = () => setSide($('#side').offsetWidth > SIDE_DEFAULT + 60 ? SIDE_DEFAULT : sideMax());
+$('#split').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  const split = e.currentTarget, right = $('#work').getBoundingClientRect().right - 10;
+  split.setPointerCapture(e.pointerId);
+  split.classList.add('drag'); document.body.classList.add('resizing');
+  const move = (ev) => setSide(right - ev.clientX - 4, false);
+  const up = () => {
+    split.removeEventListener('pointermove', move); split.removeEventListener('pointerup', up);
+    split.classList.remove('drag'); document.body.classList.remove('resizing');
+    store.set('f0.side', $('#side').offsetWidth);
+  };
+  split.addEventListener('pointermove', move); split.addEventListener('pointerup', up);
+});
+$('#split').ondblclick = toggleWide;
+$('#recWide').onclick = toggleWide;
+$('#split').onkeydown = (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setSide($('#side').offsetWidth + (e.key === 'ArrowLeft' ? 30 : -30)); }
+  if (e.key === 'Enter') toggleWide();
+};
+if (store.get('f0.side')) setSide(Number(store.get('f0.side')), false);
+
+// Barra de flujo: el paso actual sigue a la zona donde trabaja la persona (al entrar, el 1).
+// Los pasos anteriores quedan con ✓. Clic en un paso = lleva a su panel y lo resalta.
+let flowNow = 1;
+function flowAt(step) {
+  flowNow = step;
+  document.querySelectorAll('#flow .step').forEach((b) => {
+    const n = Number(b.dataset.step);
+    b.classList.toggle('done', n < step);
+    b.classList.toggle('now', n === step);
+    b.querySelector('i').textContent = n < step ? '✓' : n;
+    b.toggleAttribute('aria-current', n === step);
+  });
+}
+const FLOW_ZONES = [['#mkForm, #rail, #dlgWl', 1], ['.chartbox', 2], ['#side', 3], ['#dock, #dlgStrat, #dlgChain, #dlgOrder', 4]];
+const flowFollow = (e) => {
+  const zone = FLOW_ZONES.find(([sel]) => e.target.closest?.(sel));
+  if (zone && zone[1] !== flowNow) flowAt(zone[1]);
+};
+document.addEventListener('pointerdown', flowFollow, true);
+document.addEventListener('focusin', flowFollow, true);
+const FLOW_TARGET = { 1: ['#rail', '#mkSymbol'], 2: ['.chartbox'], 3: ['#recCard'], 4: ['#dock'] };
+$('#flow').onclick = (e) => {
+  const step = e.target.closest('.step')?.dataset.step;
+  if (!step) return;
+  if (step === '4') setDock(false);
+  flowAt(Number(step));
+  const [panel, focus] = FLOW_TARGET[step], el = $(panel);
+  el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+  if (focus) $(focus).focus();
+};
+flowAt(1);
+
 // RSI y MACD plegables: en ventanas bajas arrancan plegados para darle todo el alto a las velas.
 document.querySelectorAll('.pane > button').forEach((b) => { b.onclick = () => b.parentElement.classList.toggle('off'); });
-if (innerHeight < 900) document.querySelectorAll('.pane').forEach((p) => p.classList.add('off'));
+if (innerHeight < 900 || $('.chartbox').clientHeight < 560) document.querySelectorAll('.pane').forEach((p) => p.classList.add('off'));
 
 // ------------------------------------------------------------- tutorial paso a paso (botón ▶ arriba a la derecha)
 // Cada paso resalta un panel y explica qué hacer ahí. Los pasos siguen el flujo de trabajo: elegir → analizar → decidir → operar.
