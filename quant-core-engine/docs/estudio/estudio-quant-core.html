@@ -1,0 +1,1367 @@
+<title>Estudio Quant Core F0</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Concepto: cuaderno de laboratorio técnico. Barra superior fija con pestañas Guía / Formulario;
+   la guía es lectura con índice lateral, el formulario es una pila de tarjetas de examen. */
+:root{
+  --bg:#F3F6F8; --surface:#FFFFFF; --surface2:#EAF0F3; --line:#D3DDE3;
+  --fg:#14232D; --muted:#566874; --accent:#0B6E6E; --accent-soft:#D6EEEC; --accent-ink:#FFFFFF;
+  --ok:#1B7F4B; --ok-soft:#DDF3E5; --bad:#B4322A; --bad-soft:#F9E1DE; --warn:#8A5700; --warn-soft:#FBEFD5;
+  --code-bg:#0F1E27; --code-fg:#D7E6EC;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E171C; --surface:#152229; --surface2:#1B2C35; --line:#2A3F4A;
+    --fg:#E3EEF2; --muted:#93A9B4; --accent:#4FC3BD; --accent-soft:#16373A; --accent-ink:#06201F;
+    --ok:#5BD08A; --ok-soft:#173826; --bad:#FF8A80; --bad-soft:#3E1D1B; --warn:#F1B64F; --warn-soft:#3A2D12;
+    --code-bg:#0A1317; --code-fg:#CFE2E9; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E171C; --surface:#152229; --surface2:#1B2C35; --line:#2A3F4A;
+  --fg:#E3EEF2; --muted:#93A9B4; --accent:#4FC3BD; --accent-soft:#16373A; --accent-ink:#06201F;
+  --ok:#5BD08A; --ok-soft:#173826; --bad:#FF8A80; --bad-soft:#3E1D1B; --warn:#F1B64F; --warn-soft:#3A2D12;
+  --code-bg:#0A1317; --code-fg:#CFE2E9; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+code,pre,kbd{font-family:var(--f-mono)}
+code{font-size:.86em;background:var(--surface2);padding:.1em .35em;border-radius:4px;overflow-wrap:anywhere}
+pre{background:var(--code-bg);color:var(--code-fg);padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.55;margin:10px 0}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.top-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px}
+.brand{font-weight:600;font-size:16px;letter-spacing:.01em}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:12px;letter-spacing:0}
+.tabs{display:flex;gap:4px;margin-left:auto;background:var(--surface2);padding:3px;border-radius:9px}
+.tabs button{font:inherit;font-weight:500;border:0;background:none;color:var(--muted);padding:7px 16px;border-radius:7px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3,h4{line-height:1.25;text-wrap:balance;margin:0}
+h2{font-size:22px;margin-bottom:6px}
+h3{font-size:16px;margin:22px 0 8px}
+h4{font-size:14px;margin:16px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+p{margin:8px 0;max-width:72ch}
+ul,ol{margin:8px 0;padding-left:22px}
+li{margin:3px 0}
+.tw{overflow-x:auto;margin:10px 0;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:7px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--surface2);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:500}
+td code{white-space:nowrap}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:9px 13px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px;max-width:80ch}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+/* ---------- guía ---------- */
+.guide{display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;padding-top:22px}
+.gnav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);align-self:start;max-height:calc(100vh - 110px);overflow:auto;font-size:13.5px}
+.gnav a{display:block;padding:5px 10px;border-radius:6px;color:var(--muted);text-decoration:none;border-left:2px solid transparent}
+.gnav a:hover{background:var(--surface2);color:var(--fg)}
+.gnav a.on{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft)}
+.gsec{padding:6px 0 26px;border-bottom:1px solid var(--line);margin-bottom:22px;scroll-margin-top:90px}
+.gsec:last-child{border-bottom:0}
+.gsec>p.lead{color:var(--muted);margin-top:0}
+.gl-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.gl-tools input[type=search]{flex:1 1 220px;min-width:0;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:inherit;font-size:12.5px;padding:4px 11px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.glos{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.gi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 13px;min-width:0}
+.gi b{display:block;font-size:14px}
+.gi span.c{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:600}
+.gi p{margin:4px 0 0;font-size:13.5px;color:var(--fg)}
+.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:0 13px}
+summary{cursor:pointer;padding:9px 0;font-weight:500}
+details[open]{padding-bottom:10px}
+/* ---------- formulario ---------- */
+.exam{padding-top:20px}
+.ex-head{display:grid;gap:14px}
+.ex-intro{color:var(--muted);max-width:75ch;margin:0}
+.filters{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.filters label{font-size:13px;color:var(--muted)}
+.filters select{font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg)}
+.result{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin:18px 0}
+.result .big{font-size:40px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.result .row{display:flex;gap:22px;flex-wrap:wrap;align-items:center}
+.bars{display:grid;gap:7px;margin-top:14px}
+.bar{display:grid;grid-template-columns:minmax(140px,230px) 1fr 70px;gap:10px;align-items:center;font-size:13px}
+.bar i{display:block;height:9px;border-radius:5px;background:var(--surface2);overflow:hidden}
+.bar i b{display:block;height:100%;background:var(--accent)}
+.bar em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0;scroll-margin-top:90px}
+.q.ok{border-color:var(--ok);background:linear-gradient(0deg,var(--surface),var(--surface)) padding-box}
+.q.bad{border-color:var(--bad)}
+.q.part{border-color:var(--warn)}
+.qh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:8px}
+.qh .n{font-family:var(--f-mono);font-weight:500;color:var(--fg)}
+.lv{letter-spacing:2px;color:var(--accent)}
+.qt{font-size:15.5px;font-weight:500;margin:0 0 8px;max-width:80ch}
+.opts{display:grid;gap:6px;margin-top:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 11px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--bg)}
+.opt:hover{border-color:var(--accent)}
+.opt input{margin-top:4px;accent-color:var(--accent)}
+.opt span{min-width:0;overflow-wrap:anywhere}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.inp{font:inherit;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);width:min(100%,320px)}
+.pairs{display:grid;gap:7px;margin-top:8px}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center}
+.pair .l{overflow-wrap:anywhere;font-size:14px}
+.pair select,.ord select{font:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);min-width:0;width:100%}
+.ord{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;align-items:center;margin-top:7px}
+.fb{margin-top:12px;padding:10px 13px;border-radius:8px;background:var(--surface2);font-size:14px}
+.fb b.k{color:var(--ok)}
+.fb b.x{color:var(--bad)}
+.fb .ans{font-family:var(--f-mono);font-size:13px;overflow-wrap:anywhere}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);
+  padding:9px max(16px,env(safe-area-inset-right,0px)) calc(9px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dock-in{max-width:1180px;margin:0 auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.dock .prog{flex:1 1 180px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-weight:500;padding:8px 18px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:hover{filter:brightness(1.06)}
+[hidden]{display:none!important}
+@media (max-width:860px){
+  .guide{grid-template-columns:minmax(0,1fr);gap:8px}
+  .gnav{position:static;max-height:none;display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;white-space:nowrap}
+  .gnav a{border:1px solid var(--line);border-radius:99px;background:var(--surface);padding:4px 11px;flex:0 0 auto}
+  .gnav a.on{border-color:var(--accent)}
+  .tabs{margin-left:0;width:100%}.tabs button{flex:1}
+  .bar{grid-template-columns:1fr 60px}.bar i{grid-column:1/-1;order:3}
+  .pair{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:no-preference){.bar i b{transition:width .5s ease}}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">Quant Core Engine &amp; Market Data (F0)<small>Preparación para la revisión</small></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-guide" aria-selected="true" aria-controls="view-guide">Guía de estudio</button>
+      <button role="tab" id="tab-exam" aria-selected="false" aria-controls="view-exam">Formulario</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+<section id="view-guide" class="guide" role="tabpanel" aria-labelledby="tab-guide">
+  <nav class="gnav" id="gnav" aria-label="Índice de la guía"></nav>
+  <div id="gbody">
+
+<!-- ===================== 1. MAPA ===================== -->
+<section class="gsec" id="g-mapa" data-title="1 · Mapa del proyecto">
+  <h2>1 · Mapa del proyecto</h2>
+  <p class="lead">F0 es el equipo que entrega el <b>motor matemático analítico</b> (Rust → WebAssembly) y el <b>pipeline de datos de mercado</b> (4 APIs CRUD sobre Alpaca Paper y Supabase) de la plataforma de inversiones.</p>
+  <pre class="mermaid">flowchart LR
+  C[Cliente: Swagger, REST Client, GraphQL, front /app] --> G[gateway :3060]
+  G --> W[watchlists :3061]
+  G --> O[orders :3062]
+  G --> OC[option-chains :3063]
+  G --> S[strategies :3064]
+  G --> AI[ai :3065]
+  S --> E[engine Rust/WASM]
+  W & O & OC & S --> A[(Alpaca Paper)]
+  W & O & OC & S --> DB[(Supabase)]
+  AI --> OR[(OpenRouter)]</pre>
+  <h3>Carpetas</h3>
+  <div class="tw"><table>
+    <tr><th>Carpeta</th><th>Qué contiene</th></tr>
+    <tr><td><code>api/</code></td><td>Express 5 + GraphQL Yoga. <code>src/app.js</code>, <code>config.js</code>, <code>routes/</code>, <code>services/</code>, <code>lib/</code>, <code>graphql/</code>, <code>docs/openapi.js</code>, <code>microservices/</code>.</td></tr>
+    <tr><td><code>engine/</code></td><td>Crate Rust: <code>lib.rs</code> (frontera FFI), <code>bs.rs</code>, <code>binomial.rs</code>, <code>math.rs</code>, <code>risk.rs</code>.</td></tr>
+    <tr><td><code>packages/quant-engine/</code></td><td><code>@core/quant-engine</code>: <code>index.js</code> (contrato síncrono) + <code>quant_core.wasm</code>.</td></tr>
+    <tr><td><code>supabase/migrations/</code></td><td><code>001_market_data_f0.sql</code> (idempotente).</td></tr>
+    <tr><td><code>openspec/</code></td><td><code>specs/</code> (contratos vigentes), <code>changes/</code> (propuestas: pantalla-unica, recomendador-ia; archivadas: microservicios, refactor-codebase-clarity), <code>config.yaml</code>.</td></tr>
+    <tr><td><code>web/</code></td><td><code>index.html</code> (front de un solo archivo, sin dependencias propias) y <code>templates.js</code> (plantillas compartidas con el backend).</td></tr>
+    <tr><td><code>pruebas/</code></td><td><code>unitarias/</code>, <code>integracion/</code>, <code>contrato/</code>, <code>e2e/smoke.js</code>, <code>carga/k6.js</code>, <code>colecciones/</code>, <code>mcp/</code>, <code>resultados/</code>.</td></tr>
+    <tr><td><code>monitoring/</code></td><td>Prometheus (<code>prometheus.yml</code>) y Grafana (dashboard <code>f0.json</code>).</td></tr>
+  </table></div>
+  <h3>Procesos y puertos</h3>
+  <div class="tw"><table>
+    <tr><th>Proceso</th><th>Puerto</th><th>Rutas que posee</th></tr>
+    <tr><td>gateway</td><td>3060</td><td>proxy <code>/api/v1/*</code>, <code>/graphql</code>, <code>/api-docs</code>, <code>/app</code>, <code>/health</code>, <code>/metrics</code></td></tr>
+    <tr><td>watchlists</td><td>3061</td><td><code>watchlists</code></td></tr>
+    <tr><td>orders</td><td>3062</td><td><code>orders</code>, <code>account</code></td></tr>
+    <tr><td>option-chains</td><td>3063</td><td><code>option-chains</code>, <code>market</code> (search, overview, bars)</td></tr>
+    <tr><td>strategies</td><td>3064</td><td><code>strategies</code> (motor WASM, recomendador, auto)</td></tr>
+    <tr><td>ai</td><td>3065</td><td><code>ai</code> (validate-risk con OpenRouter)</td></tr>
+  </table></div>
+  <div class="note">El README y varios comentarios dicen «4 microservicios», pero <code>SERVICES</code> en <code>microservices/index.js</code> tiene <b>5 entradas</b> (se agregó <code>ai</code>) y el <code>/health</code> agregado recorre <code>Object.entries(urls)</code>, o sea los 5.</div>
+  <h3>Ciclo de una petición</h3>
+  <ol>
+    <li>El cliente llama al <b>gateway</b> (<code>gatewayApp()</code> → <code>createApp({service:'gateway', apiHandler: proxy, health})</code>).</li>
+    <li><code>createApp</code> aplica, en este orden: <code>app.disable('x-powered-by')</code> → <code>securityHeaders</code> → header Private Network Access → <code>cors()</code> → <code>morgan('dev')</code> → <code>monitoring.track</code> → <code>/health</code> y <code>/metrics</code> → <b>Yoga en <code>/graphql</code> (antes de <code>express.json()</code>)</b> → <code>express.json()</code> → <code>GET /</code> → <code>/app</code> estático → <code>/api-docs</code> (Swagger) → <code>config.apiUrl</code> con <code>apiHandler</code> → <code>notFoundHandler</code> → <code>errorHandler</code>.</li>
+    <li>El <code>proxy</code> toma el primer segmento de la ruta, busca su dueño en <code>serviceOwnerByPath</code> y hace <code>fetch</code> a la URL del microservicio (timeout 30 s; sin body en GET/HEAD/DELETE). Si falla lanza <code>HttpError(503, 'El microservicio X no responde')</code>.</li>
+    <li>El microservicio (<code>serviceApp(name)</code>) monta solo sus routers (<code>routers[routePath]</code>) → el router llama al <b>servicio</b> (<code>services/*.service.js</code>) → el servicio habla con Alpaca (<code>lib/alpaca.js</code>), Supabase (<code>lib/supabase.js</code>) o el motor (<code>@core/quant-engine</code>).</li>
+    <li>Cualquier excepción llega a <code>errorHandler</code> → JSON <code>{status, message, details?}</code>.</li>
+  </ol>
+  <h3>Reglas de arquitectura (<code>openspec/config.yaml</code>)</h3>
+  <ul>
+    <li><b>Fuente de verdad:</b> Alpaca manda en watchlists y órdenes (Supabase guarda un <i>espejo</i> de lectura); las cadenas de opciones y las estrategias son entidades propias en Supabase hidratadas con datos de Alpaca.</li>
+    <li><b>Casing:</b> respuestas REST/GraphQL en <code>camelCase</code>; cuerpos enviados a Alpaca y columnas SQL en <code>snake_case</code>.</li>
+    <li><b>FFI por lote:</b> cruzar la frontera WASM una sola vez por cadena/estrategia, nunca una vez por pierna.</li>
+    <li><b>Cero literales mágicos:</b> puertos, límites, regex y códigos en constantes con nombre.</li>
+    <li><b>Composición sobre herencia</b>, <b>cortes verticales</b> (contrato → WASM → servicio → espejo DB → pruebas) y <b>persistencia justo a tiempo</b>.</li>
+    <li>Código y documentación en español.</li>
+  </ul>
+</section>
+
+<!-- ===================== 2. GLOSARIOS ===================== -->
+<section class="gsec" id="g-glos" data-title="2 · Glosario (buscable)">
+  <h2>2 · Glosario financiero y técnico</h2>
+  <p class="lead">Filtra por categoría o escribe para buscar un término, un nombre de función o una constante.</p>
+  <div class="gl-tools">
+    <input type="search" id="gl-q" placeholder="Buscar término, función o constante" aria-label="Buscar en el glosario">
+    <div class="chips" id="gl-cats"></div>
+  </div>
+  <p id="gl-count" style="color:var(--muted);font-size:13px;margin:0 0 8px"></p>
+  <div class="glos" id="gl-list"></div>
+</section>
+
+<!-- ===================== 3. MOTOR ===================== -->
+<section class="gsec" id="g-motor" data-title="3 · Motor Rust / WASM">
+  <h2>3 · Motor Rust → WebAssembly (<code>engine/src</code>)</h2>
+  <h3>Archivos y responsabilidad</h3>
+  <div class="tw"><table>
+    <tr><th>Archivo</th><th>Contiene</th></tr>
+    <tr><td><code>lib.rs</code></td><td>Frontera FFI. Constantes de stride y offsets, <code>contract_from</code>, <code>legs_from</code> (unsafe), exportaciones <code>qc_*</code>.</td></tr>
+    <tr><td><code>math.rs</code></td><td><code>INV_SQRT_2PI</code>, <code>norm_pdf</code>, <code>norm_cdf</code> (Hart/West), <code>struct Rng</code> (xorshift64* + Box-Muller).</td></tr>
+    <tr><td><code>bs.rs</code></td><td><code>enum Kind</code>, <code>struct Contract</code>, <code>struct Greeks</code>, <code>price</code>, <code>greeks</code>, <code>implied_vol</code>.</td></tr>
+    <tr><td><code>binomial.rs</code></td><td><code>struct TreeResult</code>, <code>payoff</code>, <code>roll_back</code>, <code>price_tree</code> (CRR).</td></tr>
+    <tr><td><code>risk.rs</code></td><td><code>struct Leg</code>, <code>portfolio_value</code>, <code>pnl_matrix</code>, <code>monte_carlo</code>, <code>reg_t</code>, <code>span</code>, <code>SPAN_SCENARIOS</code>.</td></tr>
+  </table></div>
+  <h3>Layouts de memoria (arreglos planos de <code>f64</code>)</h3>
+  <div class="tw"><table>
+    <tr><th>Estructura</th><th>Stride</th><th>Orden de campos</th></tr>
+    <tr><td>Contrato (entrada)</td><td>7 (<code>CONTRACT_STRIDE</code>)</td><td><code>[tipo, spot, strike, t, rate, div, vol|precio]</code> — offsets 0…6; <code>OFFSET_PARAM</code> = 6</td></tr>
+    <tr><td>Griegas (salida BS)</td><td>6 (<code>GREEKS_STRIDE</code>)</td><td><code>[price, delta, gamma, vega, theta, rho]</code></td></tr>
+    <tr><td>Árbol (salida)</td><td>5 (<code>TREE_STRIDE</code>)</td><td><code>[price, delta, gamma, theta, early_exercise]</code></td></tr>
+    <tr><td>Pierna</td><td>6 (<code>LEG_STRIDE</code>)</td><td><code>[tipo, strike, t, qty, vol, multiplicador]</code>, tipo 1 call · −1 put · 0 acción</td></tr>
+    <tr><td>Monte Carlo (salida)</td><td>9 + bins (<code>MC_STATS</code> = 9)</td><td><code>[media, desv_std, VaR95, CVaR95, VaR99, prob_ganancia, min, max, valor_base]</code> + histograma</td></tr>
+    <tr><td>SPAN (salida)</td><td>4 + 16 (<code>SPAN_HEADER</code> = 4)</td><td><code>[margen, scan_risk, som, peor_escenario]</code> + 16 pérdidas</td></tr>
+  </table></div>
+  <div class="note"><code>Kind::from_f64(v)</code>: <code>v &gt; 0</code> → call; <b>cualquier otro valor (incluido 0) → put</b>. El «tipo 0 = acción» solo existe en <code>Leg</code> (<code>is_stock()</code>), no en contratos.</div>
+  <h3>Exportaciones FFI</h3>
+  <div class="tw"><table>
+    <tr><th>Función</th><th>Firma resumida</th><th>Notas</th></tr>
+    <tr><td><code>qc_alloc(n)</code></td><td>→ <code>*mut f64</code></td><td><code>Vec::with_capacity(n.max(1))</code> + <code>mem::forget</code>: JS libera después.</td></tr>
+    <tr><td><code>qc_free(ptr, n)</code></td><td>unsafe</td><td><code>Vec::from_raw_parts(ptr, 0, n.max(1))</code> y drop; mismo <code>n</code> que en alloc.</td></tr>
+    <tr><td><code>qc_abi_version()</code></td><td>→ <code>u32</code> = <b>100</b></td><td>mayor·100 + menor; sube si cambia un layout.</td></tr>
+    <tr><td><code>qc_bs_batch(inp, n, out)</code></td><td>n·7 → n·6</td><td>BSM + griegas.</td></tr>
+    <tr><td><code>qc_binomial_batch(inp, n, steps, american, out)</code></td><td>n·7 → n·5</td><td><code>american != 0</code> permite ejercicio anticipado; reutiliza un <code>buf</code>.</td></tr>
+    <tr><td><code>qc_iv_batch(inp, n, out)</code></td><td>n·7 → n</td><td>Columna 6 = precio observado.</td></tr>
+    <tr><td><code>qc_pnl_matrix(...)</code></td><td>→ spot_shocks × vol_shocks</td><td>row-major.</td></tr>
+    <tr><td><code>qc_monte_carlo(...)</code></td><td>→ <code>out_len</code> ≥ 9</td><td><code>seed as u64</code>, <code>paths as usize</code>.</td></tr>
+    <tr><td><code>qc_reg_t(...)</code></td><td>→ <code>f64</code> total; <code>out</code> = por pierna</td><td></td></tr>
+    <tr><td><code>qc_span(...)</code></td><td>→ <code>f64</code> margen; <code>out</code> = 20 posiciones</td><td></td></tr>
+  </table></div>
+  <h3>Black-Scholes-Merton (<code>bs.rs</code>)</h3>
+<pre><code>d1 = [ ln(S/K) + (r − q + σ²/2)·T ] / (σ·√T)        d2 = d1 − σ·√T
+Call = S·e^(−qT)·N(d1) − K·e^(−rT)·N(d2)
+Put  = K·e^(−rT)·N(−d2) − S·e^(−qT)·N(−d1)
+gamma = e^(−qT)·n(d1) / (S·σ·√T)        vega = S·e^(−qT)·n(d1)·√T
+Paridad: C − P = S·e^(−qT) − K·e^(−rT)</code></pre>
+  <ul>
+    <li>Convenciones de salida: <b>vega</b> ÷100 (por +1 punto de vol), <b>theta</b> ÷365 (por día calendario), <b>rho</b> ÷100 (por +1 % de tasa), gamma sin escala.</li>
+    <li>Si <code>t ≤ 0</code> o <code>vol ≤ 0</code>: <code>price</code> = valor intrínseco del forward descontado (<code>max(0)</code>); <code>greeks</code> devuelve delta ±1 si ITM, 0 si no, y el resto en 0 (<code>..Default::default()</code>).</li>
+    <li>Ejemplo de Hull 15.6 (S=42, K=40, T=0.5, r=10 %, σ=20 %): call ≈ <b>4.7594</b>, put ≈ <b>0.8086</b>.</li>
+  </ul>
+  <h3>Volatilidad implícita (<code>implied_vol</code>)</h3>
+  <ol>
+    <li>Entradas inválidas (no finito, spot/strike/t ≤ 0) → <code>NaN</code>.</li>
+    <li>Cotas de no-arbitraje: call <code>[max(S·e^(−qT) − K·e^(−rT), 0), S·e^(−qT)]</code>; put <code>[max(K·e^(−rT) − S·e^(−qT), 0), K·e^(−rT)]</code>. Fuera de cotas (<code>target &lt; lower − 1e-12</code> o <code>target ≥ upper</code>) → <code>NaN</code>. Si <code>target − lower &lt; 1e-12</code> → <code>0.0</code>.</li>
+    <li>Semilla Brenner-Subrahmanyam <code>√(2π/t)·(target/spot)</code> acotada a [0.05, 2.0]; intervalo de bisección <code>lo = 1e-6</code>, <code>hi = 5.0</code>.</li>
+    <li>Hasta 100 iteraciones de Newton-Raphson (<code>vol − diff/vega</code>); si <code>vega ≤ 1e-10</code> o el paso sale de (lo, hi) → <b>bisección</b>. Termina con <code>|diff| &lt; 1e-10</code> o <code>hi − lo &lt; 1e-12</code>.</li>
+  </ol>
+  <h3>Árbol binomial CRR (<code>binomial.rs</code>)</h3>
+<pre><code>dt = T/steps     u = e^(σ·√dt)     d = 1/u     p = ( e^((r−q)·dt) − d ) / (u − d)  (clamp 0..1)
+disc = e^(−r·dt)     valor del nodo = disc·( p·up + (1−p)·down )   [americana: max(continuación, payoff)]
+delta = (v1[1] − v1[0]) / (S·u − S·d)                       (nodos del paso 1)
+gamma = (delta_up − delta_dn) / (0.5·(S·u² − S·d²))          (nodos del paso 2)
+theta = (v2[1] − v0) / (2·dt) / 365
+early_exercise_premium = max(americano − europeo, 0)</code></pre>
+  <ul>
+    <li><code>steps</code> se acota a <b>[3, 20 000]</b>; si <code>t ≤ 0</code> o <code>vol ≤ 0</code> devuelve solo el <code>payoff</code>.</li>
+    <li><code>roll_back</code> usa un <code>buf: &amp;mut Vec&lt;f64&gt;</code> compartido para <b>no reservar memoria por contrato</b>.</li>
+    <li>Hull 21.1 (put americana S=50, K=50, r=10 %, σ=40 %, T=5/12) ≈ <b>4.28</b>. Call americana sin dividendos: prima de ejercicio anticipado ≈ 0.</li>
+  </ul>
+  <h3>Aleatorios y normal (<code>math.rs</code>)</h3>
+  <ul>
+    <li><code>norm_cdf</code>: Hart (1968) en forma de West (2005), error &lt; 1e-14. <code>|z| &lt; 7.071…</code> polinomios racionales con Horner; <code>|z| ≥ 7.071…</code> fracción continua; <code>|z| &gt; 37</code> → cola 0.</li>
+    <li><code>Rng</code>: estado <code>u64</code> + <code>spare: Option&lt;f64&gt;</code>. Semilla 0 se sustituye por <code>0x9E3779B97F4A7C15</code>. <code>next_u64</code>: xorshift (12, 25, 27) × <code>0x2545F4914F6CDD1D</code>. <code>uniform()</code> = <code>((x ≫ 11) + 0.5)/2⁵³</code> ∈ (0,1). <code>normal()</code> = Box-Muller, guarda el segundo valor en <code>spare</code>.</li>
+  </ul>
+  <h3>Riesgo (<code>risk.rs</code>)</h3>
+  <ul>
+    <li><b><code>Leg::unit_value</code></b>: acción → <code>spot</code>; opción → <code>bs::price</code> con <code>t = max(t − dt, 0)</code> y <code>vol = max(vol + shift, 1e-4)</code>. <code>value</code> = <code>qty · multiplier · unit_value</code>.</li>
+    <li><b><code>pnl_matrix</code></b>: filas = choques de spot <i>relativos</i> (<code>S·(1+ds)</code>), columnas = choques de vol <i>absolutos</i>; <code>out[i·n_vol + j]</code> = valor − valor base.</li>
+    <li><b><code>monte_carlo</code></b>: <code>paths = max(paths,2) &amp; !1</code> (par). GBM: <code>S_T = S·exp((r − q − σ²/2)·T + σ·√T·Z)</code> con variables antitéticas <code>[z, −z]</code>. Varianza muestral (n−1). <code>idx95 = ⌊0.05·n⌋</code>, <code>idx99 = ⌊0.01·n⌋</code>; VaR = −pnl[idx] (pérdida en positivo); CVaR95 = −promedio de pnl[0..=idx95]. Histograma de <code>out.len() − 9</code> intervalos entre min y max.</li>
+    <li><b><code>reg_t</code></b>: largas = prima completa; acción = 50 % del spot; cortas cubiertas por una larga del <b>mismo tipo y vencimiento igual o posterior</b> → <code>(ancho − prima)·unidades</code> (ancho = 0 si es de débito; se prueban primero los candidatos de menor ancho); cortas descubiertas → call <code>prima + max(0.20·S − OTM, 0.10·S)</code>, put <code>prima + max(0.20·S − OTM, 0.10·K)</code>.</li>
+    <li><b><code>span</code></b>: 16 escenarios <code>(fracción del rango de precio, dirección de vol, peso)</code>: 14 con peso 1 (fracciones 0, ±1/3, ±2/3, ±1 con vol ↑ y ↓) y 2 extremos <code>(±2, 0, 0.35)</code>. Revalúa a <b>1 día</b> (1/365). <code>scan_risk</code> = peor pérdida; <code>SOM</code> = contratos cortos × <code>som_per_contract</code>; <code>margen = max(scan_risk, SOM)</code>.</li>
+  </ul>
+  <p>Pruebas en Rust: <b>15</b> (<code>cargo test</code>): Hull, paridad, griegas vs. diferencias finitas, ida y vuelta de IV, rechazo de arbitraje, convergencia del árbol, put americana de Hull, call sin dividendos, CDF conocida, momentos del RNG, matriz de P&amp;L, Monte Carlo de strangle corto, Reg T desnuda, spreads verticales, SPAN.</p>
+</section>
+
+<!-- ===================== 4. WRAPPER ===================== -->
+<section class="gsec" id="g-wrapper" data-title="4 · @core/quant-engine (JS)">
+  <h2>4 · <code>@core/quant-engine</code> (<code>packages/quant-engine/index.js</code>)</h2>
+  <ul>
+    <li>Instancia <b>síncrona</b>: <code>new WebAssembly.Instance(new WebAssembly.Module(bytes), {})</code> (el .wasm no tiene imports). Si <code>qc_abi_version() !== 100</code> lanza <code>Error</code>.</li>
+    <li><code>KIND = {call: 1, put: -1, stock: 0}</code>.</li>
+    <li><code>withBuffers(inputs, outputLength, runFn)</code>: <code>qc_alloc</code> por cada entrada y una de salida → copia con <code>Float64Array.set</code> → ejecuta → lee la salida con <code>.slice()</code> sobre <code>wasm.memory.buffer</code> <i>actual</i> (la memoria pudo crecer) → <code>finally</code> libera todo con <code>qc_free</code>. Devuelve <code>{ret, out}</code>.</li>
+    <li><code>contractRows(list, key)</code> (stride 7; <code>rate ?? 0</code>, <code>div ?? 0</code>; <code>key</code> = <code>'vol'</code> o <code>'price'</code>) y <code>legRows(legs)</code> (stride 6; <code>strike ?? 0</code>, <code>t ?? 0</code>, <code>vol ?? 0</code>, multiplicador por defecto 1 si es acción, 100 si no).</li>
+  </ul>
+  <div class="tw"><table>
+    <tr><th>Función JS</th><th>Exportación Rust</th><th>Defaults / retorno</th></tr>
+    <tr><td><code>blackScholes(contracts)</code></td><td><code>qc_bs_batch</code></td><td>[{price, delta, gamma, vega, theta, rho}]</td></tr>
+    <tr><td><code>binomial(contracts, {steps=200, american=true})</code></td><td><code>qc_binomial_batch</code></td><td>[{price, delta, gamma, theta, earlyExercisePremium}]</td></tr>
+    <tr><td><code>impliedVol(quotes)</code></td><td><code>qc_iv_batch</code></td><td><code>number[]</code> (NaN si viola no-arbitraje)</td></tr>
+    <tr><td><code>pnlMatrix(legs, {spot, rate=0, div=0, horizonDays=0, spotShocks, volShocks})</code></td><td><code>qc_pnl_matrix</code></td><td>matriz <code>[fila spot][col vol]</code>; <code>horizonDays/365</code></td></tr>
+    <tr><td><code>monteCarlo(legs, {spot, rate, div, vol, horizonDays, paths=10000, seed=1, bins=40})</code></td><td><code>qc_monte_carlo</code></td><td>{mean, std, var95, cvar95, var99, probProfit, min, max, baseValue, histogram}; salida de <code>9 + bins</code></td></tr>
+    <tr><td><code>regTMargin(legs, {spot, rate, div})</code></td><td><code>qc_reg_t</code></td><td>{total, perLeg}</td></tr>
+    <tr><td><code>spanMargin(legs, {spot, rate, div, priceScan=0.15, volScan=0.04, shortOptionMinimum=0})</code></td><td><code>qc_span</code></td><td>{margin, scanRisk, shortOptionMinimum, worstScenario, scenarios[16]}</td></tr>
+  </table></div>
+</section>
+
+<!-- ===================== 5. API ===================== -->
+<section class="gsec" id="g-api" data-title="5 · API REST y GraphQL">
+  <h2>5 · API REST, GraphQL y errores</h2>
+  <h3>Rutas (<code>routes/index.js</code>, prefijo <code>/api/v1</code>)</h3>
+  <div class="tw"><table>
+    <tr><th>Recurso</th><th>Rutas</th><th>Servicio</th></tr>
+    <tr><td>watchlists</td><td>GET / · POST / (201) · GET,PUT,DELETE(204) /:id · POST /:id/symbols (201) · DELETE /:id/symbols/:symbol</td><td><code>watchlistsService</code></td></tr>
+    <tr><td>orders</td><td>GET / · POST / (201) · <b>DELETE / (207, cancelar todas)</b> · GET /:id · PATCH /:id (reemplazar) · DELETE /:id (cancelar)</td><td><code>ordersService</code></td></tr>
+    <tr><td>option-chains</td><td>GET / · POST / (201) · GET,PUT /:id · POST /:id/refresh · DELETE /:id (204)</td><td><code>optionChainsService</code></td></tr>
+    <tr><td>strategies</td><td><b>Fijas primero:</b> GET /recommend · GET /recommend/backtest · POST /auto. Luego GET, POST (201) / · GET,PUT,DELETE(204) /:id · GET /:id/risk · POST /:id/submit (201)</td><td><code>strategiesService</code>, <code>riskService</code>, <code>recommendService</code>, <code>backtestService</code>, <code>autoTradeService</code></td></tr>
+    <tr><td>market</td><td>GET /search · GET /overview · GET /:symbol/bars</td><td><code>assetsService</code>, <code>overviewService</code>, <code>marketService</code></td></tr>
+    <tr><td>account</td><td>GET / → <code>{id, status, currency, cash, buyingPower, optionsLevel}</code></td><td><code>alpaca.account()</code></td></tr>
+    <tr><td>ai</td><td>POST /validate-risk (<code>metrics</code> objeto obligatorio, si no 400)</td><td><code>aiService</code></td></tr>
+  </table></div>
+  <p>El middleware <code>uuid</code> llama <code>assertUuid(req.params.id)</code> y responde 400 si el id no es UUID. El recomendador se envuelve con <code>memo(20_000, …)</code> (clave <code>SYMBOL|paths</code>); <code>/auto</code> <b>no</b> usa ese caché.</p>
+  <h3>Errores (<code>lib/errors.js</code>)</h3>
+  <ul>
+    <li><code>class HttpError extends Error</code> con <code>status</code> y <code>details</code>. Atajos: <code>badRequest</code> (400), <code>notFound</code> (404), <code>conflict</code> (409).</li>
+    <li><code>check(body, rules)</code>: reglas <code>required</code>, <code>type</code> (<code>string|number|array</code>), <code>oneOf</code>, <code>positive</code>, <code>date</code> (<code>YYYY-MM-DD</code>). Junta <b>todos</b> los errores y lanza un único 400 «Datos inválidos» con <code>details</code>.</li>
+    <li><code>errorHandler</code>: <code>status = err.status ?? (err.type === 'entity.parse.failed' ? 400 : 500)</code>; solo registra en consola los 500. <code>notFoundHandler</code>: 404 <code>No existe METHOD path</code>.</li>
+  </ul>
+  <div class="tw"><table>
+    <tr><th>Código</th><th>Cuándo aparece en F0</th></tr>
+    <tr><td>201</td><td>creaciones y <code>submit</code></td></tr>
+    <tr><td>204</td><td>borrados de watchlists, chains y strategies</td></tr>
+    <tr><td>207</td><td><code>DELETE /orders</code> (cancelAll, estado múltiple)</td></tr>
+    <tr><td>400</td><td>validación (<code>check</code>), UUID inválido, ticker inválido, falta <code>confirm</code></td></tr>
+    <tr><td>404</td><td>recurso inexistente; ticker que Alpaca no conoce</td></tr>
+    <tr><td>409</td><td>estrategia ya no está en <code>draft</code> (update/submit)</td></tr>
+    <tr><td>429</td><td>ya hay una ejecución <code>/auto</code> en curso, o se repitió el ticker antes de 60 s</td></tr>
+    <tr><td>503</td><td>faltan llaves en <code>.env</code> o un microservicio no responde</td></tr>
+  </table></div>
+  <h3>GraphQL (<code>graphql/index.js</code>, Yoga en <code>/graphql</code>)</h3>
+  <ul>
+    <li>Reutiliza los mismos servicios. <b>Queries:</b> watchlists, watchlist, orders, order, optionChains, optionChain, strategies, strategy, <code>strategyRisk(id, paths, seed)</code>, <code>recommendStrategies(symbol)</code>.</li>
+    <li><b>Mutations:</b> create/update/delete/addSymbol/removeSymbol de watchlist; create/replace/cancel/cancelAll de orden; create/update/refresh/delete de cadena; create/update/delete/<code>submitStrategy</code>. <b>No hay mutation de ejecución automática.</b></li>
+    <li><code>wrap()</code> convierte los <code>HttpError</code> en <code>GraphQLError</code> con <code>extensions: {status, details}</code> (status 500 si el error no trae uno); <code>done()</code> envuelve las acciones de borrado y devuelve <code>true</code>. Atajo declarado: GraphQL corre en el gateway llamando a los servicios en proceso, no por HTTP.</li>
+  </ul>
+</section>
+
+<!-- ===================== 6. SERVICIOS ===================== -->
+<section class="gsec" id="g-serv" data-title="6 · Servicios y objetos">
+  <h2>6 · Servicios, objetos y funciones</h2>
+  <details open><summary><code>strategies.service.js</code> — estrategias multi-leg</summary>
+    <ul>
+      <li>Constantes: <code>MAX_LEGS = 4</code>, <code>CONTRACT_SIZE = 100</code>, <code>INTENTS = [buy_to_open, buy_to_close, sell_to_open, sell_to_close]</code>.</li>
+      <li><code>toDto(strategyRow, legs)</code>: snake_case → camelCase; cada pierna añade <code>...parseOcc(leg.symbol)</code> (root, expiration, type, strike) y <code>quote</code> si existe.</li>
+      <li><code>validate(body)</code>: <code>check</code> + 1–4 piernas + <code>limit_price</code> obligatorio si <code>order_type = limit</code> + símbolo OCC válido + cada contrato debe existir en Alpaca (<code>getOptionContract</code>) y pertenecer al subyacente. <code>position_intent</code> por defecto: buy → <code>buy_to_open</code>, sell → <code>sell_to_open</code>. <code>qty</code>/<code>ratio_qty</code> se truncan con <code>Math.trunc</code>.</li>
+      <li><code>loadStrategy(id)</code>: <code>select('*, strategy_legs(*)')</code>, ordena piernas por <code>created_at</code>; 404 si no existe.</li>
+      <li><code>priceStrategy</code>: mid = (bp+ap)/2; neto por unidad = Σ (±1 · mid · ratio) con +1 compra, −1 venta; total = neto · 100 · qty. Positivo = <b>débito</b>, negativo = <b>crédito</b>. Si una pierna no cotiza, <code>pricing = null</code>.</li>
+      <li><code>list</code> (con <code>?priced=true</code> pide un solo <code>optionSnapshots</code> para todas), <code>get</code>, <code>create</code> (con <i>rollback</i>: si fallan las piernas borra la estrategia), <code>update</code> (solo <code>draft</code>, si no 409), <code>remove</code> (si <code>submitted</code> intenta cancelar la orden en Alpaca y sigue aunque falle), <code>submit</code> (orden <code>order_class: 'mleg'</code>, <code>time_in_force: 'day'</code>, <code>qty</code> y <code>ratio_qty</code> como string, espejo con <code>mirrorOrders</code>, estado → <code>submitted</code>).</li>
+    </ul>
+  </details>
+  <details><summary><code>optionChains.service.js</code> — cadenas y cotizaciones</summary>
+    <ul>
+      <li><code>MAX_CONTRACTS = 300</code>, <code>DB_INSERT_BATCH_SIZE = 500</code>. <code>FILTER_RULES</code> valida fechas, tipo, strikes.</li>
+      <li><code>ingest(chain)</code>: lista contratos activos (Alpaca, paginado) → snapshots → precio del subyacente (<code>latestTrade.p ?? dailyBar.c</code>) → <b>borra</b> las cotizaciones de la cadena → inserta por lotes de 500 → actualiza <code>underlying_price</code>, <code>contracts_count</code>, <code>last_refreshed_at</code>.</li>
+      <li>Claves abreviadas de Alpaca: <code>bp</code> bid, <code>ap</code> ask, <code>t</code> timestamp, <code>p</code> precio del trade, <code>c</code> cierre de barra.</li>
+      <li><code>create</code> inserta la cadena e ingesta; si la ingesta falla, <b>elimina la cadena huérfana</b>. <code>update</code> re-ingesta; <code>refresh</code> solo re-ingesta; <code>remove</code> da 404 si no había nada que borrar.</li>
+      <li><code>toQuoteDto.mid</code> = promedio de bid/ask redondeado a 4 decimales o <code>null</code>.</li>
+    </ul>
+  </details>
+  <details><summary><code>orders.service.js</code> y <code>watchlists.service.js</code> — espejo de Alpaca</summary>
+    <ul>
+      <li>Orders: <code>SIDES</code>, <code>TYPES</code> (market, limit, stop, stop_limit, trailing_stop), <code>TIFS</code> (day, gtc, opg, cls, ioc, fok), <code>RESUBMIT_STATUSES</code> (accepted, pending_new). <code>toRow</code> (a Supabase, guarda <code>raw</code> y <code>legs</code> como jsonb), <code>toOrderDto</code> (camelCase), <code>mirrorOrders</code> (upsert del espejo), <code>parseOptionalNumber</code>.</li>
+      <li>Watchlists: <code>normSymbols</code> (trim, mayúsculas, sin vacíos, sin duplicados vía <code>Set</code>), <code>mirror</code>, caché de <code>list</code> de 5 s (<code>LIST_CACHE_TTL_MS</code>).</li>
+    </ul>
+  </details>
+  <details><summary><code>risk.service.js</code> — <code>riskService.analyze / analyzeLegs</code></summary>
+    <ul>
+      <li>Constantes: <code>RATE = Number(process.env.RISK_FREE_RATE ?? 0.04)</code>, <code>YEAR_MS = 365·86 400 000</code>, <code>SPOT_SHOCKS</code> (9 valores de −10 % a +10 % cada 2.5 %), <code>VOL_SHOCKS</code> = [−0.10, −0.05, 0, 0.05, 0.10].</li>
+      <li><code>analyze(id, query)</code> = <code>loadStrategy</code> + <code>analyzeLegs</code>. <code>analyzeLegs(strategy, legs, query, prefetched)</code> es el núcleo (lo usa también el recomendador con piernas que aún no existen en Supabase; <code>prefetched</code> evita repetir llamadas a Alpaca).</li>
+      <li><code>paths</code> por defecto 50 000, acotado a <b>[1 000, 500 000]</b>; <code>seed</code> 42; horizonte = min(<code>horizon_days</code>, días al primer vencimiento).</li>
+      <li><code>yearsTo(expiration, now)</code> usa el cierre <code>T20:00:00Z</code> (16:00 Nueva York). Piernas con <code>yearsTo ≤ 0</code> → 400 «Piernas vencidas».</li>
+      <li>Cada pierna: <code>vol</code> = IV de Alpaca (<code>ivSource: 'alpaca'</code>) o, si falta, <code>impliedVol</code> del motor con el mid (<code>ivSource: 'motor'</code>); <code>qty = signo · ratio_qty · strategy.qty</code> (compra +1, venta −1); <code>multiplier = 100</code>.</li>
+      <li><code>underlyingVol</code> = <b>promedio simple</b> de la vol de las piernas (el comentario del código dice «ponderado»).</li>
+      <li>Reporte: <code>strategy, inputs, legs[], cost{model, market}, monteCarlo{…histogram}, extended, pnlMatrix{spotShocks, volShocks, values}, pnlAtHorizon, greeks (portafolio = griega · qty · multiplier), margin{regT, span, spanWorstScenario}, performance{monteCarloMs, engineMs, pathsPerSecond}</code>. <code>extended</code> es <code>null</code> si falla (<code>.catch(() =&gt; null)</code>).</li>
+    </ul>
+  </details>
+  <details><summary><code>riskExtended.service.js</code> — VaR histórico, drawdown, ratios, beta, estrés</summary>
+    <ul>
+      <li><code>dailyCloses</code> (memo 5 min; 400 velas, <code>sort: 'desc'</code>, 600 días atrás, invertidas) y <code>getHistory(underlying)</code> (devuelve <code>{closes, spyCloses}</code>; para SPY, <code>spyCloses = closes</code>).</li>
+      <li><code>extendedRisk(...)</code>: (1) VaR/CVaR <b>histórico</b>: re-juega rendimientos reales en ventanas del largo del horizonte (<code>horizonTradingDays = max(1, round(días·252/365))</code>, máx. 400 choques, mínimo 20) con <code>pnlMatrix</code>; (2) drawdown del último año y peor P&amp;L histórico; (3) Sharpe/Sortino del subyacente y de la estrategia (<code>mean/std</code>, y Sortino con desviación bajista del histograma); (4) beta vs SPY y <code>betaWeightedDelta = delta · beta · spot/spySpot</code>; (5) estrés ±2σ con <code>σ = vol·√(días/365)</code> y <i>IV crush</i> <code>ivDrop = −min(0.10, vol·0.5)</code> (5 escenarios); (6) intervalos de confianza al 95 %.</li>
+    </ul>
+  </details>
+  <details><summary><code>recommend.service.js</code> — el recomendador</summary>
+    <ul>
+      <li>Constantes: <code>NEAR_TARGET_DAYS = 30</code>, <code>FAR_TARGET_DAYS = 60</code>. Importa <code>web/templates.js</code>, que define <code>globalThis.F0Templates</code> (<code>build</code>, <code>TEMPLATES</code>).</li>
+      <li><code>loadMarket(symbol)</code>: snapshot + historial en paralelo; contratos cercanos (vencen en 14–45 días, strike ±10 %, máx. 250) y lejanos (solo calls, 46–100 días, strike ±4 %, máx. 80); elige el vencimiento más cercano a 30 y 60 días (<code>closestExpiration</code>); descarta cotizaciones sin <code>mid &gt; 0</code>.</li>
+      <li><code>atmIv</code>: promedio de la IV de los <b>4</b> strikes más cercanos al spot (si no hay, se usa <code>hv30</code>). <code>termSlope = iv cercana / iv lejana</code>.</li>
+      <li>Candidatas: <code>[`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal']</code> con <code>side = volSide(ivToHv)</code>. Cada una pasa por <code>build</code> + <code>riskService.analyzeLegs</code> (<code>paths</code> por defecto 20 000, acotado a [2 000, 100 000], <code>seed: 42</code>) en <code>Promise.all</code>; si una falla queda con <code>score: -1</code> y <code>error</code>.</li>
+      <li>Salida: <code>symbol, asOf, method, signals, ranking[], winner, explanation</code>; <code>explain()</code> redacta el porqué y avisa cuando el valor esperado de la ganadora es negativo.</li>
+    </ul>
+  </details>
+  <details><summary><code>backtest.service.js</code>, <code>autoTrade.service.js</code>, <code>ai.service.js</code></summary>
+    <ul>
+      <li><b>Backtest</b>: <code>WARMUP 80</code>, <code>HOLD_TRADING_DAYS 21</code>, <code>STEP 5</code>, <code>NEAR_T 30/365</code>, <code>FAR_T 60/365</code>, <code>MC_PATHS 4000</code>, <code>seed 7</code>. IV de ese día ≈ <code>hvLongRun</code> (limitación declarada). Strikes fijos: straddle ATM, strangle ±5 %, calendar ATM (vende 30 d, compra 60 d), diagonal (vende +3 % a 30 d, compra ATM a 60 d). Calibración por tramos de probabilidad: &lt;40, 40–50, 50–60, ≥60 %. <code>byStrategy</code> quita el prefijo <code>long-/short-</code>.</li>
+      <li><b>Auto</b>: <code>confirm: true</code> obligatorio salvo <code>dryRun</code>; candado <code>running</code> (429); <code>REPEAT_BLOCK_MS = 60 000</code> por ticker (429). <code>RISK_RULES = {minProbProfit: 0.4, maxVarShareOfEquity: 0.05}</code>. <code>riskFilter(metrics, account)</code> devuelve <code>{passed, checks[4]}</code>. <code>askAi</code> llama al microservicio <code>ai</code> con timeout <code>config.ai.timeoutMs + 5000</code>; si falla → <code>verdict: 'unavailable'</code> (<b>falla cerrado</b>, no opera). Orden: <code>qty 1</code>, <code>order_type 'market'</code>, nombre <code>«… (auto)»</code>; si falla, <code>lastOrderAt.delete</code>.</li>
+      <li><b>IA</b>: OpenRouter <code>/chat/completions</code>, <code>temperature 0</code>, <code>max_tokens 1200</code>, modelo principal + <code>fallbackModels</code>. <code>extractJson</code> (regex <code>/\{[\s\S]*\}/</code>), <code>normalizeVerdict</code> (aprobado/precaución/rechazado → approved/caution/rejected), <code>unavailable(reason)</code>.</li>
+    </ul>
+  </details>
+  <details><summary><code>market</code>, <code>overview</code>, <code>assets</code></summary>
+    <ul>
+      <li><code>market.service</code>: <code>stockSnapshot</code> memo 2 s; <code>TIMEFRAMES</code>; <code>bars</code> calcula SMA20, EMA9, Bollinger, RSI14, MACD.</li>
+      <li><code>overview.service</code>: <code>EXPIRATIONS_TTL_MS</code> 10 min, ventana 120 días, <code>STRIKE_BAND</code> ±15 %, <code>MAX_CONTRACTS</code> 1000, <code>MIN_CLOSES</code> 60; carga parcial con <code>errors</code> por bloque.</li>
+      <li><code>assets.service</code>: catálogo en caché 6 h, <code>DEFAULT_LIMIT 12</code>, <code>MAX_LIMIT 50</code>, lista <code>POPULAR</code>; <code>normalize</code> quita acentos (NFD) y baja a minúsculas. <code>matchLevel</code>: 0 símbolo exacto, 1 símbolo empieza con el texto, 2 alguna palabra del nombre empieza con el texto, 3 el nombre lo contiene, <code>null</code> no coincide. <code>rankAssets</code> ordena por nivel, luego los que tienen opciones, luego símbolo más corto, luego alfabético; con búsqueda vacía devuelve <code>POPULAR</code>; <code>optionsOnly</code> filtra por <code>hasOptions</code>.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ===================== 7. LIB ===================== -->
+<section class="gsec" id="g-lib" data-title="7 · lib/ (funciones puras)">
+  <h2>7 · <code>api/src/lib</code></h2>
+  <div class="tw"><table>
+    <tr><th>Módulo</th><th>Exporta</th><th>Detalle clave</th></tr>
+    <tr><td><code>alpaca.js</code></td><td><code>alpaca</code> (objeto)</td><td><code>headers()</code> lanza 503 sin llaves; <code>toQuery</code> omite vacíos y une arreglos con coma; <code>request</code> devuelve <code>null</code> en 204, tolera cuerpo no-JSON, mapea «no snapshot found for X» a 404 amigable; <code>trading()</code> y <code>data()</code> eligen la URL base. <code>listOptionContracts</code> pagina con <code>page_token</code> (<code>limit = min(max − acumulado, 10 000)</code>). <code>optionSnapshots</code> pide de 100 en 100 símbolos. <code>stockBars</code> usa <code>adjustment: 'split'</code>.</td></tr>
+    <tr><td><code>cache.js</code></td><td><code>memo(ttlMs, fn, keyOf)</code></td><td>TTL + promesa en vuelo compartida; no cachea errores; <code>MAX_ENTRIES = 500</code> (expulsa la más antigua). Máx. llamadas/min por clave = 60 000/ttl.</td></tr>
+    <tr><td><code>occ.js</code></td><td><code>parseOcc</code></td><td>Regex <code>^([A-Z][A-Z0-9.]{0,5})(\d{2})(\d{2})(\d{2})([CP])(\d{8})$</code> → <code>{root, expiration:'20YY-MM-DD', type, strike: n/1000}</code>; <code>null</code> si no coincide.</td></tr>
+    <tr><td><code>symbol.js</code></td><td><code>normalizeSymbol</code></td><td><code>trim</code> + mayúsculas + <code>/^[A-Z][A-Z.]{0,9}$/</code>; acepta <code>BRK.B</code>; 400 si no.</td></tr>
+    <tr><td><code>supabase.js</code></td><td><code>db()</code>, <code>unwrapQuery</code> (alias <code>q</code>)</td><td>Singleton <code>client ??=</code>, <code>persistSession:false</code>, <code>autoRefreshToken:false</code>; error de consulta → <code>HttpError(500, 'Supabase: …', {code, hint})</code>.</td></tr>
+    <tr><td><code>security.js</code></td><td><code>securityHeaders</code></td><td>nosniff, X-Frame-Options SAMEORIGIN, CSP, Permissions-Policy (cámara/micro/geo apagados), Referrer-Policy no-referrer, COOP same-origin.</td></tr>
+    <tr><td><code>metrics.js</code></td><td><code>monitoring(service)</code></td><td>Devuelve <code>{track, health, metrics}</code>. Series por <code>método|ruta|estado</code> en un <code>Map</code> en memoria; formato Prometheus; <code>health</code> responde 503 «degraded» si <code>missingConfig()</code> no está vacío.</td></tr>
+    <tr><td><code>indicators.js</code></td><td><code>sma, ema, bollinger, rsi, macd</code></td><td>Calentamiento = <code>null</code>. EMA sembrada con la SMA inicial (<code>k = 2/(n+1)</code>). Bollinger 20/2 con varianza <i>poblacional</i>. RSI de Wilder (14). MACD 12/26/9.</td></tr>
+    <tr><td><code>stats.js</code></td><td><code>TRADING_DAYS=252, mean, stdev, logReturns, historicalVol, percentile, varCvar, maxDrawdown, sharpe, sortino, beta, meanConfidenceInterval95, proportionConfidenceInterval95, histogramPercentile</code></td><td>Ver fórmulas en la sección 9.</td></tr>
+    <tr><td><code>scoring.js</code></td><td><code>clamp, marketSignals, volSide, templateFit, composite</code></td><td>Ver sección 8.</td></tr>
+  </table></div>
+</section>
+
+<!-- ===================== 8. RECOMENDADOR ===================== -->
+<section class="gsec" id="g-reco" data-title="8 · Recomendador y puntaje">
+  <h2>8 · Recomendador: señales, encaje y puntaje</h2>
+  <h3><code>marketSignals(closes)</code></h3>
+  <ul>
+    <li><code>hv30</code> (vol histórica anualizada de 30 días), <code>hvLongRun</code> (promedio de <code>hv30</code> en ventanas <code>end = 60, 65, 70…</code> sobre la serie), <code>sma20</code>, <code>ema9</code>, <code>trendStrength = (ema9 − sma20)/sma20</code>, <code>bollingerPosition = clamp((precio − inferior)/(superior − inferior))</code> (0.5 si las bandas colapsan), <code>rsi14</code>.</li>
+  </ul>
+  <h3>Regla de fondo</h3>
+  <ul>
+    <li><code>volSide(ivToHv) = ivToHv &gt; 1.1 ? 'short' : 'long'</code> (estricto): IV cara → <b>vender</b> volatilidad (short straddle/strangle); IV barata o neutra → <b>comprar</b> (long).</li>
+    <li>Estructura temporal y mercado lateral → calendar. Sesgo alcista suave → diagonal de calls.</li>
+  </ul>
+  <h3><code>templateFit({ivToHv, termSlope, signals})</code></h3>
+<pre><code>volCheap  = clamp((1.15 − ivToHv) / 0.5)
+volRich   = clamp((ivToHv − 0.95) / 0.5)
+nearBand  = clamp(|bollingerPosition − 0.5| · 2)       rangeBound = 1 − nearBand
+bullish   = clamp(0.5 + trendStrength · 10)
+term      = termSlope == null ? 0.5 : clamp((termSlope − 0.9) / 0.3)
+longVol   = 0.7·volCheap + 0.3·nearBand      → long-straddle, long-strangle
+shortVol  = 0.7·volRich  + 0.3·rangeBound    → short-straddle, short-strangle
+calendar  = 0.5·term + 0.5·rangeBound
+diagonal  = 0.5·bullish + 0.5·(1 − |volRich − volCheap|)</code></pre>
+  <h3><code>composite({probProfit, expectedValue, var95, fit})</code></h3>
+<pre><code>evScore = 0.5 + 0.5 · tanh( expectedValue / max(|var95|, 1) )
+score   = 100 · ( 0.40·probProfit + 0.30·evScore + 0.30·fit )     (redondeado a 1 decimal)</code></pre>
+  <h3>Plantillas (<code>web/templates.js</code>)</h3>
+  <div class="tw"><table>
+    <tr><th>Plantilla</th><th>Piernas</th></tr>
+    <tr><td>long/short straddle</td><td>call ATM + put al mismo strike, mismo vencimiento cercano; ambas buy (long) o ambas sell (short).</td></tr>
+    <tr><td>long/short strangle</td><td>call y put OTM por <b>delta ≈ 0.25</b> (<code>byDelta</code>); sin griegas aproxima por distancia: <code>otm = (0.5 − delta)/5</code> (0.25 → 5 %, 0.30 → 4 %).</td></tr>
+    <tr><td>calendar (calls)</td><td>vende call cercana y compra call lejana <b>al mismo strike</b> (ATM del vencimiento lejano).</td></tr>
+    <tr><td>diagonal (calls)</td><td>vende call cercana por delta <b>0.30</b>, compra call lejana ATM.</td></tr>
+  </table></div>
+  <p><code>farExpiration</code> = el último vencimiento posterior al cercano cuyas calls rodean el spot (min strike ≤ spot ≤ max strike). Sin él, calendar/diagonal lanzan error. Ayudantes: <code>closest</code>, <code>atStrike</code>, <code>byDelta</code>, <code>createLeg</code> (<code>{symbol, side, ratio_qty: 1}</code>).</p>
+  <h3>Filtros de <code>/strategies/auto</code></h3>
+  <ol>
+    <li>Riesgo: <code>probProfit ≥ 0.4</code>, <code>expectedValue &gt; 0</code>, <code>var95 ≤ 5 % del equity</code>, <code>marginRegT ≤ buyingPower</code> (las 4).</li>
+    <li>IA: <code>verdict === 'approved'</code>.</li>
+    <li>Solo entonces: <code>strategiesService.create</code> → <code>submit</code> en Alpaca <b>paper</b>.</li>
+  </ol>
+</section>
+
+<!-- ===================== 9. FÓRMULAS ===================== -->
+<section class="gsec" id="g-form" data-title="9 · Fórmulas estadísticas">
+  <h2>9 · Fórmulas estadísticas y de riesgo (<code>lib/stats.js</code>)</h2>
+  <div class="tw"><table>
+    <tr><th>Medida</th><th>Fórmula / regla en el código</th></tr>
+    <tr><td>Desviación estándar muestral</td><td><code>s = √( Σ(xᵢ − μ)² / (n − 1) )</code> (corrección de Bessel); NaN con menos de 2 datos</td></tr>
+    <tr><td>Retorno logarítmico</td><td><code>rₜ = ln(Pₜ / Pₜ₋₁)</code> (devuelve un dato menos)</td></tr>
+    <tr><td>Volatilidad histórica</td><td><code>σ_anual = s_diaria · √252</code> sobre los últimos <code>window</code> (30) retornos</td></tr>
+    <tr><td>Percentil (interpolado)</td><td><code>pos = (n − 1)·p</code>; interpola entre <code>⌊pos⌋</code> y <code>⌈pos⌉</code> sobre datos ordenados</td></tr>
+    <tr><td>VaR / CVaR histórico</td><td><code>cutoff = percentil(1 − nivel)</code>; <code>VaR = −cutoff</code>; <code>CVaR = −promedio(P&amp;L ≤ cutoff)</code>; ambos como pérdida positiva</td></tr>
+    <tr><td>Drawdown máximo</td><td><code>(Pₜ − máximo_hasta_t)/máximo_hasta_t</code>, el más negativo (−1…0)</td></tr>
+    <tr><td>Sharpe</td><td><code>(μ_diaria·252 − rf) / (s_diaria·√252)</code>, rf por defecto 0.04</td></tr>
+    <tr><td>Sortino</td><td>Igual, pero el denominador es la desviación <i>bajista</i> <code>√mean(min(r − rf/252, 0)²) · √252</code></td></tr>
+    <tr><td>Beta</td><td><code>Cov(r_activo, r_índice) / Var(r_índice)</code>, alineando por la cola más corta (contra SPY)</td></tr>
+    <tr><td>IC 95 % de la media</td><td><code>μ ± 1.96·σ/√n</code></td></tr>
+    <tr><td>IC 95 % de una proporción</td><td><code>p ± 1.96·√(p(1−p)/n)</code>, acotado a [0, 1]</td></tr>
+    <tr><td>Percentil de histograma</td><td>acumula frecuencias hasta <code>total·p</code> e interpola dentro del intervalo</td></tr>
+    <tr><td>SMA</td><td>suma móvil / <code>period</code>; <code>null</code> hasta <code>index ≥ period − 1</code></td></tr>
+    <tr><td>EMA</td><td><code>k = 2/(period+1)</code>; semilla = SMA de las primeras <code>period</code> velas</td></tr>
+    <tr><td>RSI</td><td>promedios suavizados de Wilder; <code>100 − 100/(1 + gain/loss)</code>; <code>loss = 0</code> → 100</td></tr>
+    <tr><td>MACD</td><td><code>EMA(12) − EMA(26)</code>; señal = <code>EMA(9)</code> del MACD; histograma = MACD − señal</td></tr>
+    <tr><td>Bollinger</td><td>media SMA(20) ± 2·σ (varianza poblacional, divide entre <code>period</code>)</td></tr>
+  </table></div>
+</section>
+
+<!-- ===================== 10. DATOS ===================== -->
+<section class="gsec" id="g-datos" data-title="10 · Base de datos">
+  <h2>10 · Supabase (<code>001_market_data_f0.sql</code>)</h2>
+  <ul>
+    <li>Proyecto <b>quant-core-engine-f0</b>. Extensión <code>pgcrypto</code> (<code>gen_random_uuid()</code>). Función <code>set_updated_at()</code> (trigger <code>before update</code>) en <b>4</b> tablas: watchlists, orders, option_chains, strategies.</li>
+    <li><b>RLS activado sin políticas</b> en las 6 tablas: solo el backend con la llave secreta (<code>sb_secret_…</code>) lee y escribe. Migración <b>idempotente</b> (<code>if not exists</code>, <code>create or replace</code>, <code>drop trigger if exists</code>).</li>
+  </ul>
+  <div class="tw"><table>
+    <tr><th>Tabla</th><th>Columnas / reglas destacadas</th></tr>
+    <tr><td>watchlists</td><td><code>id uuid pk</code>, <code>alpaca_id uuid unique</code>, <code>name</code>, <code>symbols text[] default '{}'</code></td></tr>
+    <tr><td>orders</td><td><code>alpaca_id uuid unique not null</code>, symbol, order_class, side, type, time_in_force, qty/filled_qty/limit_price/stop_price/filled_avg_price <code>numeric</code>, status, <code>legs jsonb</code>, <code>raw jsonb</code>; índices en symbol y status</td></tr>
+    <tr><td>option_chains</td><td>underlying, expiration_from/to <code>date</code>, <code>option_type check (call|put)</code>, strike_min/max, underlying_price, contracts_count, last_refreshed_at</td></tr>
+    <tr><td>option_quotes</td><td><code>id bigint identity</code>, <code>chain_id → option_chains on delete cascade</code>, symbol, strike, expiration, open_interest, bid/ask/last, implied_volatility, delta…rho, quote_time; <code>unique (chain_id, symbol)</code>; índice (chain_id, expiration, strike)</td></tr>
+    <tr><td>strategies</td><td>name, underlying, description, <code>qty int check &gt; 0</code>, <code>order_type check (market|limit)</code>, limit_price, <code>status check (draft|submitted|canceled)</code> default <code>draft</code>, alpaca_order_id</td></tr>
+    <tr><td>strategy_legs</td><td><code>strategy_id → strategies on delete cascade</code>, <code>symbol</code> OCC, <code>side check (buy|sell)</code>, <code>ratio_qty int check &gt; 0</code>, <code>position_intent check (4 valores)</code></td></tr>
+  </table></div>
+</section>
+
+<!-- ===================== 11. CALIDAD ===================== -->
+<section class="gsec" id="g-calidad" data-title="11 · Pruebas, seguridad y operación">
+  <h2>11 · Pruebas, seguridad, monitoreo y proceso</h2>
+  <div class="tw"><table>
+    <tr><th>Tipo</th><th>Dónde / cómo</th><th>Dato clave</th></tr>
+    <tr><td>Unitarias</td><td><code>pruebas/unitarias/</code> (api, indicadores, motor, pantallaUnica, plantillas, recomendador, stats) y <code>npm run motor</code> (Rust)</td><td>15 pruebas Rust</td></tr>
+    <tr><td>Integración</td><td><code>integracion/gateway.test.js</code></td><td>gateway ↔ servicio; servicio caído → 503</td></tr>
+    <tr><td>Contrato</td><td><code>contrato/openapi.test.js</code></td><td>OpenAPI ↔ rutas; contrato de <code>/health</code></td></tr>
+    <tr><td>E2E / smoke</td><td><code>e2e/smoke.js</code> (<code>npm run smoke</code>)</td><td>26 pasos contra Alpaca y Supabase reales</td></tr>
+    <tr><td>Carga</td><td><code>carga/k6.js</code> (k6 en Docker)</td><td>umbral p95 &lt; 800 ms</td></tr>
+    <tr><td>Seguridad</td><td><code>npm run seguridad</code></td><td><code>npm audit</code> + OWASP ZAP baseline</td></tr>
+    <tr><td>Manuales</td><td><code>colecciones/f0-collection.json</code> (28 peticiones), <code>f0.http</code>, MCP <code>f0-api</code></td><td>herramientas: <code>f0_status</code>, <code>f0_list_requests</code>, <code>f0_run_request</code>, <code>f0_run_all</code>, <code>f0_call</code>, <code>f0_graphql</code>, <code>f0_reload_collection</code></td></tr>
+    <tr><td>Regresión</td><td><code>.github/workflows/quant-ci.yml</code></td><td><code>npm test</code> + <code>cargo test</code> en cada push</td></tr>
+    <tr><td>Monitoreo</td><td><code>/health</code>, <code>/metrics</code>, Prometheus :9090, Grafana :3000 (admin/admin)</td><td><code>docker compose up -d --build</code></td></tr>
+  </table></div>
+  <h3>Configuración (<code>config.js</code>)</h3>
+  <ul>
+    <li><code>baseUrl</code> quita barras finales y sufijos <code>/v2</code>, <code>/v1beta1</code>. Paper por defecto: <code>https://paper-api.alpaca.markets</code>; datos: <code>https://data.alpaca.markets</code>.</li>
+    <li>Feeds: <code>ALPACA_OPTIONS_FEED = indicative</code> (gratis, retrasado; <code>opra</code> es tiempo real de pago) y <code>ALPACA_STOCKS_FEED = iex</code>.</li>
+    <li><code>missingConfig()</code> revisa 4 variables: <code>ALPACA_KEY_ID</code>, <code>ALPACA_SECRET_KEY</code>, <code>SUPABASE_URL</code>, <code>SUPABASE_SECRET_KEY</code>. <code>RISK_FREE_RATE</code> por defecto 0.04. IA: <code>OPENROUTER_API_KEY</code>, <code>OPENROUTER_MODEL</code>, <code>AI_FALLBACK_MODELS</code>, <code>AI_TIMEOUT_MS</code> (25 000).</li>
+  </ul>
+  <h3>Pantalla única (change <code>pantalla-unica</code>)</h3>
+  <ul>
+    <li>Problema medido: una carga disparaba <b>32 peticiones</b> (20 eran <code>GET /strategies/:id</code> una por una). Alpaca limita a <b>200/min</b>.</li>
+    <li>Solución: <code>GET /market/overview</code> (cotización + indicadores + vencimientos), <code>lib/cache.js</code> (<code>memo</code>), <code>GET /strategies?priced=true</code>, candado y bloqueo de 60 s en <code>/auto</code>, <code>lib/symbol.js</code> único.</li>
+    <li>Límite: cachés en memoria por proceso; con réplicas pasar a <b>Redis</b>.</li>
+  </ul>
+  <h3>Flujo OpenSpec (SDD)</h3>
+  <ol>
+    <li><code>proposal.md</code> (por qué, qué cambia, impacto) → <code>specs/</code> delta (escenarios Dado/Cuando/Entonces) → <code>design.md</code> → <code>tasks.md</code> (cada tarea con prueba automática).</li>
+    <li>Implementar por corte vertical y correr pruebas.</li>
+    <li><b>Archive</b>: se fusionan los deltas en <code>openspec/specs/</code> y la carpeta pasa a <code>changes/archive/AAAA-MM-DD-nombre</code>.</li>
+  </ol>
+</section>
+
+<!-- ===================== 12. TRAMPAS ===================== -->
+<section class="gsec" id="g-trampas" data-title="12 · Detalles finos del código">
+  <h2>12 · Detalles finos que suelen preguntar</h2>
+  <ul>
+    <li><code>volSide(1.1)</code> es <code>'long'</code>: el umbral es <code>&gt;</code> estricto.</li>
+    <li><code>Kind::from_f64(0.0)</code> es <b>Put</b>.</li>
+    <li>El Monte Carlo del motor fuerza <b>paths par</b>; pedir 20 001 simula 20 000.</li>
+    <li><code>qty</code> en las piernas lleva el signo (largo +, corto −); <code>side</code> solo existe en la capa de API.</li>
+    <li>VaR y CVaR se devuelven como pérdida <b>positiva</b>.</li>
+    <li>El árbol y Black-Scholes comparten <code>Contract</code>, pero el riesgo (<code>risk.rs</code>) revalúa <b>siempre con BS</b> (aproximación europea).</li>
+    <li>Las rutas fijas de <code>strategies</code> (<code>/recommend</code>, <code>/auto</code>) van <b>antes</b> de <code>/:id</code>.</li>
+    <li>Yoga se monta <b>antes</b> de <code>express.json()</code>.</li>
+    <li><code>DELETE /orders</code> responde <b>207</b>, no 204.</li>
+    <li><code>priceStrategy</code> solo marca la pierna como sin precio si faltan <i>ambos</i> <code>bp</code> y <code>ap</code>; con solo uno de los dos el <code>mid</code> sale <code>NaN</code>.</li>
+    <li>El README dice 4 microservicios; el código tiene 5 (<code>ai</code>, :3065).</li>
+    <li>El comentario de <code>risk.service</code> dice «IV promedio ponderado», pero el cálculo es un promedio simple.</li>
+    <li>El Monte Carlo usa una sola vol, por eso el valor esperado puede salir negativo aunque cada pierna esté a precio de mercado (skew).</li>
+  </ul>
+</section>
+  </div>
+</section>
+
+<section id="view-exam" class="exam" role="tabpanel" aria-labelledby="tab-exam" hidden>
+  <div class="ex-head">
+    <h2>Formulario de repaso</h2>
+    <p class="ex-intro" id="ex-intro"></p>
+    <div class="filters">
+      <div class="chips" id="exf-secs" aria-label="Filtrar por bloque"></div>
+    </div>
+    <div class="filters">
+      <label for="exf-lv">Nivel</label>
+      <select id="exf-lv"><option value="0">Todos</option><option value="1">1 · base</option><option value="2">2 · intermedio</option><option value="3">3 · difícil</option></select>
+      <label for="exf-ty">Tipo</label>
+      <select id="exf-ty"><option value="">Todos</option><option value="mc">Opción múltiple</option><option value="ms">Varias correctas</option><option value="tf">Verdadero / falso</option><option value="fi">Completar</option><option value="nu">Cálculo</option><option value="ma">Relacionar</option><option value="or">Ordenar</option></select>
+      <label for="exf-st" id="exf-st-l" hidden>Estado</label>
+      <select id="exf-st" hidden><option value="">Todas</option><option value="fail">Solo falladas</option><option value="pass">Solo correctas</option></select>
+    </div>
+  </div>
+  <div id="result" hidden></div>
+  <div id="qlist"></div>
+</section>
+</main>
+
+<div class="dock" id="dock" hidden>
+  <div class="dock-in">
+    <div class="prog" id="prog"></div>
+    <button class="btn" id="btn-reset" type="button">Reiniciar</button>
+    <button class="btn pri" id="btn-grade" type="button">Calificar</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   GLOSARIO  [categoría, término, definición]
+   ============================================================ */
+const GLOS = [
+['Opciones','Subyacente (underlying)','Activo del que deriva la opción, p. ej. AAPL. En el código: <code>underlying</code> / <code>underlying_symbol</code>.'],
+['Opciones','Call','Derecho a <b>comprar</b> el subyacente al strike hasta (o en) el vencimiento. En el motor: tipo 1.'],
+['Opciones','Put','Derecho a <b>vender</b> el subyacente al strike. En el motor: tipo −1.'],
+['Opciones','Strike (precio de ejercicio)','Precio pactado. En OCC va multiplicado por 1000 en 8 dígitos (<code>00200000</code> = 200.00).'],
+['Opciones','Spot','Precio actual del subyacente. Sale de <code>latestTrade.p</code> o, si no hay, <code>dailyBar.c</code>.'],
+['Opciones','Vencimiento (expiration)','Fecha en que expira el contrato. El código asume el cierre 16:00 de Nueva York ≈ <code>T20:00:00Z</code>.'],
+['Opciones','Prima (premium)','Precio de la opción por acción. Un contrato cubre 100 acciones.'],
+['Opciones','Multiplicador / tamaño del contrato','100 acciones por contrato (<code>CONTRACT_SIZE</code>, <code>multiplier</code>); 1 para acciones.'],
+['Opciones','ITM / ATM / OTM','En el dinero (call: spot &gt; strike), en el dinero exacto, fuera del dinero. ATM = strike más cercano al spot.'],
+['Opciones','Valor intrínseco y extrínseco','Intrínseco = max(S − K, 0) en call (max(K − S, 0) en put); extrínseco = prima − intrínseco (tiempo y volatilidad).'],
+['Opciones','Bid / Ask / Mid','Precio que paga el comprador (<code>bp</code>), precio que pide el vendedor (<code>ap</code>) y su promedio (<code>(bp+ap)/2</code>). Sin cotización se usa el último trade.'],
+['Opciones','Open interest','Contratos abiertos vigentes (<code>open_interest</code>).'],
+['Opciones','Símbolo OCC','Formato de la Options Clearing Corporation: raíz + AAMMDD + C/P + strike×1000 en 8 dígitos. Ej.: <code>AAPL251219C00200000</code>.'],
+['Opciones','Cadena de opciones (option chain)','Conjunto de contratos de un subyacente con sus cotizaciones. Tabla <code>option_chains</code> + <code>option_quotes</code>.'],
+['Opciones','Ejercicio americano / europeo','Americano: se puede ejercer antes del vencimiento (árbol binomial). Europeo: solo al vencimiento (Black-Scholes).'],
+['Opciones','Ejercicio anticipado (early exercise)','Ejercer antes de expirar; su valor extra es <code>early_exercise_premium</code> = americano − europeo.'],
+['Opciones','Tasa libre de riesgo (r)','En el código <code>RISK_FREE_RATE</code> (0.04). Entra a BS como <code>rate</code> y descuenta con e<sup>−rT</sup>.'],
+['Opciones','Dividendo continuo (q)','Rendimiento por dividendo continuo (<code>div</code>); descuenta el spot con e<sup>−qT</sup>.'],
+['Opciones','Paridad put-call','C − P = S·e<sup>−qT</sup> − K·e<sup>−rT</sup> para europeas. Una prueba del motor la verifica con error &lt; 1e-12.'],
+['Opciones','Cotas de no-arbitraje','Rango de precios posibles de una opción; fuera de él la IV no existe (<code>NaN</code>).'],
+['Opciones','Forward descontado','S·e<sup>−qT</sup> − K·e<sup>−rT</sup>; el motor lo usa como valor al vencer o con vol 0.'],
+['Griegas y modelos','Delta (Δ)','Cambio del precio por +1 en el spot. Call 0…1, put −1…0.'],
+['Griegas y modelos','Gamma (Γ)','Cambio de delta por +1 en el spot. Igual para call y put.'],
+['Griegas y modelos','Vega','Cambio de precio por +1 <b>punto</b> de volatilidad (÷100 en el motor).'],
+['Griegas y modelos','Theta (Θ)','Cambio de precio por <b>1 día calendario</b> (÷365). Normalmente negativa para largas.'],
+['Griegas y modelos','Rho (ρ)','Cambio de precio por +1 % de tasa (÷100).'],
+['Griegas y modelos','Black-Scholes-Merton (BSM)','Modelo analítico europeo con dividendo continuo. <code>bs::price</code>, <code>bs::greeks</code>.'],
+['Griegas y modelos','d1 y d2','d1 = [ln(S/K) + (r − q + σ²/2)T]/(σ√T); d2 = d1 − σ√T.'],
+['Griegas y modelos','N(x) y n(x)','Acumulada y densidad de la normal estándar (<code>norm_cdf</code>, <code>norm_pdf</code>).'],
+['Griegas y modelos','Árbol binomial CRR','Cox-Ross-Rubinstein: u = e<sup>σ√dt</sup>, d = 1/u. Permite ejercicio americano.'],
+['Griegas y modelos','Probabilidad neutral al riesgo (p)','p = (e<sup>(r−q)dt</sup> − d)/(u − d) en el árbol.'],
+['Griegas y modelos','Volatilidad implícita (IV)','Volatilidad que hace que BS iguale el precio de mercado; se resuelve con Newton + bisección.'],
+['Griegas y modelos','Newton-Raphson','Iteración vol ← vol − (precio − objetivo)/vega. Si falla se pasa a bisección.'],
+['Griegas y modelos','Bisección','Búsqueda por mitades en [lo, hi] = [1e-6, 5.0]; converge siempre.'],
+['Griegas y modelos','Brenner-Subrahmanyam','Aproximación inicial de la IV: √(2π/T)·(precio/spot).'],
+['Griegas y modelos','Skew de volatilidad','Las puts OTM cotizan con más IV; explica por qué el valor esperado del Monte Carlo (vol única) sale negativo.'],
+['Griegas y modelos','IV crush','Caída de la IV (típica tras resultados). El estrés extendido la simula con <code>ivDrop = −min(0.10, vol·0.5)</code>.'],
+['Griegas y modelos','Volatilidad histórica (HV)','Desviación de los retornos logarítmicos × √252. <code>hv30</code> usa 30 retornos; <code>hvLongRun</code> es el promedio de ventanas pasadas.'],
+['Griegas y modelos','Razón IV/HV (ivToHv)','Si &gt; 1.1 la IV está cara (vender vol); si no, comprar vol.'],
+['Griegas y modelos','Estructura temporal (termSlope)','IV del vencimiento cercano ÷ IV del lejano.'],
+['Estrategias','Pierna (leg)','Cada contrato de una estrategia. En API: <code>{symbol, side, ratio_qty, position_intent}</code>; en el motor: 6 números.'],
+['Estrategias','Estrategia multi-leg / mleg','Orden de varias piernas (<code>order_class: mleg</code>), máximo 4 en Alpaca (<code>MAX_LEGS</code>).'],
+['Estrategias','position_intent','<code>buy_to_open</code>, <code>buy_to_close</code>, <code>sell_to_open</code>, <code>sell_to_close</code>.'],
+['Estrategias','Posición larga / corta','Larga: comprada (qty &gt; 0). Corta: vendida (qty &lt; 0).'],
+['Estrategias','Débito / crédito','Neto positivo = pagas (débito); neto negativo = cobras (crédito).'],
+['Estrategias','Long straddle','Compra call y put ATM del mismo vencimiento. Gana si el precio se mueve mucho. Pérdida máxima: la prima.'],
+['Estrategias','Short straddle','Vende call y put ATM. Cobra prima; riesgo grande si hay movimiento.'],
+['Estrategias','Long / short strangle','Como el straddle pero con strikes OTM (delta ≈ 0.25 en F0). Más barato / menos prima.'],
+['Estrategias','Calendar spread','Vende call cercana y compra call lejana al <b>mismo strike</b>. Se beneficia del paso del tiempo y de una vol cercana mayor.'],
+['Estrategias','Diagonal spread','Calendar con strikes distintos: vende call cercana (delta 0.30) y compra call lejana ATM.'],
+['Estrategias','Spread vertical','Compra y venta del mismo tipo y vencimiento con distinto strike. Reg T lo reconoce y limita el margen a su pérdida máxima.'],
+['Estrategias','Plantilla (template)','Función de <code>web/templates.js</code> (<code>build</code>) que elige las piernas desde una cadena.'],
+['Estrategias','Ranking / score','Puntaje 0–100 del recomendador: 40 % prob. de ganancia + 30 % valor esperado/riesgo + 30 % encaje.'],
+['Riesgo y estadística','P&L','Ganancia o pérdida respecto al valor base de la posición.'],
+['Riesgo y estadística','Monte Carlo','Simula miles de futuros del subyacente y revalúa la estrategia en cada uno.'],
+['Riesgo y estadística','GBM (movimiento browniano geométrico)','S<sub>T</sub> = S·exp((r − q − σ²/2)T + σ√T·Z). Supone retornos lognormales sin saltos.'],
+['Riesgo y estadística','Variables antitéticas','Para cada Z se usa también −Z: baja la varianza del estimador. Por eso <code>paths</code> es par.'],
+['Riesgo y estadística','Semilla (seed)','Hace reproducible la simulación. El motor sustituye 0 por una constante; la API usa 42.'],
+['Riesgo y estadística','Trayectoria (path)','Una simulación individual. <code>paths</code> por defecto: 10 000 (wrapper), 50 000 (riesgo), 20 000 (recomendador).'],
+['Riesgo y estadística','Probabilidad de ganancia (probProfit)','Fracción de trayectorias con P&amp;L &gt; 0.'],
+['Riesgo y estadística','Valor esperado (EV)','Promedio del P&amp;L simulado (<code>mean</code>).'],
+['Riesgo y estadística','VaR 95 %','Pérdida que se supera solo en el 5 % de los peores casos; se reporta en positivo.'],
+['Riesgo y estadística','CVaR / Expected Shortfall','Pérdida <b>promedio</b> dentro de ese 5 % peor.'],
+['Riesgo y estadística','VaR histórico vs. Monte Carlo','Histórico: re-juega movimientos reales del último año. MC: simula con GBM. Si se parecen, el modelo es creíble.'],
+['Riesgo y estadística','Drawdown máximo','Mayor caída porcentual desde un máximo previo.'],
+['Riesgo y estadística','Sharpe','Rendimiento en exceso de la tasa libre por unidad de volatilidad total.'],
+['Riesgo y estadística','Sortino','Como Sharpe, penaliza solo la volatilidad bajista.'],
+['Riesgo y estadística','Beta','Cov(activo, índice)/Var(índice) contra SPY.'],
+['Riesgo y estadística','Delta ponderado por beta','Delta de la estrategia · beta · spot/spotSPY: «acciones de SPY equivalentes».'],
+['Riesgo y estadística','Intervalo de confianza 95 %','μ ± 1.96·σ/√n (media) o p ± 1.96·√(p(1−p)/n) (proporción).'],
+['Riesgo y estadística','Desviación estándar muestral','Divide entre n−1 (Bessel).'],
+['Riesgo y estadística','Retorno logarítmico','ln(Pₜ/Pₜ₋₁): aditivo en el tiempo y coherente con GBM.'],
+['Riesgo y estadística','Margen Reg T','Regla de margen por pierna estilo CBOE (largas = prima, acciones = 50 %, cortas con fórmula).'],
+['Riesgo y estadística','Margen SPAN','Pérdida máxima en 16 escenarios de precio/vol (o el mínimo de opciones cortas, el mayor).'],
+['Riesgo y estadística','Scan risk / SOM','Peor pérdida de los 16 escenarios / Short Option Minimum (contratos cortos × mínimo por contrato).'],
+['Riesgo y estadística','Calibración','Comparar la probabilidad anunciada con la frecuencia real de ganancia (backtest).'],
+['Riesgo y estadística','Backtest','Reproduce el recomendador en el pasado con datos de ese día y mide el P&amp;L real a ~30 días.'],
+['Riesgo y estadística','Indicadores técnicos','SMA, EMA, Bollinger, RSI, MACD sobre cierres diarios.'],
+['Riesgo y estadística','Fuerza de tendencia','(EMA9 − SMA20)/SMA20. Positivo = impulso alcista.'],
+['Riesgo y estadística','Posición en Bollinger','0 banda inferior, 0.5 media, 1 banda superior.'],
+['Mercado y broker','Alpaca','Broker/API. F0 usa Trading API (paper) y Market Data API.'],
+['Mercado y broker','Paper trading','Cuenta simulada; nunca se mueve dinero real (<code>paper-api.alpaca.markets</code>).'],
+['Mercado y broker','Feed indicative / opra','indicative: opciones gratis y retrasadas; opra: tiempo real con suscripción.'],
+['Mercado y broker','Feed IEX','Fuente gratuita de acciones (<code>ALPACA_STOCKS_FEED</code>).'],
+['Mercado y broker','Snapshot','Foto de cotización/último trade/IV/griegas de un símbolo. Se piden de 100 en 100.'],
+['Mercado y broker','Velas OHLCV','Open, High, Low, Close, Volume. <code>o h l c v</code> en la API de Alpaca.'],
+['Mercado y broker','Watchlist','Lista de seguimiento de tickers.'],
+['Mercado y broker','Time in force','day, gtc, opg, cls, ioc, fok. Órdenes de opciones: solo <code>day</code>.'],
+['Mercado y broker','Poder de compra (buying power)','Capital disponible para operar; el filtro de /auto exige margen Reg T ≤ buyingPower.'],
+['Mercado y broker','OpenRouter','Pasarela de modelos de lenguaje usada por el microservicio <code>ai</code>.'],
+['Código y arquitectura','Microservicio','Proceso pequeño e independiente por capacidad (watchlists, orders, option-chains, strategies, ai).'],
+['Código y arquitectura','API Gateway / proxy inverso','Punto único :3060 que reenvía cada ruta a su microservicio.'],
+['Código y arquitectura','Middleware','Función <code>(req, res, next)</code> que se encadena en Express.'],
+['Código y arquitectura','Router','<code>express.Router()</code> con las rutas de un recurso.'],
+['Código y arquitectura','Servicio (capa)','Objeto con la lógica de negocio (<code>strategiesService</code>…). Lo comparten REST y GraphQL.'],
+['Código y arquitectura','DTO','Objeto de transferencia: forma camelCase que ve el cliente (<code>toDto</code>, <code>toOrderDto</code>).'],
+['Código y arquitectura','Espejo (mirror)','Copia local en Supabase de datos cuya fuente es Alpaca.'],
+['Código y arquitectura','REST / GraphQL','Dos interfaces sobre los mismos servicios. GraphQL con GraphQL Yoga en <code>/graphql</code>.'],
+['Código y arquitectura','OpenAPI / Swagger UI','Contrato REST (<code>docs/openapi.js</code>) y su visor en <code>/api-docs</code>.'],
+['Código y arquitectura','OpenSpec / SDD','Spec Driven Development: la especificación gobierna el código (proposal → specs → tasks → archive).'],
+['Código y arquitectura','HttpError','Error con <code>status</code> y <code>details</code>; lo traduce <code>errorHandler</code>.'],
+['Código y arquitectura','Función pura','Misma entrada, misma salida, sin red ni estado (<code>lib/stats.js</code>, <code>lib/scoring.js</code>).'],
+['Código y arquitectura','memo / TTL / promesa en vuelo','Caché con vida limitada que comparte la misma promesa entre llamadas simultáneas.'],
+['Código y arquitectura','Singleton','Una sola instancia reutilizada: <code>client ??=</code> en <code>db()</code>.'],
+['Código y arquitectura','Falla cerrado (fail closed)','Si no se puede validar (IA caída), no se opera.'],
+['Código y arquitectura','dryRun','Calcula todo pero no envía la orden.'],
+['Código y arquitectura','shortcut (comentario)','Marca una simplificación consciente con su límite (caché en memoria, GraphQL en proceso).'],
+['Código y arquitectura','ESM','Módulos <code>import/export</code> de Node ≥ 20.'],
+['Código y arquitectura','camelCase / snake_case','Respuestas JSON en camelCase; Alpaca y SQL en snake_case.'],
+['Código y arquitectura','CORS y Private Network Access','Permiten que el front en GitHub Pages (https) llame a la API en localhost.'],
+['Código y arquitectura','CSP','Content-Security-Policy: limita de dónde se cargan scripts y estilos.'],
+['Rust y WASM','FFI','Interfaz de funciones foráneas: JS llama a funciones Rust exportadas.'],
+['Rust y WASM','WebAssembly (WASM)','Binario portable (<code>quant_core.wasm</code>) con memoria lineal propia.'],
+['Rust y WASM','Memoria lineal','Bloque contiguo de bytes compartido entre JS y WASM; se pasan punteros y se leen con <code>Float64Array</code>.'],
+['Rust y WASM','Stride','Cantidad de números por registro en un arreglo plano (7, 6, 5, 6).'],
+['Rust y WASM','Procesamiento por lotes (batch)','Cruzar la frontera una vez con N contratos en vez de N veces.'],
+['Rust y WASM','ABI version','Número (100) que el wrapper comprueba al cargar; cambia si cambia un layout.'],
+['Rust y WASM','#[no_mangle] extern "C"','Exporta la función con su nombre exacto y convención C.'],
+['Rust y WASM','unsafe','Bloque que desreferencia punteros crudos (<code>slice::from_raw_parts</code>); el comentario <code># Safety</code> documenta el contrato.'],
+['Rust y WASM','struct update (..Default::default())','Rellena los campos restantes con su valor por defecto.'],
+['Rust y WASM','RNG xorshift64* + Box-Muller','Generador determinista y transformación a normal estándar.'],
+['Datos y operación','Supabase / PostgreSQL','Base de datos del proyecto <code>quant-core-engine-f0</code>.'],
+['Datos y operación','RLS','Row Level Security activado sin políticas: solo la llave secreta accede.'],
+['Datos y operación','Migración idempotente','Se puede ejecutar varias veces sin romper nada.'],
+['Datos y operación','UUID','Identificador de 128 bits; <code>assertUuid</code> lo valida.'],
+['Datos y operación','Prometheus / Grafana','Recolección y panel de métricas (:9090 y :3000).'],
+['Datos y operación','Health check','<code>GET /health</code>: 200 ok o 503 degraded.'],
+['Datos y operación','k6 / OWASP ZAP','Prueba de carga y escáner de seguridad baseline.'],
+['Datos y operación','Smoke test','Recorrido corto que prueba que todo responde (26 pasos).'],
+['Datos y operación','Prueba de contrato','Verifica que las rutas reales coinciden con el OpenAPI.'],
+['Datos y operación','MCP','Model Context Protocol; <code>f0-api</code> deja a Claude Code ejecutar la colección.'],
+];
+
+/* ============================================================
+   GUÍA: índice lateral, glosario y pestañas
+   ============================================================ */
+(function guide(){
+  const nav = document.getElementById('gnav');
+  const secs = [...document.querySelectorAll('.gsec')];
+  secs.forEach(s => {
+    const a = document.createElement('a');
+    a.href = '#' + s.id;
+    a.textContent = s.dataset.title;
+    a.addEventListener('click', (ev) => { ev.preventDefault(); s.scrollIntoView({behavior:'smooth', block:'start'}); });
+    a.dataset.id = s.id;
+    nav.appendChild(a);
+  });
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) nav.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.dataset.id === e.target.id)); });
+    }, {rootMargin:'-90px 0px -65% 0px'});
+    secs.forEach(s => io.observe(s));
+  }
+  const cats = ['Todas', ...new Set(GLOS.map(g => g[0]))];
+  let cat = 'Todas';
+  const q = document.getElementById('gl-q'), list = document.getElementById('gl-list'), cnt = document.getElementById('gl-count'), chips = document.getElementById('gl-cats');
+  const strip = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+  const draw = () => {
+    const t = strip(q.value.trim());
+    const rows = GLOS.filter(g => (cat === 'Todas' || g[0] === cat) && (!t || strip(g[1] + ' ' + g[2].replace(/<[^>]+>/g,'')).includes(t)));
+    list.innerHTML = rows.map(g => `<div class="gi"><span class="c">${g[0]}</span><b>${g[1]}</b><p>${g[2]}</p></div>`).join('') || '<p>Sin resultados.</p>';
+    cnt.textContent = rows.length + ' de ' + GLOS.length + ' términos';
+  };
+  cats.forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = c; b.setAttribute('aria-pressed', c === cat);
+    b.addEventListener('click', () => { cat = c; chips.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x === b)); draw(); });
+    chips.appendChild(b);
+  });
+  q.addEventListener('input', draw);
+  draw();
+})();
+
+/* ============================================================
+   CONSTRUCTORES DE PREGUNTAS
+   sec = bloque, lv = nivel 1-3. La primera opción escrita es la correcta; se baraja al mostrar.
+   ============================================================ */
+const BLOCKS = {
+  A:'Arquitectura y gateway', B:'Motor Rust', C:'Wrapper y FFI', D:'Cálculo numérico',
+  E:'API REST y GraphQL', F:'Servicios', G:'Estadística y riesgo', H:'Recomendador, IA y auto',
+  I:'Base de datos', J:'Calidad y operación', K:'Lectura de código'
+};
+const Q = [];
+const add = (o) => { o.id = Q.length + 1; Q.push(o); };
+const MC = (sec, lv, q, opts, why, code) => add({t:'mc', sec, lv, q, opts, why, code});
+const MS = (sec, lv, q, ok, bad, why, code) => add({t:'ms', sec, lv, q, ok, bad, why, code});
+const TF = (sec, lv, q, a, why, code) => add({t:'tf', sec, lv, q, a, why, code});
+const FI = (sec, lv, q, a, why, code) => add({t:'fi', sec, lv, q, a: Array.isArray(a) ? a : [a], why, code});
+const NU = (sec, lv, q, a, tol, why, unit, code) => add({t:'nu', sec, lv, q, a, tol, why, unit, code});
+const MA = (sec, lv, q, pairs, why, extra) => add({t:'ma', sec, lv, q, pairs, extra: extra || [], why});
+const OR = (sec, lv, q, items, why) => add({t:'or', sec, lv, q, items, why});
+</script>
+<script>
+
+/* ====================== A · ARQUITECTURA ====================== */
+MC('A',1,`¿En qué puerto escucha el gateway por defecto?`,[`3060`,`3061`,`3000`,`8080`],`config.port = Number(env.PORT ?? 3060). 3061–3065 son los microservicios.`);
+MA('A',1,`Relaciona cada microservicio con su puerto.`,[[`watchlists`,`3061`],[`orders`,`3062`],[`option-chains`,`3063`],[`strategies`,`3064`],[`ai`,`3065`]],`Definido en SERVICES (microservices/index.js) y en config.services.`);
+MA('A',2,`Relaciona la ruta pública con el microservicio que la atiende (serviceOwnerByPath).`,[[`/account`,`orders`],[`/market`,`option-chains`],[`/strategies`,`strategies`],[`/ai`,`ai`],[`/watchlists`,`watchlists`]],`SERVICES.orders.paths = [orders, account]; SERVICES['option-chains'].paths = [option-chains, market].`);
+NU('A',2,`Con la configuración actual, ¿cuántos servicios consulta el /health agregado del gateway?`,5,0,`Recorre Object.entries(urls) con urls = config.services: watchlists, orders, option-chains, strategies y ai. Los comentarios dicen «los 4».`,`servicios`);
+TF('A',2,`createApp registra Yoga (/graphql) antes de express.json() porque Yoga lee el cuerpo de la petición por su cuenta.`,true,`Si express.json() se ejecutara antes consumiría el stream del body y Yoga no podría leerlo.`);
+OR('A',3,`Ordena los pasos de createApp desde que entra la petición hasta el manejo de error final.`,[`securityHeaders`,`Header Private Network Access`,`cors()`,`morgan('dev')`,`monitoring.track`,`Yoga en /graphql`,`express.json()`,`apiHandler en config.apiUrl`,`notFoundHandler`,`errorHandler`],`Ver app.js: /health, /metrics, GET / , /app y /api-docs van entre json() y apiHandler.`);
+MC('A',2,`Cuando un microservicio no responde, ¿qué hace el proxy del gateway?`,[`Lanza HttpError 503 «El microservicio X no responde»`,`Reintenta tres veces y devuelve 500`,`Responde 404 con el nombre del servicio`,`Devuelve 200 con cuerpo vacío`],`El fetch está en try/catch: catch → new HttpError(503, ...).`);
+MS('A',2,`¿Qué métodos HTTP NO reenvía con cuerpo el proxy del gateway?`,[`GET`,`HEAD`,`DELETE`],[`POST`,`PUT`,`PATCH`],`body: ['GET','HEAD','DELETE'].includes(req.method) ? undefined : JSON.stringify(req.body ?? {}).`);
+NU('A',3,`¿Cuántos milisegundos de timeout usa el gateway al reenviar una petición a un microservicio?`,30000,0,`AbortSignal.timeout(30_000). El health de cada servicio usa 3000.`,`ms`);
+NU('A',3,`¿Cuántos milisegundos de timeout tiene askAi (autoTrade → servicio ai) con la configuración por defecto?`,30000,0,`config.ai.timeoutMs (25 000) + 5000.`,`ms`);
+TF('A',3,`GraphQL se ejecuta dentro del gateway y llama a los servicios en proceso, no por HTTP a los microservicios.`,true,`Lo declara el comentario «shortcut» de gatewayApp; si crece, los resolvers deberían llamar por HTTP.`);
+FI('A',1,`¿Qué función de node:child_process usa start.js para levantar cada proceso con «all»?`,[`fork`,`fork()`],`fork(fileURLToPath(import.meta.url), [serviceName]) para cada servicio y para el gateway.`);
+MC('A',2,`¿Para qué sirve req.metricRoute = '/' + routePrefix en el proxy?`,[`Etiquetar las métricas del gateway por prefijo y no por ruta completa`,`Reescribir la URL hacia el microservicio`,`Habilitar CORS para esa ruta`,`Evitar el timeout de 30 s`],`Mantiene bajo el número de series de Prometheus (cardinalidad).`);
+MC('A',2,`Según OpenSpec, ¿cuál es la fuente de verdad de cada dato?`,[`Alpaca para watchlists y órdenes; Supabase para cadenas y estrategias`,`Supabase para todo`,`Alpaca para todo`,`El front guarda la verdad en localStorage`],`config.yaml: Alpaca autoritativa con espejo en Supabase; cadenas y estrategias son entidades propias.`);
+TF('A',2,`En strategies, la ruta GET /recommend debe declararse antes de GET /:id.`,true,`Si no, Express interpretaría «recommend» como un id.`);
+MC('A',2,`El middleware uuid de routes/index.js, ¿qué responde cuando :id no es un UUID?`,[`400 «El id debe ser un UUID»`,`404`,`422`,`500`],`assertUuid lanza badRequest.`);
+FI('A',2,`¿Qué encabezado de respuesta agrega createApp cuando llega Access-Control-Request-Private-Network? (nombre completo)`,[`Access-Control-Allow-Private-Network`],`Permite que el front en GitHub Pages (https) llame a la API en localhost.`);
+MC('A',2,`¿Qué problema resuelve Private Network Access en este proyecto?`,[`Una página https pública que llama a http://localhost`,`La autenticación con Supabase`,`El límite de 200 peticiones/min de Alpaca`,`La compresión de respuestas`],`Chrome pregunta en el preflight antes de dejar que un sitio público acceda a una IP privada.`);
+MA('A',2,`Relaciona cada tipo de dato con la convención de nombres que usa.`,[[`Respuestas JSON de la API`,`camelCase`],[`Cuerpos enviados a Alpaca`,`snake_case`],[`Columnas de Supabase`,`snake_case`],[`Campos GraphQL`,`camelCase`]],`openspec/config.yaml: camelCase hacia fuera, snake_case hacia Alpaca; los DTO traducen.`);
+MC('A',3,`¿Qué principio de OpenSpec prohíbe puertos, límites y regex «sueltos» en el código?`,[`Cero literales mágicos`,`Composición sobre herencia`,`Persistencia justo a tiempo`,`Corte vertical`],`Los literales deben vivir en constantes con nombre.`);
+MC('A',3,`El ciclo de OpenSpec termina con «archive». ¿Qué ocurre ahí?`,[`Los deltas de specs se fusionan en openspec/specs y el cambio pasa a changes/archive`,`Se borra la carpeta del cambio`,`Se publica el front en GitHub Pages`,`Se corren solo las pruebas de carga`],`Guía de archive del config.yaml.`);
+
+/* ====================== B · MOTOR RUST ====================== */
+MA('B',1,`Relaciona cada constante del motor con su valor.`,[[`CONTRACT_STRIDE`,`7`],[`GREEKS_STRIDE`,`6`],[`TREE_STRIDE`,`5`],[`LEG_STRIDE`,`6`],[`SPAN_HEADER`,`4`],[`MC_STATS`,`9`]],`lib.rs y risk.rs.`,[`16`,`20`]);
+NU('B',1,`En el buffer de un contrato, ¿qué índice (offset) ocupa la tasa de dividendo (div)?`,5,0,`[tipo0, spot1, strike2, t3, rate4, div5, vol|precio6].`,`índice`);
+MC('B',2,`¿Qué contiene la columna 6 (OFFSET_PARAM) de un contrato?`,[`La volatilidad para pricing y árbol, o el precio observado para IV`,`Siempre el precio de mercado`,`El multiplicador del contrato`,`La semilla del generador aleatorio`],`qc_iv_batch lee la misma posición como precio objetivo.`);
+TF('B',3,`En un contrato del FFI, el tipo 0 significa «acción».`,false,`Kind::from_f64: v > 0 → Call, cualquier otro → Put (el 0 es Put). El tipo 0 = acción solo existe en Leg.`);
+MC('B',2,`¿Por qué qc_alloc llama core::mem::forget(v)?`,[`Para que Rust no libere el bloque al terminar la función; lo libera JS con qc_free`,`Para inicializar el vector en cero`,`Para evitar un desbordamiento de pila`,`Para alinear la memoria a 64 bits`],`Si no se «olvida» el Vec, su Drop liberaría la memoria y el puntero devuelto quedaría colgando.`);
+NU('B',1,`¿Qué devuelve qc_abi_version()?`,100,0,`mayor·100 + menor. El wrapper lanza error si es distinto de 100.`,``);
+MC('B',2,`¿Para qué se marcan las exportaciones con #[no_mangle] pub extern "C"?`,[`Para exponer el nombre exacto con convención C y poder llamarlas desde WASM/JS`,`Para que se ejecuten en paralelo`,`Para desactivar las comprobaciones de límites`,`Para compilarlas solo en modo debug`],`Sin no_mangle el compilador renombra el símbolo.`);
+MC('B',2,`¿Por qué qc_bs_batch es unsafe?`,[`Construye slices desde punteros crudos con slice::from_raw_parts`,`Usa hilos`,`Accede a variables globales mutables`,`Llama a código en C`],`El llamador debe garantizar n*7 f64 de entrada y n*6 de salida (sección # Safety).`);
+MC('B',2,`¿Qué calcula este fragmento del motor?`,[`d1 de Black-Scholes-Merton`,`La probabilidad neutral al riesgo del árbol`,`La vega`,`El precio de una put`],`d1 = [ln(S/K) + (r − q + σ²/2)·T] / (σ√T).`,`let d1 = ((c.spot / c.strike).ln()\n    + (c.rate - c.div + 0.5 * c.vol * c.vol) * c.t)\n    / (c.vol * sqrt_t);`);
+MC('B',2,`En bs::price, si t ≤ 0 o vol ≤ 0, ¿qué devuelve?`,[`El valor intrínseco del forward descontado, con piso en 0`,`NaN`,`0 siempre`,`El strike`],`fwd_intrinsic.max(0.0): call S·e^(−qT) − K·e^(−rT); put al revés.`);
+MA('B',2,`Relaciona cada griega con su convención de escala en la salida del motor.`,[[`vega`,`÷ 100 (por +1 punto de vol)`],[`theta`,`÷ 365 (por día calendario)`],[`rho`,`÷ 100 (por +1 % de tasa)`],[`gamma`,`Sin escala`]],`Greeks { price, delta, gamma, vega: vega/100.0, theta: theta/365.0, rho: rho/100.0 }.`);
+TF('B',2,`Call y put con los mismos parámetros tienen la misma gamma.`,true,`La fórmula de gamma no depende del tipo: df_q·n(d1)/(S·σ·√T).`);
+MC('B',2,`La paridad put-call con dividendo continuo q es:`,[`C − P = S·e^(−qT) − K·e^(−rT)`,`C + P = S·e^(−qT) + K·e^(−rT)`,`C − P = S − K`,`C − P = K·e^(−rT) − S·e^(−qT)`],`Probada en el test put_call_parity con tolerancia 1e-12.`);
+OR('B',3,`Ordena los pasos de implied_vol.`,[`Validar entradas y cotas de no-arbitraje`,`Calcular la semilla de Brenner-Subrahmanyam acotada`,`Evaluar el precio con la vol actual y comparar con el objetivo`,`Actualizar [lo, hi] según el signo de la diferencia`,`Intentar el paso de Newton-Raphson`,`Si vega es casi 0 o el paso sale del intervalo, bisectar`],`Se repite hasta 100 veces o hasta |diff| < 1e-10 / hi − lo < 1e-12.`);
+MS('B',3,`¿En qué casos implied_vol devuelve NaN?`,[`El precio objetivo es menor que el límite inferior de no-arbitraje`,`El precio objetivo es mayor o igual que el límite superior`,`t ≤ 0`],[`El precio objetivo es exactamente el valor intrínseco`,`La opción es una put`,`La vol inicial fue mayor que 2.0`],`Si target − lower < 1e-12 devuelve 0.0 (no NaN).`);
+NU('B',3,`¿Qué valor tiene el límite superior hi del intervalo de bisección en implied_vol?`,5,0,`let (mut lo, mut hi) = (1e-6, 5.0). La semilla se acota a [0.05, 2.0].`,`(500 % de vol)`);
+MC('B',3,`¿Cuál es la semilla inicial de la IV?`,[`√(2π/t)·(precio/spot) acotada a [0.05, 2.0]`,`La vol histórica de 30 días`,`Siempre 0.20`,`El promedio de lo y hi`],`Aproximación de Brenner-Subrahmanyam.`);
+MC('B',2,`En el árbol CRR de binomial.rs, ¿cuáles son u y d?`,[`u = e^(σ√dt), d = 1/u`,`u = 1 + σ, d = 1 − σ`,`u = e^(rT), d = e^(−rT)`,`u = σ√dt, d = −σ√dt`],`let u = (c.vol * dt.sqrt()).exp(); let d = 1.0 / u;`);
+MC('B',3,`¿De dónde salen delta, gamma y theta del árbol?`,[`De los nodos de los pasos 1 y 2 (diferencias finitas) y del nodo central a 2·dt`,`De derivar Black-Scholes`,`De simular Monte Carlo`,`De una tabla fija`],`delta con v1; gamma con v2; theta = (v2[1] − v0)/(2·dt)/365.`);
+TF('B',2,`price_tree acota steps al intervalo [3, 20 000].`,true,`steps.clamp(3, 20_000).`);
+MC('B',2,`early_exercise_premium es:`,[`Precio americano − precio europeo del mismo árbol, con piso en 0`,`Precio europeo − precio americano`,`Delta × spot`,`El theta acumulado`],`(v0 − euro).max(0.0).`);
+TF('B',3,`Una call americana sobre un subyacente sin dividendos tiene prima de ejercicio anticipado ≈ 0.`,true,`Nunca conviene ejercerla antes: el test american_call_without_dividends_equals_european lo comprueba.`);
+MC('B',2,`¿Para qué se pasa un buf: &mut Vec<f64> a roll_back y price_tree?`,[`Reutilizar la memoria entre contratos y evitar reservas por cada uno`,`Guardar el historial de precios`,`Compartir estado entre hilos`,`Cambiar el signo del precio`],`Se limpia con buf.clear() pero conserva su capacidad.`);
+MC('B',3,`¿Qué algoritmo implementa norm_cdf?`,[`Hart (1968) en la forma de West (2005), con error < 1e-14`,`Taylor de orden 3`,`Simpson con 100 intervalos`,`Abramowitz-Stegun 26.2.17 (error 1e-7)`],`Polinomios racionales con Horner para |z| < 7.07 y fracción continua para colas; z > 37 → 0.`);
+MC('B',2,`¿Qué hace Rng::new(0)?`,[`Sustituye la semilla por la constante 0x9E3779B97F4A7C15`,`Falla con panic`,`Usa la hora del sistema`,`Genera siempre ceros`],`Un estado 0 dejaría atascado a xorshift.`);
+TF('B',3,`Box-Muller del motor produce dos normales por cada par de uniformes y guarda la segunda en spare.`,true,`self.spare = Some(r * theta.sin()); devuelve r * theta.cos().`);
+MC('B',3,`uniform() devuelve ((x >> 11) as f64 + 0.5) · 2^−53. ¿Qué garantiza?`,[`Un valor en el intervalo abierto (0, 1)`,`Un entero de 64 bits`,`Un valor en [0, 1]`,`Una normal estándar`],`El +0.5 evita el 0 exacto, necesario para ln(u1).`);
+MC('B',2,`¿Qué fórmula sigue el subyacente en monte_carlo?`,[`S·exp((r − q − σ²/2)·T + σ·√T·Z)`,`S + σ·Z`,`S·(1 + r·T)`,`S·exp(r·T)`],`drift = (rate − div − 0.5·vol²)·horizon; diffusion = vol·√horizon.`);
+NU('B',2,`Si se piden 20 001 trayectorias, ¿cuántas simula realmente el motor?`,20000,0,`paths.max(2) & !1 deja el número par.`,`trayectorias`);
+NU('B',2,`Si se piden 7 trayectorias, ¿cuántas simula?`,6,0,`7 & !1 = 6.`,`trayectorias`);
+NU('B',3,`Con n = 20 000 trayectorias, ¿qué índice (idx95) del arreglo ordenado se usa para el VaR 95?`,1000,0,`idx95 = (0.05·n) as usize, acotado a len − 1.`,`índice`);
+OR('B',3,`Ordena las 9 estadísticas que monte_carlo escribe al inicio de out.`,[`media`,`desviación estándar`,`VaR 95`,`CVaR 95`,`VaR 99`,`probabilidad de ganancia`,`mínimo`,`máximo`,`valor base`],`[media, desv_std, VaR95, CVaR95, VaR99, prob_ganancia, min, max, valor_base].`);
+MC('B',2,`¿Qué divisor usa monte_carlo para la varianza?`,[`n − 1 (muestral)`,`n (poblacional)`,`n + 1`,`2n`],`.sum::<f64>() / (n - 1.0).`);
+MC('B',3,`¿Cómo se calcula cvar95 en monte_carlo?`,[`−(promedio de los P&L ordenados desde el menor hasta idx95 inclusive)`,`−pnl[idx95]`,`El promedio de los P&L positivos`,`La mediana de la cola derecha`],`-pnl[..=idx95].iter().sum() / (idx95 + 1).`);
+NU('B',2,`En una matriz de P&L de 9 choques de spot × 5 choques de vol (row-major), ¿qué índice del arreglo plano ocupa la fila 3, columna 2 (ambas desde 0)?`,17,0,`out[i·num_vol + j] = 3·5 + 2.`,`índice`);
+MC('B',3,`En Leg::unit_value, ¿qué ocurre con la vol y el tiempo bajo un escenario?`,[`vol = max(vol + shift, 1e-4) y t = max(t − dt, 0)`,`vol = vol + shift sin piso`,`t se mantiene fijo`,`vol se reemplaza por la IV de mercado`],`El piso evita vol ≤ 0 en BS.`);
+NU('B',2,`Reg T: 200 acciones a $50. ¿Cuánto margen requiere esa pierna?`,5000,0,`0.5 · spot · unidades = 0.5·50·200.`,`USD`);
+NU('B',3,`Reg T, put corta desnuda con strike 80 y spot 100: ¿cuántos dólares por acción se suman a la prima (término max(0.20·S − OTM, 0.10·K))?`,8,0,`OTM = 100 − 80 = 20; 0.20·100 − 20 = 0; 0.10·80 = 8; max(0, 8) = 8.`,`USD por acción`);
+MC('B',3,`En reg_t, ¿qué larga puede cubrir a una corta?`,[`Del mismo tipo (kind), con cantidad libre y que venza igual o después`,`Cualquiera con más prima`,`Solo una del mismo strike`,`Solo acciones`],`.filter(free>0 && same kind && legs[i].t >= leg.t - 1e-9).`);
+MC('B',3,`Un bull call spread de débito (compra 100, vende 105) bajo Reg T requiere:`,[`El débito neto (prima larga − prima corta) × unidades`,`Ancho × 100`,`50 % del spot`,`Cero`],`Ancho 0 (de débito) menos la prima de la corta, más la prima de la larga: el total es el débito.`);
+NU('B',2,`¿Cuántos escenarios tiene la tabla SPAN_SCENARIOS?`,16,0,`14 con peso 1 y 2 extremos con peso 0.35.`,`escenarios`);
+NU('B',3,`¿Qué peso tienen los dos escenarios extremos (±2 del rango, vol sin cambio) en SPAN?`,0.35,0,`(2.0, 0.0, 0.35) y (−2.0, 0.0, 0.35).`,``);
+NU('B',3,`SPAN con spot 200 y priceScan 0.15. ¿Cuál es el spot del escenario con fracción 2/3 de rango (sin choque de vol)?`,220,0.01,`200·(1 + (2/3)·0.15) = 220.`,`USD`);
+NU('B',3,`SPAN: 3 contratos cortos y som_per_contract = 25. ¿Cuánto vale el SOM?`,75,0,`short_contracts · som_per_contract.`,`USD`);
+MC('B',3,`El margen SPAN final es:`,[`max(scan_risk, SOM)`,`scan_risk + SOM`,`min(scan_risk, SOM)`,`El promedio de los 16 escenarios`],`let margin = scan_risk.max(som);`);
+NU('B',2,`¿De cuántas posiciones debe ser el arreglo out de qc_span?`,20,0,`SPAN_HEADER (4) + 16 escenarios.`,`posiciones`);
+TF('B',3,`SPAN revalúa cada escenario con un horizonte de 1 día (1/365).`,true,`let one_day = 1.0 / 365.0.`);
+MC('B',3,`¿Qué modelo usa risk.rs para revaluar opciones en todos sus escenarios?`,[`Black-Scholes (aproximación europea)`,`El árbol binomial americano`,`Monte Carlo anidado`,`Precios de mercado fijos`],`Lo indica el encabezado de risk.rs, igual que los arreglos SPAN de las cámaras.`);
+NU('B',1,`¿Cuántas pruebas Rust (#[test]) tiene el motor?`,15,0,`bs 5, binomial 3, math 2, risk 5.`,`pruebas`);
+MC('B',2,`¿Qué hace esta línea de bs::greeks?`,[`Devuelve Greeks con price y delta calculados y el resto de campos en su valor por defecto (0)`,`Copia todos los campos de p`,`Lanza un error si falta gamma`,`Reordena la estructura`],`Sintaxis de actualización de struct: ..Default::default().`,`return Greeks { price: p, delta, ..Default::default() };`);
+MC('B',2,`¿Qué hace esta línea de monte_carlo?`,[`Redondea hacia abajo al número par más cercano (mínimo 2)`,`Divide entre dos`,`Invierte los bits y suma uno`,`Limita a 2 trayectorias`],`max(2) asegura al menos 2; & !1 apaga el bit menos significativo.`,`let paths = paths.max(2) & !1;`);
+
+/* ====================== C · WRAPPER Y FFI ====================== */
+MA('C',1,`Relaciona cada tipo del wrapper con su código numérico en KIND.`,[[`call`,`1`],[`put`,`-1`],[`stock`,`0`]],`const KIND = { call: 1, put: -1, stock: 0 }.`);
+OR('C',2,`Ordena lo que hace withBuffers.`,[`qc_alloc por cada entrada y copia con Float64Array.set`,`qc_alloc del buffer de salida`,`Ejecutar runFn con los punteros`,`Crear la vista de salida sobre wasm.memory.buffer actual y hacer .slice()`,`En finally, qc_free de entradas y salida`],`El slice copia los datos antes de liberar la memoria.`);
+MC('C',3,`¿Por qué la vista de salida se crea DESPUÉS de ejecutar la función WASM?`,[`Porque la memoria lineal pudo crecer y la vista anterior quedaría invalidada`,`Porque JavaScript es asíncrono`,`Porque Float64Array no existe antes`,`Para ahorrar memoria`],`El comentario del código: «la memoria lineal pudo crecer durante la ejecución».`);
+TF('C',2,`El wrapper instancia el WebAssembly de forma síncrona porque el .wasm no declara imports.`,true,`new WebAssembly.Instance(new WebAssembly.Module(bytes), {}).`);
+MC('C',2,`¿Qué lanza el wrapper si wasm.qc_abi_version() no es 100?`,[`Un Error «ABI de quant_core no soportado»`,`Un HttpError 503`,`Nada, solo advierte`,`Reinicia el proceso`],`Se verifica al cargar el módulo.`);
+MC('C',2,`¿Qué diferencia hay entre contractRows(list, 'vol') y contractRows(list, 'price')?`,[`La séptima columna: vol para pricing/árbol, precio para IV`,`El orden de las columnas`,`El tipo de datos`,`Ninguna`],`contract[trailingMetricKey].`);
+MC('C',2,`¿Qué multiplicador asigna legRows si la pierna no lo trae?`,[`1 para stock y 100 para opciones`,`100 siempre`,`1 siempre`,`10`],`leg.multiplier ?? (leg.type === 'stock' ? 1 : 100).`);
+MA('C',2,`Relaciona cada valor por defecto del wrapper con su parámetro.`,[[`binomial · steps`,`200`],[`monteCarlo · paths`,`10000`],[`monteCarlo · seed`,`1`],[`monteCarlo · bins`,`40`],[`spanMargin · priceScan`,`0.15`],[`spanMargin · volScan`,`0.04`]],`Valores de las firmas de index.js.`,[`50000`,`100`]);
+NU('C',2,`monteCarlo(..., bins = 40): ¿de cuántos f64 es el buffer de salida?`,49,0,`9 estadísticas + 40 intervalos.`,`f64`);
+MC('C',2,`¿Cómo convierte pnlMatrix el horizonte antes de llamar a WASM?`,[`horizonDays / 365`,`horizonDays / 252`,`horizonDays · 365`,`No lo convierte`],`wasm.qc_pnl_matrix(..., horizonDays / 365, ...).`);
+MA('C',2,`Relaciona cada función del wrapper con la exportación Rust que invoca.`,[[`blackScholes`,`qc_bs_batch`],[`binomial`,`qc_binomial_batch`],[`impliedVol`,`qc_iv_batch`],[`pnlMatrix`,`qc_pnl_matrix`],[`monteCarlo`,`qc_monte_carlo`],[`regTMargin`,`qc_reg_t`],[`spanMargin`,`qc_span`]],`index.js.`);
+MC('C',2,`regTMargin devuelve:`,[`{ total, perLeg }`,`Un número`,`{ margin, scanRisk }`,`Una matriz`],`total viene del valor de retorno de qc_reg_t; perLeg del buffer out.`);
+MC('C',3,`¿Qué contiene spanMargin().scenarios?`,[`Las 16 pérdidas por escenario (out.subarray(4))`,`Los 4 valores de cabecera`,`Los precios simulados`,`El histograma`],`scenarios: Array.from(out.subarray(4)).`);
+MC('C',2,`¿Por qué el motor trabaja con arreglos planos por lote y no llama a WASM por cada contrato?`,[`Para cruzar la frontera JS↔WASM una sola vez por cadena o estrategia`,`Porque WASM no soporta objetos`,`Para cumplir el límite de 200 peticiones/min`,`Para poder usar hilos`],`Regla de diseño de OpenSpec: FFI por lote, nunca por pierna.`);
+MC('C',3,`¿Qué hace esta línea de withBuffers?`,[`Crea una vista Float64Array sobre la memoria de WASM en el puntero reservado y copia arr dentro`,`Reserva memoria en JavaScript y la envía por red`,`Convierte arr a JSON`,`Libera el puntero`],`new Float64Array(wasm.memory.buffer, pointer, arr.length).set(arr).`,`const pointer = wasm.qc_alloc(arr.length);\nnew Float64Array(wasm.memory.buffer, pointer, arr.length).set(arr);`);
+
+/* ====================== D · CÁLCULO NUMÉRICO ====================== */
+FI('D',2,`volSide(1.1): ¿devuelve 'long' o 'short'?`,[`long`,`'long'`],`El umbral es ivToHv > 1.1 (estricto): con exactamente 1.1 se compra volatilidad.`);
+NU('D',2,`templateFit con ivToHv = 1.15. ¿Cuánto vale volRich = clamp((ivToHv − 0.95)/0.5)?`,0.4,0.001,`(1.15 − 0.95)/0.5 = 0.4.`,``);
+NU('D',2,`templateFit con ivToHv = 0.90. ¿Cuánto vale volCheap = clamp((1.15 − ivToHv)/0.5)?`,0.5,0.001,`(1.15 − 0.90)/0.5 = 0.5.`,``);
+NU('D',3,`templateFit: ivToHv = 0.65 y bollingerPosition = 0.9. ¿Cuánto vale longVol = 0.7·volCheap + 0.3·nearBand?`,0.94,0.005,`volCheap = clamp(0.5/0.5) = 1; nearBand = |0.9 − 0.5|·2 = 0.8; 0.7 + 0.24 = 0.94.`,``);
+NU('D',3,`templateFit: volRich = 1 y bollingerPosition = 0.5. ¿Cuánto vale shortVol = 0.7·volRich + 0.3·rangeBound?`,1,0.005,`nearBand = 0 → rangeBound = 1; 0.7 + 0.3 = 1.0.`,``);
+NU('D',2,`templateFit: trendStrength = 0.02. ¿Cuánto vale bullish = clamp(0.5 + trendStrength·10)?`,0.7,0.001,`0.5 + 0.2 = 0.7.`,``);
+NU('D',2,`templateFit: termSlope = 1.05. ¿Cuánto vale term = clamp((termSlope − 0.9)/0.3)?`,0.5,0.001,`0.15/0.3 = 0.5.`,``);
+NU('D',2,`marketSignals: ema9 = 105 y sma20 = 100. ¿Cuánto vale trendStrength?`,0.05,0.0005,`(105 − 100)/100.`,``);
+NU('D',3,`composite: probProfit = 0.6, expectedValue = 0, fit = 0.5. ¿Qué score (0–100) resulta?`,54,0.05,`evScore = 0.5 + 0.5·tanh(0) = 0.5; 100·(0.4·0.6 + 0.3·0.5 + 0.3·0.5) = 54.`,``);
+NU('D',3,`composite: probProfit = 0.5, expectedValue = 100, var95 = 100, fit = 0.8. ¿Qué score resulta (1 decimal)?`,70.4,0.06,`evScore = 0.5 + 0.5·tanh(1) = 0.8808; 100·(0.2 + 0.2642 + 0.24) = 70.42 → 70.4.`,``);
+NU('D',3,`Una desviación estándar diaria de retornos de 0.01. ¿Qué volatilidad anualizada (en %) da historicalVol?`,15.87,0.05,`0.01·√252 = 0.15875.`,`%`);
+NU('D',3,`sharpe: media diaria 0.001, desviación diaria con σ anual 0.20, rf = 0.04. ¿Cuánto vale?`,1.06,0.005,`(0.001·252 − 0.04)/0.20 = (0.252 − 0.04)/0.20.`,``);
+NU('D',2,`beta: Cov(activo, SPY) = 0.0002 y Var(SPY) = 0.0001.`,2,0,`β = Cov/Var = 2: el activo amplifica al índice.`,``);
+NU('D',3,`percentile([10, 20, 30, 40, 50], 0.1): ¿cuánto vale?`,14,0.001,`pos = 4·0.1 = 0.4; 10 + (20 − 10)·0.4 = 14.`,``);
+NU('D',3,`varCvar([−100, −50, 0, 50, 100], 0.95): ¿cuánto vale el VaR?`,90,0.01,`cutoff = percentil 5 = −100 + 50·0.2 = −90; VaR = −cutoff = 90.`,``);
+NU('D',3,`En el mismo caso, ¿cuánto vale el CVaR?`,100,0.01,`Los P&L ≤ −90 son solo [−100]; CVaR = 100.`,``);
+NU('D',2,`maxDrawdown([100, 120, 90, 110, 80]): ¿cuánto vale (4 decimales)?`,-0.3333,0.0005,`Pico 120; el mínimo posterior 80 da (80 − 120)/120 = −0.3333.`,``);
+NU('D',3,`meanConfidenceInterval95(mu = 100, sigma = 50, n = 10 000): ¿cuál es el límite INFERIOR?`,99.02,0.005,`margen = 1.96·50/√10 000 = 0.98.`,``);
+NU('D',3,`proportionConfidenceInterval95(p = 0.5, n = 10 000): ¿cuál es el margen (4 decimales)?`,0.0098,0.00005,`1.96·√(0.25/10 000) = 1.96·0.005.`,``);
+NU('D',2,`logReturns([100, 110]): ¿cuánto vale el retorno (4 decimales)?`,0.0953,0.0005,`ln(1.1) = 0.0953.`,``);
+NU('D',3,`riskExtended: vol = 0.30 y horizonDays = 30. ¿Cuánto vale sigmaMove en %?`,8.6,0.1,`0.30·√(30/365) = 0.30·0.2867 = 0.086.`,`%`);
+NU('D',3,`riskExtended: vol = 0.12. ¿Cuánto vale ivDrop = −min(0.10, vol·0.5)?`,-0.06,0.0005,`min(0.10, 0.06) = 0.06 → −0.06.`,``);
+NU('D',3,`riskExtended: delta = 50, beta = 1.2, spot = 200, spot de SPY = 400. ¿Cuánto vale betaWeightedDelta?`,30,0.01,`50·1.2·(200/400) = 30.`,``);
+NU('D',3,`horizonTradingDays con horizonDays = 30 (max(1, round(días·252/365))):`,21,0,`30·252/365 = 20.7 → 21.`,`días hábiles`);
+NU('D',3,`priceStrategy: compra call (bid 4.9, ask 5.1) y compra put (mid 4), ratio 1 y qty = 2. ¿Cuánto vale netTotal?`,1800,0.01,`neto por unidad = 5 + 4 = 9; total = 9·100·2.`,`USD`);
+NU('D',3,`priceStrategy: vende call (mid 1.5) y vende put (mid 2.5), qty = 1. ¿Cuánto vale netTotal?`,-400,0.01,`neto = −1.5 − 2.5 = −4; −4·100·1 = −400 (crédito).`,`USD`);
+NU('D',2,`parseOcc('XYZ260116C00150500'): ¿qué strike devuelve?`,150.5,0.001,`00150500 / 1000.`,`USD`);
+FI('D',3,`Escribe el símbolo OCC de una put de SPY con vencimiento 2026-03-20 y strike 450.`,[`SPY260320P00450000`],`Raíz + AAMMDD + P + strike·1000 en 8 dígitos.`);
+NU('D',3,`byDelta sin griegas, delta objetivo 0.30, call y spot 200: ¿qué strike estimado usa?`,208,0.01,`otm = (0.5 − 0.30)/5 = 0.04; 200·1.04 = 208.`,`USD`);
+NU('D',2,`yearsTo para un vencimiento dentro de exactamente 73 días: ¿cuántos años (YEAR_MS = 365 días)?`,0.2,0.0005,`73/365.`,`años`);
+NU('D',2,`ema: period = 9. ¿Cuánto vale el multiplicador de suavizado?`,0.2,0.0005,`2/(9 + 1).`,``);
+NU('D',2,`rsi: promedio de ganancias 1 y de pérdidas 1. ¿Cuánto vale el RSI?`,50,0.01,`100 − 100/(1 + 1/1) = 50.`,``);
+NU('D',2,`Bollinger: media 100, σ = 5, multiplicador 2. ¿Cuánto vale la banda superior?`,110,0.01,`100 + 2·5.`,``);
+NU('D',2,`memo con TTL de 2000 ms y un solo ticker: ¿cuántas llamadas por minuto a Alpaca como máximo, sin importar cuántas pestañas haya?`,30,0,`60 000 / 2 000.`,`llamadas/min`);
+NU('D',2,`El recomendador se cachea 20 s por clave. ¿Cuántas llamadas por minuto como máximo para un mismo ticker y paths?`,3,0,`60 000 / 20 000.`,`llamadas/min`);
+NU('D',2,`optionSnapshots con 250 símbolos y una sola página por lote: ¿cuántas peticiones a Alpaca hace como mínimo?`,3,0,`Lotes de 100: 100 + 100 + 50.`,`peticiones`);
+NU('D',3,`recommend: ¿qué valor efectivo de paths se usa si el cliente manda paths = 500?`,2000,0,`Math.min(Math.max(Number(paths), 2000), 100000).`,`trayectorias`);
+NU('D',3,`riskService.analyzeLegs: ¿qué valor efectivo de paths se usa si el cliente manda paths = 1 000 000?`,500000,0,`Math.min(Math.max(paths, 1000), 500000).`,`trayectorias`);
+NU('D',3,`Backtest con 300 cierres y sin muestras descartadas: ¿cuántas muestras (i = 80, 85, … mientras i + 21 < 300)?`,40,0,`i máximo 275 (275 + 21 = 296 < 300; 280 + 21 = 301 no). (275 − 80)/5 + 1 = 40.`,`muestras`);
+NU('D',3,`marketSignals con 250 cierres: ¿cuántas ventanas rolling usa para hvLongRun (end = 60, 65, … ≤ 250)?`,39,0,`(250 − 60)/5 + 1 = 39.`,`ventanas`);
+NU('D',3,`atmIv promedia la IV de los N strikes más cercanos al spot. ¿Cuánto vale N?`,4,0,`.slice(0, 4).`,``);
+MC('D',3,`En riskFilter, un candidato tiene probProfit 0.45, EV 12, VaR95 600, margen Reg T 5 000, equity 10 000 y buyingPower 20 000. ¿Pasa el filtro?`,[`No: el VaR95 600 supera el 5 % del equity (500)`,`Sí, cumple las cuatro reglas`,`No: la probabilidad es menor a 0.5`,`No: el margen excede el equity`],`probProfit ≥ 0.4 ✓, EV > 0 ✓, VaR ≤ 500 ✗, margen ≤ 20 000 ✓.`);
+
+/* ====================== E · API ====================== */
+MA('E',2,`Relaciona la situación con el código HTTP que devuelve F0.`,[[`POST que crea un recurso`,`201`],[`DELETE de una watchlist`,`204`],[`DELETE /orders (cancelar todas)`,`207`],[`Estrategia ya enviada que se intenta editar`,`409`],[`/strategies/auto con otra ejecución en curso`,`429`],[`Microservicio caído o llaves sin configurar`,`503`],[`:id que no es UUID`,`400`]],`Ver routes/index.js, strategies.service.js, autoTrade.service.js y errors.js.`,[`200`,`500`,`404`]);
+MS('E',2,`¿Cuáles de estas rutas existen en el router de strategies?`,[`GET /recommend`,`GET /recommend/backtest`,`POST /auto`,`GET /:id/risk`,`POST /:id/submit`],[`POST /:id/cancel`,`POST /:id/refresh`,`GET /compare`],`routes/index.js strategiesRouter.`);
+MA('E',2,`Relaciona cada ruta con el servicio u objeto que la resuelve.`,[[`GET /market/search`,`assetsService.search`],[`GET /market/overview`,`overviewService.overview`],[`GET /market/:symbol/bars`,`marketService.bars`],[`GET /strategies/:id/risk`,`riskService.analyze`],[`POST /strategies/auto`,`autoTradeService.run`],[`POST /ai/validate-risk`,`aiService.validateRisk`],[`GET /account`,`alpaca.account`]],`routes/index.js.`);
+MC('E',2,`¿Qué campos devuelve GET /account?`,[`id, status, currency, cash, buyingPower, optionsLevel`,`Todo el objeto de Alpaca`,`Solo cash`,`equity y positions`],`El handler mapea explícitamente esos seis campos.`);
+MC('E',1,`¿Qué hace PATCH /orders/:id?`,[`Reemplaza la orden (orders.replace)`,`La cancela`,`La duplica`,`La ejecuta de inmediato`],`DELETE /:id cancela; DELETE / cancela todas con 207.`);
+TF('E',2,`DELETE /watchlists/:id/symbols/:symbol devuelve la watchlist actualizada.`,true,`res.json(await watchlists.removeSymbol(...)): no es 204.`);
+MS('E',2,`¿Cuáles son Mutations del esquema GraphQL?`,[`createWatchlist`,`cancelAllOrders`,`refreshOptionChain`,`submitStrategy`],[`strategyRisk`,`recommendStrategies`,`optionChains`],`strategyRisk y recommendStrategies son Query.`);
+TF('E',3,`El esquema GraphQL incluye una mutation para ejecutar la estrategia automática (/auto).`,false,`El auto trade solo existe en REST (POST /strategies/auto).`);
+MC('E',2,`En GraphQL, ¿cómo se expone un HttpError?`,[`Como GraphQLError con extensions {status, details}`,`Como respuesta HTTP 500 sin cuerpo`,`Se ignora`,`Como un campo null sin mensaje`],`wrap() captura el error y lo relanza como GraphQLError.`);
+MC('E',1,`¿Dónde se sirve Swagger UI y dónde está su especificación?`,[`/api-docs; api/src/docs/openapi.js`,`/swagger; openapi.json en la raíz`,`/docs; web/index.html`,`/graphql; schema.graphql`],`app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapi)).`);
+MC('E',3,`¿Qué clave usa el caché de /strategies/recommend y cuánto dura?`,[`SÍMBOLO en mayúsculas|paths, 20 s`,`Solo el símbolo, 5 min`,`El cuerpo completo, 2 s`,`No usa caché`],`memo(20_000, ..., (symbol, query) => symbol.toUpperCase()|query.paths).`);
+TF('E',2,`POST /strategies/auto reutiliza el caché de 20 s del recomendador.`,false,`El comentario es explícito: /auto NO usa ese caché.`);
+MC('E',3,`¿Qué devuelve errorHandler si el JSON del body es inválido (err.type = 'entity.parse.failed') y no hay status?`,[`400`,`500`,`422`,`415`],`const status = err.status ?? (err.type === 'entity.parse.failed' ? 400 : 500).`);
+MC('E',2,`¿Qué hace check(body, rules) cuando varios campos fallan?`,[`Junta todos los errores y lanza un solo 400 «Datos inválidos» con details`,`Lanza al primer error`,`Devuelve un arreglo sin lanzar`,`Responde 500`],`if (errors.length) throw badRequest('Datos inválidos', errors).`);
+MS('E',3,`¿Qué reglas soporta check()?`,[`required`,`type (string, number, array)`,`oneOf`,`positive`,`date`],[`min`,`regex personalizado`,`email`],`Ver lib/errors.js.`);
+FI('E',2,`¿Cómo se llama la función que valida el formato de UUID de un id?`,[`assertUuid`,`assertUuid()`],`lib/errors.js; la usa el middleware uuid de routes.`);
+MC('E',2,`¿Qué responde notFoundHandler?`,[`404 con JSON { status: 404, message: "No existe MÉTODO ruta" }`,`Redirige a /`,`200 con HTML`,`500`],`res.status(404).json({ status: 404, message: ... }).`);
+MC('E',3,`¿Qué valida POST /ai/validate-risk antes de llamar al servicio?`,[`Que metrics exista y sea un objeto; si no, 400`,`Que haya sesión`,`Que el símbolo tenga opciones`,`Nada`],`throw badRequest('metrics es obligatorio ...').`);
+
+/* ====================== F · SERVICIOS ====================== */
+NU('F',1,`¿Cuál es el máximo de piernas de una estrategia (MAX_LEGS)?`,4,0,`Límite de Alpaca para órdenes mleg.`,`piernas`);
+MS('F',2,`¿Qué valores acepta position_intent?`,[`buy_to_open`,`buy_to_close`,`sell_to_open`,`sell_to_close`],[`sell_short`,`hold`],`Constante INTENTS.`);
+MC('F',2,`Si una pierna no trae position_intent, ¿qué se asigna?`,[`buy → buy_to_open; sell → sell_to_open`,`Siempre buy_to_open`,`null`,`Se rechaza con 400`],`leg.position_intent ?? (leg.side === 'buy' ? 'buy_to_open' : 'sell_to_open').`);
+MC('F',3,`¿Qué valida strategies.validate contra Alpaca para cada pierna?`,[`Que el contrato exista y pertenezca al subyacente declarado`,`Que tenga volumen`,`Que su IV sea positiva`,`Que venza en 30 días`],`getOptionContract + comparación de underlying_symbol (400 si no coincide).`);
+MC('F',3,`strategiesService.create inserta la estrategia y luego las piernas. Si fallan las piernas:`,[`Borra la estrategia (rollback manual) y relanza el error`,`Deja la estrategia en draft`,`Reintenta tres veces`,`Marca la estrategia como canceled`],`Supabase vía supabase-js no da transacciones, por eso el try/catch compensa.`);
+TF('F',2,`strategiesService.update solo funciona si la estrategia está en draft; si no, responde 409.`,true,`conflict(...) cuando current.status !== 'draft'.`);
+MS('F',3,`¿Qué lleva el cuerpo de la orden enviada en submit?`,[`order_class: 'mleg'`,`time_in_force: 'day'`,`qty como string`,`limit_price solo si es limit`],[`time_in_force: 'gtc'`,`una orden por pierna`,`qty numérico`],`Alpaca solo acepta day para órdenes de opciones.`);
+MC('F',3,`En remove, si la estrategia está submitted y la cancelación en Alpaca falla:`,[`Se ignora el fallo y se borra igual el registro local`,`No se borra nada`,`Se lanza 500`,`Se reintenta indefinidamente`],`El .catch(() => {}) deja pasar el borrado.`);
+NU('F',2,`ingest inserta las cotizaciones en lotes. ¿De cuántas filas es cada lote?`,500,0,`DB_INSERT_BATCH_SIZE = 500.`,`filas`);
+NU('F',2,`¿Cuántos contratos como máximo ingesta una cadena (MAX_CONTRACTS)?`,300,0,`optionChainsService.`,`contratos`);
+MC('F',3,`ingest: ¿qué hace con las cotizaciones previas de la cadena?`,[`Las borra todas y luego inserta las nuevas`,`Hace upsert fila por fila`,`Las conserva y agrega`,`Las mueve a una tabla de histórico`],`await q(db().from('option_quotes').delete().eq('chain_id', chain.id)).`);
+MA('F',2,`Relaciona la clave abreviada de Alpaca con su significado.`,[[`bp`,`precio bid`],[`ap`,`precio ask`],[`p`,`precio del último trade`],[`c`,`cierre de la barra diaria`],[`t`,`timestamp`]],`Comentarios de optionChains.service.js.`);
+MC('F',2,`Si ingest falla durante POST /option-chains:`,[`Se elimina el registro de cadena huérfano y se relanza el error`,`La cadena queda vacía`,`Se responde 201`,`Se reintenta con otra feed`],`catch → delete option_chains where id.`);
+MS('F',2,`¿Qué valores de time_in_force acepta orders.service?`,[`day`,`gtc`,`opg`,`cls`,`ioc`,`fok`],[`ext`,`eod`],`Constante TIFS.`);
+MS('F',2,`¿Qué tipos de orden acepta orders.service?`,[`market`,`limit`,`stop`,`stop_limit`,`trailing_stop`],[`iceberg`,`twap`],`Constante TYPES.`);
+MC('F',2,`¿Qué hace mirrorOrders?`,[`Upsert de las órdenes de Alpaca en la tabla orders, con conflicto en alpaca_id`,`Envía órdenes a Alpaca`,`Borra órdenes viejas`,`Calcula el P&L`],`upsert(rows, { onConflict: 'alpaca_id' }).`);
+TF('F',2,`watchlists.normSymbols recorta espacios, pasa a mayúsculas, elimina vacíos y quita duplicados.`,true,`[...new Set(symbols.map(trim+upper).filter(Boolean))].`);
+NU('F',2,`¿Cuántos milisegundos dura el caché de watchlists.list (LIST_CACHE_TTL_MS)?`,5000,0,`5 segundos.`,`ms`);
+NU('F',2,`¿Cuántos milisegundos de TTL tiene stockSnapshot en market.service?`,2000,0,`SNAPSHOT_TTL_MS = 2000.`,`ms`);
+MC('F',3,`¿Qué devuelve overviewService.overview en un solo llamado?`,[`Cotización, indicadores resumidos y vencimientos (con errores parciales por bloque)`,`Solo la cotización`,`El historial completo de órdenes`,`La cadena completa de opciones`],`Reduce las peticiones de la pantalla única.`);
+MA('F',3,`Relaciona cada constante de overview.service con su valor.`,[[`EXPIRATIONS_WINDOW_DAYS`,`120`],[`STRIKE_BAND`,`0.15`],[`MAX_CONTRACTS`,`1000`],[`MIN_CLOSES`,`60`],[`EXPIRATIONS_TTL_MS`,`10 minutos`]],`overview.service.js.`,[`30`,`0.05`]);
+MA('F',3,`Relaciona cada nivel de matchLevel (assets.service) con su regla.`,[[`0`,`símbolo idéntico`],[`1`,`el símbolo empieza con el texto`],[`2`,`alguna palabra del nombre empieza con el texto`],[`3`,`el nombre contiene el texto`]],`Menor nivel = mejor coincidencia; null = no coincide.`);
+MC('F',3,`rankAssets con búsqueda vacía devuelve:`,[`Los de la lista POPULAR que existan en el catálogo`,`Todo el catálogo`,`Un arreglo vacío`,`Los primeros 12 alfabéticos`],`if (!query) results = POPULAR.map(...).filter(Boolean).`);
+MS('F',3,`¿Cómo desempata rankAssets a igual nivel?`,[`Primero los que tienen opciones`,`Luego el símbolo más corto`,`Luego orden alfabético del símbolo`],[`Por volumen negociado`,`Por capitalización`],`sort: level, hasOptions, symbol.length, localeCompare.`);
+NU('F',2,`¿Cuántas horas dura el caché del catálogo de activos (CACHE_TTL_MS)?`,6,0,`6·60·60·1000 ms.`,`horas`);
+MA('F',3,`Relaciona los parámetros de loadMarket (recomendador) con su valor.`,[[`Vencimiento cercano: ventana`,`14–45 días`],[`Strikes cercanos`,`±10 % del spot`],[`Vencimiento lejano: ventana`,`46–100 días`],[`Strikes lejanos`,`±4 % del spot (solo calls)`],[`Objetivo cercano / lejano`,`30 / 60 días`]],`recommend.service.js.`,[`7–21 días`,`±20 %`]);
+MC('F',3,`En loadMarket, ¿qué cotizaciones se descartan?`,[`Las que no tienen mid > 0`,`Las de más de 30 días`,`Las que tienen delta positivo`,`Las de volumen bajo`],`Sin precio de mercado no se puede medir el riesgo.`);
+MC('F',3,`Si una plantilla candidata lanza un error al armarse o al analizarse, el recomendador:`,[`La deja con score −1 y su error, y sigue con las demás`,`Aborta toda la petición`,`La reintenta con otro ticker`,`Responde 500`],`El try/catch por plantilla; solo si no queda ninguna usable → 400.`);
+TF('F',3,`El recomendador evalúa las 4 candidatas en paralelo con Promise.all.`,true,`candidates.map(async ...) dentro de Promise.all.`);
+MC('F',3,`En el recomendador, reward_risk se calcula como:`,[`mean / var95 cuando var95 > 0`,`var95 / mean`,`probProfit / var95`,`max / min`],`mc.var95 > 0 ? round(mc.mean / mc.var95, 3) : null.`);
+MC('F',3,`¿Para qué sirve el parámetro prefetched de analyzeLegs?`,[`Reutilizar snapshots e historial ya descargados y no repetir llamadas a Alpaca`,`Cargar la estrategia desde Supabase`,`Cambiar la semilla`,`Activar el modo paper`],`{ stock, snaps, history } lo pasa el recomendador.`);
+MC('F',2,`En una pierna de riesgo, ¿qué es ivSource?`,[`'alpaca' si la IV vino del snapshot; 'motor' si se calculó con impliedVol desde el mid`,`El nombre del modelo de IA`,`La fuente del feed`,`El broker`],`Si vol == null && mid != null → motor.`);
+MC('F',3,`¿Cómo se calcula qty de cada pierna en analyzeLegs?`,[`(+1 si buy, −1 si sell) · ratio_qty · strategy.qty`,`ratio_qty solamente`,`strategy.qty · 100`,`El valor absoluto de ratio_qty`],`positionSign * contract.ratio_qty * strategy.qty.`);
+TF('F',3,`El comentario de risk.service dice «IV promedio ponderado», pero underlyingVol se calcula como promedio simple.`,true,`legsIn.reduce(accum + leg.vol) / legsIn.length.`);
+MC('F',3,`Si extendedRisk falla (por ejemplo, Alpaca no entrega historial):`,[`extended = null y el reporte base sigue siendo válido`,`Toda la petición responde 500`,`Se usa un historial inventado`,`Se reintenta hasta lograrlo`],`.catch(() => null).`);
+MC('F',3,`¿Cómo se calcula performance.pathsPerSecond?`,[`paths / (duración del Monte Carlo en segundos)`,`paths · 1000`,`paths / engineMs`,`1 / monteCarloMs`],`Math.round(paths / (monteCarloDurationMs / 1000)).`);
+MC('F',2,`marketCost del reporte de riesgo es null cuando:`,[`Alguna pierna no tiene mid`,`qty es 1`,`El Monte Carlo falla`,`El horizonte es cero`],`legsIn.every(leg => leg.mid != null) ? ... : null.`);
+
+/* ====================== G · ESTADÍSTICA Y RIESGO ====================== */
+MC('G',2,`¿Por qué stdev divide entre n − 1?`,[`Corrección de Bessel: se estima con una muestra, no con toda la población`,`Para evitar la división entre cero`,`Porque los retornos son logarítmicos`,`Para anualizar`],`Docstring de lib/stats.js.`);
+MC('G',2,`¿Por qué se usan retornos logarítmicos?`,[`Se suman en el tiempo y son coherentes con el modelo GBM del Monte Carlo`,`Siempre son positivos`,`No requieren datos`,`Son más rápidos de calcular`],`rₜ = ln(Pₜ/Pₜ₋₁).`);
+NU('G',1,`¿Cuántos días de mercado por año usa TRADING_DAYS?`,252,0,`σ_anual = σ_diaria · √252.`,`días`);
+MC('G',2,`VaR 95 % significa:`,[`Pérdida que solo se supera en el 5 % de los peores casos`,`Pérdida promedio de todos los casos`,`Ganancia esperada`,`Pérdida máxima posible`],`Se devuelve como número positivo.`);
+MC('G',2,`CVaR 95 % es:`,[`La pérdida promedio dentro de ese 5 % peor (Expected Shortfall)`,`El VaR de 99 %`,`La desviación estándar`,`El percentil 50`],`Siempre ≥ VaR.`);
+MC('G',2,`¿En qué se diferencian Sharpe y Sortino?`,[`Sortino solo penaliza la volatilidad bajista`,`Sortino usa la tasa libre de riesgo y Sharpe no`,`Sharpe usa retornos logarítmicos y Sortino no`,`Sortino se calcula con beta`],`El denominador de Sortino es la desviación bajista.`);
+MC('G',2,`Una beta de 1.5 contra SPY significa:`,[`El activo tiende a moverse 1.5 veces lo que se mueve el índice`,`Se mueve 1.5 % al día`,`Tiene 1.5 de Sharpe`,`Es 50 % menos volátil que SPY`],`β = Cov(activo, índice)/Var(índice).`);
+MC('G',3,`¿Qué distingue al VaR histórico del VaR Monte Carlo en F0?`,[`El histórico re-juega los movimientos reales del último año; el MC simula con GBM`,`El histórico usa más trayectorias`,`El MC usa datos reales y el histórico no`,`Son idénticos`],`Si los dos se parecen, el modelo es creíble.`);
+MC('G',3,`¿Cuántos choques históricos mínimos se necesitan para calcular el VaR histórico y cuál es el máximo que se usa?`,[`Mínimo 20; máximo 400 (MAX_REPLAY_SHOCKS)`,`Mínimo 5; máximo 100`,`Mínimo 252; máximo 252`,`Mínimo 1; sin máximo`],`recentShocks.length >= 20; slice(-MAX_REPLAY_SHOCKS).`);
+MC('G',3,`¿Por qué el valor esperado del Monte Carlo puede salir negativo aunque cada pierna esté a precio de mercado?`,[`Porque usa una sola vol (promedio de piernas) y el mercado tiene skew`,`Por un error de redondeo`,`Porque la semilla es 42`,`Porque la tasa libre es 4 %`],`Lo explica el README: las puts OTM cobran más IV.`);
+MC('G',2,`IV crush es:`,[`Una caída fuerte de la volatilidad implícita (p. ej. tras resultados)`,`Una caída del precio del subyacente`,`Un error de la API`,`El vencimiento de una opción`],`El estrés extendido lo modela con ivDrop.`);
+MC('G',3,`¿Cómo calcula percentile() un valor intermedio?`,[`Interpola linealmente entre los dos datos ordenados que rodean la posición (n − 1)·p`,`Toma el dato más cercano`,`Promedia todos los datos`,`Usa la mediana`],`sorted[lower] + (sorted[upper] − sorted[lower])·(pos − lower).`);
+MC('G',3,`histogramPercentile:`,[`Acumula frecuencias hasta total·p e interpola dentro del intervalo que lo contiene`,`Ordena los datos originales`,`Devuelve el centro del primer intervalo`,`Usa una normal ajustada`],`Se usa para el rango de P&L del 95 %.`);
+TF('G',3,`Bollinger en F0 usa la varianza poblacional (divide entre period).`,true,`variance = Σ(...)²/period.`);
+MC('G',3,`¿Cómo siembra la EMA su primer valor?`,[`Con la SMA de las primeras N velas (convención TradingView)`,`Con el primer precio`,`Con cero`,`Con la mediana`],`previousEma = promedio de windowSlice.`);
+MC('G',2,`¿Qué valor devuelve rsi cuando averageLoss es 0?`,[`100`,`0`,`50`,`NaN`],`averageLoss === 0 ? 100 : 100 − 100/(1 + gain/loss).`);
+MC('G',2,`¿Cuáles son los parámetros por defecto de macd y qué es su histograma?`,[`12, 26, 9; MACD − señal`,`9, 12, 26; señal − MACD`,`20, 2, 5; MACD · señal`,`14, 28, 7; señal`],`macd(values, fast=12, slow=26, signal=9).`);
+TF('G',2,`sma devuelve null mientras no haya período completo de datos.`,true,`index >= period − 1 ? rollingSum/period : null.`);
+MC('G',3,`bollingerPosition = 0.5 significa:`,[`El precio está en la media de las bandas`,`Está en la banda superior`,`La volatilidad es 50 %`,`RSI neutral`],`0 = banda inferior, 1 = banda superior.`);
+MC('G',3,`En el estrés extendido, ¿cuántos escenarios se reportan y cuáles son?`,[`5: Baja 2σ, Sube 2σ, Caída de IV, Baja 2σ + caída de IV, Sube 2σ + caída de IV`,`3: bajista, neutral, alcista`,`16 como SPAN`,`9 como la matriz`],`scenarios: [...] en riskExtended.service.js.`);
+MC('G',3,`¿Cómo se calcula el Sharpe de la ESTRATEGIA en riskExtended?`,[`mc.mean / mc.std`,`(mean − rf)/std anualizado con 252`,`probProfit / var95`,`mean / var95`],`ratios.strategySharpe: round(mc.mean / mc.std).`);
+
+/* ====================== H · RECOMENDADOR, IA Y AUTO ====================== */
+OR('H',3,`Ordena el flujo de recommendService.recommend.`,[`normalizeSymbol y acotar paths`,`loadMarket (snapshot, historial, contratos, snapshots)`,`marketSignals sobre los cierres`,`IV ATM, ivToHv y termSlope`,`volSide y templateFit`,`build + riskService.analyzeLegs por candidata`,`composite y ordenar el ranking`,`explain de la ganadora`],`Ver recommend.service.js.`);
+MA('H',2,`Relaciona cada componente del puntaje con su peso.`,[[`Probabilidad de ganancia`,`40 %`],[`Valor esperado / riesgo`,`30 %`],[`Encaje con el mercado`,`30 %`]],`score = 100·(0.40·prob + 0.30·evScore + 0.30·fit).`,[`20 %`,`50 %`]);
+MC('H',3,`¿Cómo se calcula evScore dentro de composite?`,[`0.5 + 0.5·tanh(EV / max(|VaR95|, 1))`,`EV / VaR95`,`probProfit · EV`,`1 − tanh(EV)`],`Vale 0.5 si EV = 0, sube hacia 1 si gana mucho respecto al riesgo.`);
+MC('H',2,`Regla de fondo del recomendador:`,[`IV cara frente a la HV → vender volatilidad; IV barata → comprarla`,`IV barata → vender; IV cara → comprar`,`Siempre comprar straddles`,`Siempre calendar`],`volSide: ivToHv > 1.1 → short.`);
+MC('H',2,`¿Qué cuatro candidatas arma el recomendador?`,[`{side}-straddle, {side}-strangle, calendar y diagonal`,`Las seis plantillas`,`Solo straddles`,`Iron condor y butterfly`],`candidates = [`+"`${side}-straddle`"+`, ...] con side = volSide(...).`);
+MS('H',2,`¿Qué reglas debe cumplir el filtro de riesgo de /auto? (todas)`,[`probProfit ≥ 0.4`,`valor esperado > 0`,`VaR95 ≤ 5 % del equity`,`margen Reg T ≤ poder de compra`],[`Sharpe > 1`,`delta neutral`,`IV/HV < 1`],`RISK_RULES y riskFilter.`);
+MC('H',2,`¿Qué exige POST /strategies/auto para enviar una orden real (paper)?`,[`confirm: true (o dryRun: true para solo simular)`,`Un token JWT`,`Que el mercado esté abierto`,`Nada`],`if (!body.dryRun && body.confirm !== true) throw badRequest(...).`);
+MC('H',3,`¿Qué evita el candado running y el REPEAT_BLOCK_MS?`,[`Doble clic o peticiones repetidas: solo una ejecución a la vez y 60 s entre órdenes del mismo ticker (429)`,`Que se opere fuera de horario`,`Que la IA se llame dos veces`,`Que Alpaca rechace la orden`],`/auto es la única ruta que mueve dinero (paper) y no tiene autenticación.`);
+TF('H',2,`Si el servicio de IA no responde, /auto envía la orden de todas formas porque el filtro de riesgo ya pasó.`,false,`Falla cerrado: verdict 'unavailable' ≠ 'approved', no se opera.`);
+MC('H',3,`¿Qué veredictos normaliza aiService?`,[`approved, caution, rejected (y 'unavailable' cuando no hay respuesta legible)`,`yes, no`,`buy, sell, hold`,`low, medium, high`],`normalizeVerdict mapea también aprobado/precaución/rechazado.`);
+FI('H',2,`normalizeVerdict('aprobado') devuelve:`,[`approved`,`'approved'`],`VERDICTS.aprobado = 'approved'.`);
+MC('H',3,`¿Qué parámetros fijos usa la llamada a OpenRouter?`,[`temperature 0 y max_tokens 1200, con modelos de respaldo si falla el principal`,`temperature 1 y sin límite`,`Solo streaming`,`Un único modelo sin respaldo`],`Se prueban fallbackModels en orden (429/404 de los modelos gratuitos).`);
+MC('H',3,`¿Para qué sirve extractJson?`,[`Sacar el primer objeto JSON de un texto (algunos modelos lo envuelven en un bloque de código markdown)`,`Validar el esquema OpenAPI`,`Convertir CSV a JSON`,`Serializar la respuesta`],`Busca desde la primera llave hasta la última con una regex y hace JSON.parse en try/catch.`);
+MC('H',2,`¿Dónde vive OPENROUTER_API_KEY?`,[`Solo en api/.env; nunca se devuelve ni se registra`,`En web/index.html`,`En Supabase`,`En openapi.js`],`Garantía de seguridad de ai.service.js.`);
+MC('H',3,`¿Qué orden crea /auto cuando todo pasa?`,[`Estrategia «<nombre> (auto)», qty 1, order_type market, luego submit mleg a Alpaca paper`,`Una orden límite de 100 contratos`,`Una orden de acciones`,`Ninguna, solo recomienda`],`strategiesService.create + submit.`);
+MC('H',3,`Si falla la creación o el submit de la orden automática:`,[`Se borra lastOrderAt del ticker para permitir reintentar y se relanza el error`,`Se bloquea el ticker 24 h`,`Se envía de nuevo en 60 s`,`Se ignora`],`lastOrderAt.delete(recommendation.symbol).`);
+MA('H',2,`Relaciona cada constante del backtest con su valor.`,[[`WARMUP`,`80`],[`HOLD_TRADING_DAYS`,`21`],[`STEP`,`5`],[`MC_PATHS`,`4000`]],`backtest.service.js.`,[`30`,`10000`]);
+MC('H',3,`¿Por qué el backtest aproxima la IV con hvLongRun?`,[`Alpaca no entrega IV histórica en el plan gratuito; se declara como limitación`,`Porque la IV siempre es igual a la HV`,`Por velocidad`,`Porque BS no usa IV`],`limitation en la respuesta.`);
+OR('H',3,`Ordena el procedimiento del backtest.`,[`Tomar ~1.5 años de velas diarias`,`Avanzar cada 5 días hábiles usando solo datos hasta esa fecha`,`Leer el régimen y armar las 4 estrategias con strikes fijos`,`Calcular probabilidad anunciada y puntaje con Monte Carlo`,`Medir el P&L real 21 días hábiles después`,`Comparar probabilidad anunciada contra frecuencia real por tramos`],`Es la calibración.`);
+MA('H',3,`Relaciona cada plantilla del backtest con sus strikes.`,[[`strangle`,`call spot·1.05 y put spot·0.95`],[`straddle`,`call y put al spot`],[`calendar`,`vende call ATM a 30 d y compra call ATM a 60 d`],[`diagonal`,`vende call spot·1.03 a 30 d y compra call ATM a 60 d`]],`backtestLegs.`);
+MA('H',3,`Relaciona cada plantilla de web/templates.js con cómo elige strikes.`,[[`long/short straddle`,`call ATM y put en el mismo strike`],[`long/short strangle`,`call y put por delta ≈ 0.25`],[`calendar`,`vende cercana y compra lejana al mismo strike`],[`diagonal`,`vende cercana por delta 0.30 y compra lejana ATM`]],`build().`);
+MC('H',3,`¿Cómo define build el vencimiento lejano (farExpiration)?`,[`El último vencimiento posterior al cercano cuyas calls rodean el spot`,`El primero posterior al cercano`,`Siempre 60 días exactos`,`El de mayor open interest`],`coversSpot: min strike ≤ spot ≤ max strike.`);
+MC('H',3,`calendar fit = 0.5·term + 0.5·rangeBound. ¿Qué mide rangeBound?`,[`1 − nearBand: qué tan centrado está el precio entre las bandas de Bollinger`,`La amplitud de las bandas`,`El RSI`,`El volumen`],`Cercano a 1 = mercado lateral.`);
+MC('H',2,`¿Qué semilla usa el recomendador para el Monte Carlo y por qué?`,[`42, para que el resultado sea reproducible`,`La hora actual, para variar`,`0, para desactivar el azar`,`El número de paths`],`{ paths, seed: 42 }.`);
+MC('H',3,`explain() de la ganadora avisa «Ojo» cuando:`,[`Su valor esperado es negativo`,`Su score es menor a 50`,`IV < HV`,`No hay vencimiento lejano`],`Honestidad: aclara si otra estrategia tiene EV positivo.`);
+
+/* ====================== I · BASE DE DATOS ====================== */
+NU('I',1,`¿Cuántas tablas crea la migración 001?`,6,0,`watchlists, orders, option_chains, option_quotes, strategies, strategy_legs.`,`tablas`);
+MC('I',2,`RLS activado en todas las tablas sin ninguna política significa:`,[`Solo el backend con la llave secreta puede leer y escribir`,`Cualquiera puede leer`,`Nadie, ni el backend`,`Solo usuarios autenticados`],`La secret key (service role) salta RLS.`);
+NU('I',2,`¿En cuántas tablas se instala el trigger set_updated_at?`,4,0,`watchlists, orders, option_chains, strategies (option_quotes y strategy_legs no tienen updated_at).`,`tablas`);
+MA('I',2,`Relaciona cada tabla con su restricción o columna distintiva.`,[[`watchlists`,`symbols text[]`],[`orders`,`raw jsonb con la orden completa`],[`option_quotes`,`unique (chain_id, symbol)`],[`strategies`,`status check (draft|submitted|canceled)`],[`strategy_legs`,`position_intent check con 4 valores`]],`001_market_data_f0.sql.`);
+MS('I',2,`¿Qué valores permite strategies.status?`,[`draft`,`submitted`,`canceled`],[`filled`,`expired`],`check (status in ('draft','submitted','canceled')).`);
+MC('I',2,`¿Qué ocurre con option_quotes al borrar una option_chain?`,[`Se borran en cascada (on delete cascade)`,`Quedan huérfanas`,`Se archivan`,`Se bloquea el borrado`],`chain_id references option_chains on delete cascade.`);
+MC('I',2,`¿Qué significa que la migración sea idempotente?`,[`Puede correrse varias veces sin error ni duplicados (if not exists, create or replace…)`,`Solo corre una vez`,`Borra y recrea todo`,`No usa transacciones`],`Cabecera del archivo SQL.`);
+MC('I',3,`¿Por qué orders tiene alpaca_id uuid unique not null?`,[`Es la clave natural de Alpaca; el upsert del espejo usa onConflict: 'alpaca_id'`,`Para guardar el id de Supabase`,`Para indexar por símbolo`,`Por seguridad`],`Alpaca es la fuente de verdad.`);
+MC('I',3,`¿Qué tipo de id usa option_quotes?`,[`bigint generated always as identity`,`uuid`,`text`,`serial de 32 bits`],`Las demás tablas usan uuid con gen_random_uuid().`);
+MC('I',2,`¿Qué extensión habilita gen_random_uuid()?`,[`pgcrypto`,`uuid-ossp`,`pg_trgm`,`postgis`],`create extension if not exists pgcrypto.`);
+MC('I',3,`¿Cómo garantiza db() una sola instancia del cliente de Supabase?`,[`client ??= createClient(...) con persistSession: false`,`Con una clase estática`,`Con Redis`,`Con variables de entorno`],`Singleton perezoso.`);
+MC('I',3,`¿Qué hace unwrapQuery (alias q)?`,[`Desenvuelve {data, error} y, si hay error, lanza HttpError 500 «Supabase: …» con {code, hint}`,`Reintenta la consulta`,`Convierte a camelCase`,`Cierra la conexión`],`lib/supabase.js.`);
+TF('I',2,`Las órdenes y watchlists se guardan en Supabase como espejo; la fuente de verdad sigue siendo Alpaca.`,true,`openspec/config.yaml.`);
+MC('I',3,`strategies.qty tiene check (qty > 0). ¿Dónde más se garantiza esto?`,[`validate() lo exige positivo con check() y lo trunca con Math.trunc`,`En el front solamente`,`En Alpaca`,`No se garantiza`],`Doble defensa: API y base de datos.`);
+
+/* ====================== J · CALIDAD Y OPERACIÓN ====================== */
+MA('J',2,`Relaciona cada tipo de prueba con su archivo o herramienta.`,[[`Integración`,`integracion/gateway.test.js`],[`Contrato`,`contrato/openapi.test.js`],[`E2E / smoke`,`e2e/smoke.js`],[`Carga`,`carga/k6.js`],[`Seguridad`,`npm audit + OWASP ZAP`]],`Carpeta pruebas/.`);
+NU('J',2,`¿Cuántos pasos recorre el smoke test?`,26,0,`Contra Alpaca y Supabase reales.`,`pasos`);
+NU('J',2,`¿Cuántas peticiones tiene la colección f0-collection.json?`,28,0,`Se importa en Insomnia, Postman, Bruno, etc.`,`peticiones`);
+NU('J',2,`¿Cuál es el umbral p95 (ms) de la prueba de carga con k6?`,800,0,`p95 < 800 ms.`,`ms`);
+MA('J',2,`Relaciona cada herramienta de monitoreo con su puerto.`,[[`Prometheus`,`9090`],[`Grafana`,`3000`]],`docker compose up -d --build.`,[`3060`,`9100`]);
+MS('J',3,`¿Qué cabeceras fija securityHeaders?`,[`X-Content-Type-Options: nosniff`,`X-Frame-Options: SAMEORIGIN`,`Content-Security-Policy`,`Permissions-Policy`,`Referrer-Policy`,`Cross-Origin-Opener-Policy`],[`Strict-Transport-Security`,`X-Powered-By: Express`],`Además app.disable('x-powered-by').`);
+MC('J',2,`¿Qué problema de seguridad señaló OWASP ZAP que cubre lib/security.js?`,[`Cabeceras HTTP de seguridad faltantes`,`Inyección SQL`,`Llaves en el repositorio`,`Dependencias vulnerables`],`Prueba baseline de T3-Act 2, inciso C.`);
+MC('J',3,`¿Por qué la CSP permite script-src 'unsafe-inline' y https://unpkg.com?`,[`El front usa un script en línea y la librería de gráficas desde unpkg; Swagger también necesita scripts en línea`,`Por descuido`,`Para permitir anuncios`,`Porque Express lo exige`],`Aun así cierra object-src, base-uri, frame-ancestors, etc.`);
+MC('J',2,`¿Qué formato tiene /metrics?`,[`Texto de Prometheus (http_requests_total, http_request_duration_seconds…)`,`JSON`,`XML`,`CSV`],`Content-Type text/plain; version=0.0.4.`);
+MC('J',3,`¿Qué clave usa monitoring.track para agrupar series?`,[`método|ruta|estado`,`IP|usuario`,`Solo la ruta`,`URL completa con query`],`Con la ruta parametrizada (/:id) para no explotar la cardinalidad.`);
+MC('J',2,`/health de un microservicio responde 503 cuando:`,[`missingConfig() no está vacío (status «degraded»)`,`Hay más de 100 peticiones`,`Hace más de 1 h que arrancó`,`Falla el motor WASM`],`health: status missing.length ? 503 : 200.`);
+TF('J',2,`Los contadores de monitoring se reinician al reiniciar el proceso porque viven en memoria.`,true,`Const series = new Map().`);
+MC('J',3,`Características de memo():`,[`TTL, promesa en vuelo compartida, no cachea errores, máximo 500 entradas`,`Persistencia en disco`,`Cachea también los errores`,`Sin límite de entradas`],`MAX_ENTRIES = 500; expulsa la más antigua.`);
+MC('J',2,`¿Por qué existe el caché memo?`,[`Alpaca limita a 200 peticiones por minuto`,`Para guardar contraseñas`,`Para acelerar Rust`,`Para cumplir con GDPR`],`Doc de lib/cache.js.`);
+NU('J',2,`La pantalla única medía antes cuántas peticiones por carga (20 eran GET /strategies/:id)?`,32,0,`Se redujeron con /market/overview, ?priced=true y memo.`,`peticiones`);
+MC('J',3,`Límite declarado del caché en memoria y la migración sugerida:`,[`Es por proceso; con varias réplicas conviene Redis`,`No tiene límites`,`Se pierde cada hora; usar disco`,`Solo funciona con Docker`],`Comentarios de cache.js y del change pantalla-unica.`);
+MC('J',2,`¿Qué variables revisa missingConfig()?`,[`ALPACA_KEY_ID, ALPACA_SECRET_KEY, SUPABASE_URL, SUPABASE_SECRET_KEY`,`PORT y HOST`,`OPENROUTER_API_KEY solamente`,`RISK_FREE_RATE y API_URL`],`GET / muestra missingConfig.`);
+MC('J',2,`¿Qué valor por defecto tiene RISK_FREE_RATE?`,[`0.04`,`0.05`,`0`,`0.10`],`Number(process.env.RISK_FREE_RATE ?? 0.04).`);
+MA('J',3,`Relaciona cada variable de entorno con su valor por defecto.`,[[`ALPACA_OPTIONS_FEED`,`indicative`],[`ALPACA_STOCKS_FEED`,`iex`],[`AI_TIMEOUT_MS`,`25000`],[`PORT`,`3060`],[`API_URL`,`/api/v1`]],`config.js.`,[`opra`,`sip`]);
+MC('J',3,`¿Qué hace baseUrl en config.js?`,[`Quita barras finales y sufijos de versión como /v2 o /v1beta1`,`Agrega https`,`Resuelve DNS`,`Valida certificados`],`Dos replace con regex: uno quita las barras finales y otro el sufijo /v seguido de dígitos y opcionalmente beta.`);
+MC('J',2,`¿Qué dispara la regresión en GitHub Actions (quant-ci.yml)?`,[`npm test y cargo test en cada push`,`Solo k6`,`Solo el smoke`,`Nada, es manual`],`README.`);
+MC('J',3,`¿Qué es el MCP f0-api?`,[`Un servidor MCP sin dependencias que deja a Claude Code ejecutar la colección de peticiones`,`Un microservicio de F0`,`Una base de datos`,`El motor Rust`],`Herramientas f0_status, f0_run_request, f0_run_all, f0_call, f0_graphql…`);
+OR('J',3,`Ordena el flujo de un cambio con OpenSpec.`,[`proposal.md`,`specs/ (deltas con escenarios)`,`design.md`,`tasks.md con prueba automática por tarea`,`Implementar por corte vertical y correr pruebas`,`Archive: fusionar specs y mover a changes/archive`],`Reglas de config.yaml.`);
+MC('J',2,`¿Qué significa un comentario «shortcut» en el código?`,[`Una simplificación consciente con su límite documentado`,`Un atajo de teclado`,`Una función deprecada`,`Un alias de ruta`],`Ej.: estado en memoria, GraphQL en proceso.`);
+MC('J',3,`¿Cuántos milisegundos duran el caché de historial diario y el de vencimientos del overview?`,[`5 minutos y 10 minutos`,`2 s y 20 s`,`1 min y 1 h`,`6 h y 6 h`],`HISTORY_TTL_MS = 5·60 000; EXPIRATIONS_TTL_MS = 10·60 000.`);
+
+/* ====================== K · LECTURA DE CÓDIGO ====================== */
+MC('K',2,`¿Qué devuelve sma([1, 2, 3, 4, 5], 3)?`,[`[null, null, 2, 3, 4]`,`[2, 3, 4]`,`[1, 1.5, 2, 3, 4]`,`[null, 1.5, 2, 3, 4]`],`Suma móvil; el primer valor llega en el índice period − 1.`,`export function sma(values, period) {\n  let rollingSum = 0;\n  return values.map((price, index) => {\n    rollingSum += price - (index >= period ? values[index - period] : 0);\n    return index >= period - 1 ? rollingSum / period : null;\n  });\n}`);
+MC('K',3,`Se llama dos veces seguidas a f(AAPL) dentro del TTL y la primera aún no termina. ¿Cuántas veces se ejecuta fn?`,[`Una: las dos llamadas comparten la misma promesa`,`Dos`,`Cero`,`Depende del TTL`],`La promesa en vuelo ya está en entries; la segunda llamada la reutiliza (hit.promise).`,`const hit = entries.get(key);\nif (hit && Date.now() - hit.at < ttlMs) return hit.promise;\nconst promise = Promise.resolve(fn(...args));\nentries.set(key, { at: Date.now(), promise });\npromise.catch(() => entries.get(key)?.promise === promise && entries.delete(key));`);
+MC('K',3,`En el fragmento de memo, ¿qué hace la línea promise.catch(...)?`,[`Elimina del caché una promesa fallida para no cachear errores`,`Reintenta la llamada`,`Registra el error en consola`,`Convierte el error en null`],`Solo borra si la entrada sigue siendo esa misma promesa.`,`promise.catch(() => entries.get(key)?.promise === promise && entries.delete(key));`);
+MS('K',3,`check(body, rules) con body = {name: 'x', qty: -3} y las reglas abajo. ¿Qué mensajes produce?`,[`qty debe ser mayor que 0`,`legs es obligatorio`],[`name es obligatorio`,`qty debe ser numérico`,`underlying es obligatorio`],`name está presente; qty es numérico pero no positivo; legs falta. No hay regla para underlying.`,`check(body, {\n  name: { required: true, type: 'string' },\n  qty:  { type: 'number', positive: true },\n  legs: { required: true, type: 'array' },\n});`);
+MS('K',3,`¿Qué entradas acepta normalizeSymbol? (regex /^[A-Z][A-Z.]{0,9}$/ tras trim y mayúsculas)`,[`AAPL`,`BRK.B`,`  msft `,`ABCDEFGHIJ`],[`AAPL2`,`3M`,`ABCDEFGHIJK`],`No admite dígitos y el máximo es 10 caracteres.`);
+MC('K',3,`parseOcc('aapl251219c00200000') devuelve:`,[`{ root:'AAPL', expiration:'2025-12-19', type:'call', strike:200 }`,`null, porque está en minúsculas`,`{ root:'AAPL', expiration:'251219', type:'C', strike:200000 }`,`{ strike: 0.2 }`],`Se aplica toUpperCase() antes de la regex; strike = 00200000/1000.`);
+MC('K',3,`priceStrategy: una pierna trae latestQuote con bp = 1.2 pero sin ap. ¿Qué pasa?`,[`No se marca como sin precio; mid = (1.2 + undefined)/2 = NaN y el neto queda NaN`,`pricing = null`,`mid = 1.2`,`Lanza 400`],`La guarda es if (!quote?.bp && !quote?.ap): solo falla si faltan ambos.`,`if (!quote?.bp && !quote?.ap) {\n  complete = false;\n  return leg;\n}\nconst mid = (quote.bp + quote.ap) / 2;`);
+MC('K',3,`En el proxy, una petición DELETE llega con cuerpo JSON. ¿Qué recibe el microservicio?`,[`Sin cuerpo: se envía body undefined`,`El mismo cuerpo`,`Un {} vacío`,`Un 400`],`['GET','HEAD','DELETE'].includes(method) ? undefined : JSON.stringify(...).`,`body: ['GET', 'HEAD', 'DELETE'].includes(req.method)\n  ? undefined\n  : JSON.stringify(req.body ?? {}),`);
+MC('K',3,`closestExpiration(contracts, 30): ¿qué devuelve?`,[`El vencimiento cuya distancia en días a 30 es mínima`,`El primer vencimiento de la lista`,`El mayor vencimiento`,`El promedio de fechas`],`reduce con Math.abs(daysUntil(x) − targetDays).`,`expirations.reduce((best, current) =>\n  Math.abs(daysUntil(current) - targetDays) <\n  Math.abs(daysUntil(best) - targetDays) ? current : best);`);
+MC('K',3,`historicalVol(closes, 30): ¿cuántos retornos usa?`,[`Los últimos 30 (logReturns(closes).slice(-30))`,`Los primeros 30`,`30 precios`,`Todos`],`Necesita al menos 31 cierres para tener 30 retornos.`,`const returns = logReturns(closes).slice(-window);\nreturn stdev(returns) * Math.sqrt(TRADING_DAYS);`);
+MC('K',3,`En unit_value, ¿qué pasa si dt > t de la pierna?`,[`t efectivo = 0 (la opción vale su intrínseco), no negativo`,`Panic por tiempo negativo`,`Se usa dt directamente`,`Devuelve NaN`],`(self.t - dt).max(0.0).`,`t: (self.t - dt).max(0.0),\nvol: (self.vol + vol_shift).max(1e-4),`);
+MC('K',3,`rsi(values, 14): ¿en qué índice aparece el primer valor no nulo?`,[`En el índice 14`,`En el índice 13`,`En el índice 1`,`En el índice 15`],`index < period → continue; el primer RSI se asigna cuando index == period.`,`if (index <= period) {\n  averageGain += upwardChange / period;\n  averageLoss += downwardChange / period;\n  if (index < period) continue;\n}`);
+MC('K',3,`¿Qué efecto tiene el segundo argumento {} en la instanciación del módulo?`,[`Indica que no hay imports que proveer al WASM`,`Configura el tamaño de memoria`,`Activa el modo debug`,`Define la semilla`],`El .wasm de F0 no importa funciones de JS.`,`const { exports: wasm } = new WebAssembly.Instance(\n  new WebAssembly.Module(bytes), {});`);
+MC('K',3,`En reg_t, ¿qué hace este sort_by?`,[`Prueba primero a las largas con menor ancho de strike (las que dejan el spread en débito)`,`Ordena por prima descendente`,`Ordena por vencimiento`,`Mezcla al azar`],`Menor ancho = menor requerimiento, así que se asignan primero.`,`candidates.sort_by(|&a, &b|\n  width(a).partial_cmp(&width(b))\n    .unwrap_or(core::cmp::Ordering::Equal));`);
+MC('K',3,`¿Qué problema evita el bloque finally de withBuffers?`,[`Fugas de memoria WASM aunque la función FFI lance una excepción`,`Que el wasm se descargue dos veces`,`Que el proceso se detenga`,`Condiciones de carrera entre hilos`],`Cada qc_alloc debe emparejarse con qc_free.`,`try {\n  const ret = runFn(...pointers, outputPointer);\n  return { ret, out: new Float64Array(wasm.memory.buffer, outputPointer, outputLength).slice() };\n} finally {\n  inputPointers.forEach(([pointer, length]) => wasm.qc_free(pointer, length));\n  wasm.qc_free(outputPointer, outputLength);\n}`);
+MC('K',2,`¿Qué devuelve volSide(0.9)?`,[`'long'`,`'short'`,`null`,`NaN`],`0.9 no es mayor que 1.1 → se compra volatilidad.`,`export const volSide = (ivToHv) => (ivToHv > 1.1 ? 'short' : 'long');`);
+MC('K',3,`En riskService.analyzeLegs, si Alpaca no trae IV para una pierna pero sí mid, ¿qué ocurre?`,[`El motor calcula la IV con impliedVol y ivSource = 'motor'`,`Se usa la vol del subyacente`,`Se descarta la pierna`,`Se asume 20 %`],`Si el resultado sigue sin ser finito → 400 «Sin cotización ni IV».`,`let vol = snapshot.impliedVolatility ?? null;\nlet ivSource = 'alpaca';\nif (vol == null && mid != null) {\n  vol = impliedVol([{ type, spot, strike, t, rate: RATE, price: mid }])[0];\n  ivSource = 'motor';\n}\nif (!Number.isFinite(vol)) throw badRequest(...);`);
+
+/* ============================================================
+   MOTOR DEL FORMULARIO
+   ============================================================ */
+(function exam(){
+  const STORE = 'f0-estudio-v1';
+  const TYPE_LABEL = {mc:'Opción múltiple', ms:'Varias correctas', tf:'Verdadero / falso', fi:'Completar', nu:'Cálculo', ma:'Relacionar', or:'Ordenar'};
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[`'"]/g,'').replace(/\(\)$/,'').replace(/\s+/g,' ').trim();
+
+  let ans = {}, graded = false, res = {};
+  try { const o = JSON.parse(localStorage.getItem(STORE) || 'null'); if (o) { ans = o.ans || {}; graded = !!o.graded; } } catch (e) {}
+  const save = () => { try { localStorage.setItem(STORE, JSON.stringify({ans, graded})); } catch (e) {} };
+
+  /* ---------- barajado determinista por pregunta ---------- */
+  const rng = (a) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const shuffled = (arr, seed) => { const r = rng(seed * 7919 + 13); const a = arr.map((v, i) => [v, i]); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  Q.forEach(q => {
+    if (q.t === 'mc') q.view = shuffled(q.opts, q.id);
+    else if (q.t === 'ms') q.view = shuffled(q.ok.concat(q.bad), q.id);
+    else if (q.t === 'ma') q.view = shuffled([...new Set(q.pairs.map(p => p[1]).concat(q.extra))], q.id).map(x => x[0]);
+    else if (q.t === 'or') q.view = shuffled(q.items, q.id);
+  });
+
+  /* ---------- calificación ---------- */
+  function grade(q) {
+    const a = ans[q.id];
+    let f = 0, shown = '';
+    if (q.t === 'mc') { f = a === 0 ? 1 : 0; shown = q.opts[0]; }
+    else if (q.t === 'ms') {
+      const sel = Array.isArray(a) ? a : [], k = q.ok.length;
+      const right = sel.filter(i => i < k).length, wrong = sel.length - right;
+      f = Math.max(0, (right - wrong) / k); shown = q.ok.join('  ·  ');
+    }
+    else if (q.t === 'tf') { f = a === q.a ? 1 : 0; shown = q.a ? 'Verdadero' : 'Falso'; }
+    else if (q.t === 'fi') { f = a != null && q.a.some(x => norm(x) === norm(a)) ? 1 : 0; shown = q.a[0]; }
+    else if (q.t === 'nu') {
+      const n = parseFloat(String(a ?? '').replace(',', '.'));
+      f = Number.isFinite(n) && Math.abs(n - q.a) <= q.tol + 1e-9 ? 1 : 0;
+      shown = q.a + (q.unit ? ' ' + q.unit : '') + (q.tol ? '  (tolerancia ±' + q.tol + ')' : '');
+    }
+    else if (q.t === 'ma') {
+      const sel = Array.isArray(a) ? a : [];
+      f = q.pairs.filter((p, i) => sel[i] === p[1]).length / q.pairs.length;
+      shown = q.pairs.map(p => p[0] + '  →  ' + p[1]).join('\n');
+    }
+    else if (q.t === 'or') {
+      const sel = Array.isArray(a) ? a : [];
+      f = q.view.filter((it, d) => Number(sel[d]) === it[1] + 1).length / q.items.length;
+      shown = q.items.map((t, i) => (i + 1) + '. ' + t).join('\n');
+    }
+    return {f, shown};
+  }
+  const answered = (q) => {
+    const a = ans[q.id];
+    if (q.t === 'mc') return typeof a === 'number';
+    if (q.t === 'tf') return typeof a === 'boolean';
+    if (q.t === 'ms' || q.t === 'ma' || q.t === 'or') return Array.isArray(a) && a.some(x => x !== '' && x != null);
+    return a != null && String(a).trim() !== '';
+  };
+
+  /* ---------- HTML de cada pregunta ---------- */
+  function body(q) {
+    const a = ans[q.id], name = 'q' + q.id, dis = graded ? ' disabled' : '';
+    const r = graded ? res[q.id] : null;
+    if (q.t === 'mc') return '<div class="opts">' + q.view.map(([txt, oi]) => {
+      const cls = r ? (oi === 0 ? ' right' : (a === oi ? ' wrong' : '')) : '';
+      return `<label class="opt${cls}"><input type="radio" name="${name}" value="${oi}" data-q="${q.id}"${a === oi ? ' checked' : ''}${dis}><span>${esc(txt)}</span></label>`;
+    }).join('') + '</div>';
+    if (q.t === 'ms') { const k = q.ok.length; return '<div class="opts">' + q.view.map(([txt, oi]) => {
+      const on = Array.isArray(a) && a.includes(oi);
+      const cls = r ? (oi < k ? ' right' : (on ? ' wrong' : '')) : '';
+      return `<label class="opt${cls}"><input type="checkbox" value="${oi}" data-q="${q.id}"${on ? ' checked' : ''}${dis}><span>${esc(txt)}</span></label>`;
+    }).join('') + '</div>'; }
+    if (q.t === 'tf') return '<div class="opts">' + [[true, 'Verdadero'], [false, 'Falso']].map(([v, l]) => {
+      const cls = r ? (v === q.a ? ' right' : (a === v ? ' wrong' : '')) : '';
+      return `<label class="opt${cls}"><input type="radio" name="${name}" value="${v}" data-q="${q.id}"${a === v ? ' checked' : ''}${dis}><span>${l}</span></label>`;
+    }).join('') + '</div>';
+    if (q.t === 'fi') return `<input class="inp" type="text" autocomplete="off" spellcheck="false" placeholder="Tu respuesta" data-q="${q.id}" value="${esc(a ?? '')}"${dis}>`;
+    if (q.t === 'nu') return `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input class="inp" type="text" inputmode="decimal" autocomplete="off" placeholder="Valor numérico" data-q="${q.id}" value="${esc(a ?? '')}"${dis} style="width:min(100%,200px)">${q.unit ? `<span style="color:var(--muted);font-size:13px">${esc(q.unit)}</span>` : ''}</div>`;
+    if (q.t === 'ma') return '<div class="pairs">' + q.pairs.map((p, i) => {
+      const cur = Array.isArray(a) ? a[i] : '';
+      return `<div class="pair"><div class="l">${esc(p[0])}</div><select data-q="${q.id}" data-i="${i}"${dis}><option value="">Elegir…</option>${q.view.map(v => `<option value="${esc(v)}"${cur === v ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></div>`;
+    }).join('') + '</div>';
+    if (q.t === 'or') return '<div>' + q.view.map(([txt], d) => {
+      const cur = Array.isArray(a) ? a[d] : '';
+      return `<div class="ord"><select data-q="${q.id}" data-i="${d}" aria-label="Posición"${dis}><option value="">Posición</option>${q.items.map((_, k) => `<option value="${k + 1}"${String(cur) === String(k + 1) ? ' selected' : ''}>${k + 1}</option>`).join('')}</select><div style="overflow-wrap:anywhere;font-size:14px">${esc(txt)}</div></div>`;
+    }).join('') + '</div>';
+    return '';
+  }
+
+  function qHtml(q) {
+    const r = graded ? res[q.id] : null;
+    const state = r ? (r.f === 1 ? ' ok' : r.f > 0 ? ' part' : ' bad') : '';
+    let fb = '';
+    if (r) {
+      const un = !answered(q);
+      const head = un ? '<b class="x">Sin responder</b>' : r.f === 1 ? '<b class="k">Correcta</b>' : r.f > 0 ? `<b class="x" style="color:var(--warn)">Parcial · ${Math.round(r.f * 100)} %</b>` : '<b class="x">Incorrecta</b>';
+      const mine = (q.t === 'fi' || q.t === 'nu') && !un && r.f < 1 ? `<div>Tu respuesta: <span class="ans">${esc(ans[q.id])}</span></div>` : '';
+      fb = `<div class="fb">${head}${mine}<div style="margin-top:4px">Respuesta correcta:</div><div class="ans" style="white-space:pre-wrap">${esc(r.shown)}</div><div style="margin-top:6px">${esc(q.why)}</div></div>`;
+    }
+    return `<article class="q${state}" id="q-${q.id}" data-id="${q.id}">
+      <div class="qh"><span class="n">#${String(q.id).padStart(3, '0')}</span><span class="tag">${esc(q.sec)} · ${esc(BLOCKS[q.sec])}</span><span class="lv" title="Nivel ${q.lv}">${'●'.repeat(q.lv)}${'○'.repeat(3 - q.lv)}</span><span>${TYPE_LABEL[q.t]}</span></div>
+      <p class="qt">${esc(q.q)}</p>
+      ${q.code ? `<pre><code>${esc(q.code)}</code></pre>` : ''}
+      ${body(q)}${fb}</article>`;
+  }
+
+  /* ---------- filtros ---------- */
+  const sel = {blocks: new Set(), lv: 0, ty: '', st: ''};
+  function visible(q) {
+    if (sel.blocks.size && !sel.blocks.has(q.sec)) return false;
+    if (sel.lv && q.lv !== sel.lv) return false;
+    if (sel.ty && q.t !== sel.ty) return false;
+    if (graded && sel.st) { const f = res[q.id].f; if (sel.st === 'fail' && f === 1) return false; if (sel.st === 'pass' && f < 1) return false; }
+    return true;
+  }
+  function applyFilters() {
+    let n = 0;
+    Q.forEach(q => { const el = $('q-' + q.id); const v = visible(q); if (el) el.hidden = !v; if (v) n++; });
+    updateProgress(n);
+  }
+  function updateProgress(shown) {
+    const done = Q.filter(answered).length;
+    if (shown == null) shown = Q.filter(visible).length;
+    $('prog').textContent = `Respondidas ${done} de ${Q.length}  ·  Mostrando ${shown}`;
+  }
+
+  /* ---------- panel de resultados ---------- */
+  function resultHtml() {
+    let pts = 0, full = 0, part = 0, zero = 0, none = 0;
+    const byB = {}, byL = {};
+    Q.forEach(q => {
+      const f = res[q.id].f; pts += f;
+      if (!answered(q)) none++; else if (f === 1) full++; else if (f > 0) part++; else zero++;
+      (byB[q.sec] ??= {p: 0, n: 0}); byB[q.sec].p += f; byB[q.sec].n++;
+      (byL[q.lv] ??= {p: 0, n: 0}); byL[q.lv].p += f; byL[q.lv].n++;
+    });
+    const pct = Math.round(pts / Q.length * 100);
+    const bar = (label, o) => { const p = Math.round(o.p / o.n * 100); return `<div class="bar"><span>${esc(label)}</span><i><b style="width:${p}%"></b></i><em>${p} %  (${Math.round(o.p * 10) / 10}/${o.n})</em></div>`; };
+    return `<div class="result" id="result-box">
+      <div class="row"><div><div class="big">${pct} %</div><div style="color:var(--muted)">${Math.round(pts * 10) / 10} de ${Q.length} puntos</div></div>
+      <div style="font-size:14px;line-height:1.8">Correctas: <b>${full}</b> · Parciales: <b>${part}</b> · Incorrectas: <b>${zero}</b> · Sin responder: <b>${none}</b></div></div>
+      <h4>Por bloque</h4><div class="bars">${Object.keys(BLOCKS).filter(k => byB[k]).map(k => bar(k + ' · ' + BLOCKS[k], byB[k])).join('')}</div>
+      <h4>Por nivel</h4><div class="bars">${[1, 2, 3].filter(k => byL[k]).map(k => bar('Nivel ' + k + ' ' + '●'.repeat(k), byL[k])).join('')}</div>
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="r-fails" type="button">Ver solo falladas</button><button class="btn" id="r-all" type="button">Ver todas</button><button class="btn" id="r-edit" type="button">Seguir editando</button></div></div>`;
+  }
+
+  /* ---------- render total ---------- */
+  function renderAll() {
+    if (graded) { res = {}; Q.forEach(q => { res[q.id] = grade(q); }); }
+    $('qlist').innerHTML = Q.map(qHtml).join('');
+    const box = $('result');
+    box.hidden = !graded;
+    box.innerHTML = graded ? resultHtml() : '';
+    $('exf-st').hidden = !graded; $('exf-st-l').hidden = !graded;
+    if (!graded) { sel.st = ''; $('exf-st').value = ''; }
+    $('btn-grade').textContent = graded ? 'Volver a calificar' : 'Calificar';
+    applyFilters();
+  }
+
+  /* ---------- eventos ---------- */
+  $('qlist').addEventListener('input', onChange);
+  $('qlist').addEventListener('change', onChange);
+  function onChange(ev) {
+    const t = ev.target, id = Number(t.dataset.q);
+    if (!id || graded) return;
+    const q = Q[id - 1];
+    if (q.t === 'mc') ans[id] = Number(t.value);
+    else if (q.t === 'tf') ans[id] = t.value === 'true';
+    else if (q.t === 'ms') ans[id] = [...document.querySelectorAll(`#q-${id} input[type=checkbox]:checked`)].map(x => Number(x.value));
+    else if (q.t === 'fi' || q.t === 'nu') ans[id] = t.value;
+    else if (q.t === 'ma' || q.t === 'or') { const arr = Array.isArray(ans[id]) ? ans[id].slice() : []; arr[Number(t.dataset.i)] = t.value; ans[id] = arr; }
+    save(); updateProgress();
+  }
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'r-fails') { sel.st = 'fail'; $('exf-st').value = 'fail'; applyFilters(); document.getElementById('qlist').scrollIntoView({behavior: 'smooth'}); }
+    if (b.id === 'r-all') { sel.st = ''; $('exf-st').value = ''; applyFilters(); }
+    if (b.id === 'r-edit') { graded = false; save(); renderAll(); }
+  });
+  $('btn-grade').addEventListener('click', () => { graded = true; save(); renderAll(); $('result').scrollIntoView({behavior: 'smooth', block: 'start'}); });
+  let armed = null;
+  $('btn-reset').addEventListener('click', (ev) => {
+    const b = ev.currentTarget;
+    if (!armed) { b.textContent = 'Confirmar: borrar todo'; armed = setTimeout(() => { armed = null; b.textContent = 'Reiniciar'; }, 4000); return; }
+    clearTimeout(armed); armed = null; b.textContent = 'Reiniciar';
+    ans = {}; graded = false; save(); renderAll(); window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+  $('exf-lv').addEventListener('change', e => { sel.lv = Number(e.target.value); applyFilters(); });
+  $('exf-ty').addEventListener('change', e => { sel.ty = e.target.value; applyFilters(); });
+  $('exf-st').addEventListener('change', e => { sel.st = e.target.value; applyFilters(); });
+
+  /* chips de bloque */
+  const chips = $('exf-secs');
+  const mk = (label, key) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = label; b.dataset.k = key; chips.appendChild(b); return b; };
+  mk('Todos los bloques', '*').setAttribute('aria-pressed', 'true');
+  Object.keys(BLOCKS).forEach(k => { const n = Q.filter(q => q.sec === k).length; if (n) mk(k + ' · ' + BLOCKS[k] + ' (' + n + ')', k).setAttribute('aria-pressed', 'false'); });
+  chips.addEventListener('click', (ev) => {
+    const b = ev.target.closest('.chip'); if (!b) return;
+    if (b.dataset.k === '*') sel.blocks.clear();
+    else if (sel.blocks.has(b.dataset.k)) sel.blocks.delete(b.dataset.k); else sel.blocks.add(b.dataset.k);
+    chips.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.k === '*' ? sel.blocks.size === 0 : sel.blocks.has(c.dataset.k)));
+    applyFilters();
+  });
+
+  /* intro */
+  const nBlocks = new Set(Q.map(q => q.sec)).size;
+  const byType = Q.reduce((o, q) => (o[q.t] = (o[q.t] || 0) + 1, o), {});
+  $('ex-intro').textContent = `${Q.length} preguntas en ${nBlocks} bloques, de tres niveles de dificultad: ` +
+    Object.keys(TYPE_LABEL).filter(k => byType[k]).map(k => `${TYPE_LABEL[k].toLowerCase()} (${byType[k]})`).join(', ') +
+    '. Las respuestas y las explicaciones aparecen solo al calificar. Tus respuestas se guardan en este navegador.';
+
+  /* ---------- pestañas ---------- */
+  const tg = $('tab-guide'), te = $('tab-exam'), vg = $('view-guide'), ve = $('view-exam');
+  function show(which) {
+    const isExam = which === 'exam';
+    tg.setAttribute('aria-selected', !isExam); te.setAttribute('aria-selected', isExam);
+    vg.hidden = isExam; ve.hidden = !isExam; $('dock').hidden = !isExam;
+    window.scrollTo({top: 0});
+  }
+  tg.addEventListener('click', () => show('guide'));
+  te.addEventListener('click', () => show('exam'));
+
+  renderAll();
+})();
+</script>

@@ -12,9 +12,9 @@
 <script src="templates.js"></script>
 <style>
 /* =====================================================================================
-   SISTEMA DE DISEÑO · "Tinta y marfil" (editorial financiero)
+   SISTEMA DE DISEÑO · "Bun" (crema, negro, blanco y rosa)
    TODA la paleta y la tipografía viven aquí: cambia estas variables y cambia la marca.
-   Oscuro = tinta verde-negra con marfil y lima ácido. Claro = papel cálido con verde bosque.
+   Oscuro = negro con blanco y rosa. Claro = crema de Bun con blanco, negro y rosa fuerte.
    Verde/rojo SOLO para compra/venta y ganancia/pérdida. Sin morados ni azules-violeta.
    ===================================================================================== */
 :root {
@@ -23,20 +23,20 @@
   --font: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* solo cifras */
   /* modo claro: papel cálido */
-  --bg: #f3eee1; --panel: #fbf8ef; --panel2: #efe9d8; --line: #d8d0b8;
-  --text: #15201b; --muted: #5a695f;
-  --accent: #1f4d3a; --accent-fg: #fbf8ef; --accent-soft: #e0e7d1; --focus: rgba(31, 77, 58, .45);
+  --bg: #fbf0df; --panel: #ffffff; --panel2: #f6e6cf; --line: #e4d2b4;
+  --text: #14151a; --muted: #5f5a52;
+  --accent: #d81b7a; --accent-fg: #ffffff; --accent-soft: #fde1ef; --focus: rgba(216, 27, 122, .45);
   --ok: #17703f; --ok-soft: #d9ead4; --bad: #b4301c; --bad-soft: #f4dcd2; --warn: #765000; --warn-soft: #f1e4c0;
-  --shadow: 0 4px 14px rgba(21, 32, 27, .16);
+  --shadow: 0 4px 14px rgba(20, 21, 26, .16);
   /* medidas del app-shell */
   --top: 48px; --foot: 28px; --dock: 232px; --rail: 220px; --side: 340px;
   --r: 6px; --r-sm: 4px; --t: 150ms;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b1210; --panel: #111a17; --panel2: #16221d; --line: #22302a;
-    --text: #ece6d6; --muted: #8a9a91;
-    --accent: #d9f24f; --accent-fg: #0b1210; --accent-soft: #1c2a12; --focus: rgba(217, 242, 79, .5);
+    --bg: #000000; --panel: #0e0e10; --panel2: #17171a; --line: #2a2a2f;
+    --text: #ffffff; --muted: #a2a2aa;
+    --accent: #ff7ac6; --accent-fg: #000000; --accent-soft: #3a1328; --focus: rgba(255, 122, 198, .55);
     --ok: #46d79b; --ok-soft: #0f2a20; --bad: #ff6f61; --bad-soft: #32160f; --warn: #e6c75a; --warn-soft: #2b2510;
     --shadow: 0 4px 14px rgba(0, 0, 0, .5);
   }

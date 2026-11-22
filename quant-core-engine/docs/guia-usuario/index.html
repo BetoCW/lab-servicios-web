@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quant Core F0 desde cero</title>
+<style>
+  :root { --bg:#f6f7f9; --panel:#fff; --text:#16181d; --muted:#5d6471; --line:#e2e5ea; --accent:#2457d6; --soft:#e8eefc; --ok:#13804a; --bad:#c2322b; --warn:#fdf2dc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --panel:#171a20; --text:#e7e9ee; --muted:#9aa1ad; --line:#2a2f38; --accent:#7aa2ff; --soft:#1d2740; --ok:#4cc488; --bad:#ff7b72; --warn:#30260f; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 30px; margin: 8px 0; } h2 { font-size: 24px; margin: 48px 0 8px; padding-top: 12px; border-top: 2px solid var(--line); }
+  h3 { font-size: 18px; margin: 28px 0 6px; } p, li { max-width: 75ch; }
+  .lead { color: var(--muted); font-size: 18px; }
+  nav.toc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; }
+  nav.toc ol { margin: 6px 0; columns: 2; column-gap: 32px; } nav.toc a { color: var(--accent); text-decoration: none; }
+  figure { margin: 16px 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+  figure img { width: 100%; height: auto; border-radius: 6px; display: block; }
+  figcaption { color: var(--muted); font-size: 14px; padding: 8px 6px 2px; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); font-size: 15px; margin: 12px 0; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); }
+  code { background: var(--soft); padding: 1px 6px; border-radius: 4px; font-size: 14px; }
+  .box { border-left: 4px solid var(--accent); background: var(--soft); padding: 10px 16px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+  .warn { border-left-color: #d9a21b; background: var(--warn); }
+  .buy { color: var(--ok); font-weight: 600; } .sell { color: var(--bad); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Quant Core F0, explicado desde cero</h1>
+<p class="lead">Una guía para quien no sabe nada de inversiones. Primero los conceptos básicos, luego cada botón y cada
+pestaña de la aplicación, con capturas reales y ejemplos con números.</p>
+
+<div class="box warn"><b>Aviso:</b> esto es material de estudio, no asesoría financiera. La aplicación usa una cuenta
+<b>paper</b> de Alpaca: el dinero es ficticio (100,000 USD de práctica), pero los precios del mercado son reales.
+Los números de los ejemplos son de la sesión del 4 de noviembre de 2026.</div>
+
+<nav class="toc"><b>Contenido</b>
+<ol>
+  <li><a href="#s1">Lo más básico (acciones, broker, precios)</a></li>
+  <li><a href="#s2">Qué es una opción, despacio</a></li>
+  <li><a href="#s3">Las griegas e IV</a></li>
+  <li><a href="#s4">Encabezado: efectivo, poder de compra, nivel de opciones</a></li>
+  <li><a href="#s5">Pestaña Watchlists</a></li>
+  <li><a href="#s6">Pestaña Cadenas de opciones</a></li>
+  <li><a href="#s7">Pestaña Estrategias</a></li>
+  <li><a href="#s8">Riesgo: el motor y sus números</a></li>
+  <li><a href="#s9">Pestaña Órdenes</a></li>
+  <li><a href="#s10">Gráfica en vivo</a></li>
+  <li><a href="#s11">Por qué el campo de Peticiones está abajo</a></li>
+  <li><a href="#s12">Receta completa paso a paso</a></li>
+  <li><a href="#s13">Glosario</a></li>
+</ol></nav>
+
+<!-- ============================================================ 1 -->
+<h2 id="s1">1. Empecemos por lo más básico</h2>
+<div class="box">Los números de esta sección son <b>inventados y redondos</b> para que se entienda la idea. Más adelante verás
+números reales de la aplicación.</div>
+
+<h3>1.1 ¿Qué es invertir?</h3>
+<p>Invertir es <b>comprar algo hoy con la esperanza de que valga más mañana</b>, para venderlo después y quedarte con
+la diferencia. Es lo mismo que comprar un tenis de edición limitada en 2,000 pesos esperando revenderlo en 3,000.
+La diferencia entre lo que pagaste y lo que te pagan después es tu <b>ganancia</b> (si es positiva) o tu <b>pérdida</b> (si es negativa).</p>
+
+<h3>1.2 ¿Qué es una acción?</h3>
+<p>Imagina una pizzería que vale 1,000,000 de pesos y que sus dueños la dividen en 1,000 pedacitos iguales.
+Cada pedacito vale 1,000 pesos. Quien compra un pedacito es <b>dueño de una milésima parte de la pizzería</b>.
+Ese pedacito se llama <b>acción</b>.</p>
+<ul>
+  <li>Si a la pizzería le va bien, todos quieren un pedacito, y el pedacito ahora cuesta 1,100. Tu acción <b>subió</b>.</li>
+  <li>Si le va mal, el pedacito baja a 900. Tu acción <b>bajó</b>.</li>
+</ul>
+<p>Con una empresa real es igual. Apple, por ejemplo, tiene millones de pedacitos y cada uno tiene su precio, que cambia
+cada segundo mientras la bolsa está abierta.</p>
+
+<h3>1.3 Ganar y perder con una acción: un ejemplo con dinero</h3>
+<table>
+  <tr><th>Paso</th><th>Qué pasa</th><th>Tu dinero</th></tr>
+  <tr><td>1</td><td>Compras 1 acción cuando vale <b>100 USD</b>.</td><td>Pagas 100</td></tr>
+  <tr><td>2a</td><td>Sube a 110 y la vendes.</td><td>Recibes 110 → <b>ganaste 10</b></td></tr>
+  <tr><td>2b</td><td>En cambio, baja a 90 y la vendes.</td><td>Recibes 90 → <b>perdiste 10</b></td></tr>
+</table>
+<p>Eso es todo el negocio: <b>compra barato, vende caro</b>. El riesgo es que pase lo contrario.</p>
+
+<h3>1.4 Ticker (símbolo), ETF y SPY</h3>
+<ul>
+  <li><b>Ticker o símbolo</b>: el nombre corto de cada cosa que se compra en la bolsa, como una placa de coche.
+  Apple es <code>AAPL</code>, Microsoft es <code>MSFT</code>.</li>
+  <li><b>ETF</b>: una "canasta" que ya trae muchas acciones adentro, y se compra como si fuera una sola cosa.
+  Es como comprar un paquete combinado de comida en lugar de cada platillo por separado.</li>
+  <li><b><code>SPY</code></b>: un ETF famoso cuya canasta son las 500 empresas más grandes de Estados Unidos. Si a esas
+  empresas en conjunto les va bien, SPY sube. <b>Es el ejemplo principal de esta aplicación</b>, y en nuestras capturas vale unos <b>767 USD</b>.</li>
+</ul>
+
+<h3>1.5 ¿Dónde se compra? Bolsa, broker y paper trading</h3>
+<ul>
+  <li><b>Bolsa</b>: el "mercado" donde compradores y vendedores se encuentran (como un tianguis gigante y ordenado).</li>
+  <li><b>Broker</b>: tú no puedes entrar a la bolsa directamente; necesitas un intermediario que compre y venda por ti.
+  Ese intermediario es el broker. En este proyecto es <b>Alpaca</b>. Tú le dices "compra esto" y él lo hace.</li>
+  <li><b>Paper trading</b> ("trading de papel"): una cuenta de <b>práctica</b>. Los precios son los reales, pero el
+  dinero es de mentira (tienes 100,000 USD ficticios). Sirve para aprender sin perder dinero de verdad. <b>Todo lo que
+  hacemos aquí es paper.</b></li>
+</ul>
+
+<h3>1.6 Bid, Ask y Mid (por qué hay dos precios)</h3>
+<p>Al comprar un celular usado en un tianguis, el vendedor pide 1,010 pesos, pero el comprador interesado solo ofrece 1,000.
+En la bolsa pasa igual, siempre hay dos precios:</p>
+<table>
+  <tr><th>Nombre</th><th>Qué es</th><th>En el ejemplo</th></tr>
+  <tr><td><b>Ask</b> (lo que piden)</td><td>El precio al que <b>tú compras</b>. Siempre es el más alto.</td><td>1,010</td></tr>
+  <tr><td><b>Bid</b> (lo que ofrecen)</td><td>El precio al que <b>tú vendes</b>. Siempre es el más bajo.</td><td>1,000</td></tr>
+  <tr><td><b>Mid</b> (medio)</td><td>El punto en medio. Se usa como "precio justo" de referencia.</td><td>1,005</td></tr>
+</table>
+<p>La diferencia entre ask y bid (10 pesos) es un costo escondido de operar: si compras y vendes de inmediato, pierdes esa diferencia.</p>
+
+<h3>1.7 Comprar, vender, "long" y "short"</h3>
+<ul>
+  <li><b>Comprar</b> = ganas si el precio <b>sube</b> (se dice estar <i>long</i>, "largo").</li>
+  <li><b>Vender algo que aún no tienes</b> = ganas si el precio <b>baja</b> (se dice estar <i>short</i>, "corto"). Es raro de entender
+  al principio: tú "vendes" primero, y después lo recompras más barato. En esta aplicación aparece como <b>VENTA</b> en las opciones.</li>
+</ul>
+
+<!-- ============================================================ 2 -->
+<h2 id="s2">2. Qué es una opción (despacio, con dinero)</h2>
+
+<h3>2.1 El problema que resuelven las opciones</h3>
+<p>Imagina que crees que SPY va a subir en las próximas dos semanas. SPY vale 767 USD <b>cada uno</b>. Para apostar con una
+cantidad "normal" de acciones, digamos 100, necesitarías <b>76,700 USD</b>. Eso es mucho dinero para apostar a algo.</p>
+<p>Una <b>opción</b> te deja apostar <b>pagando solo una fracción</b> (por ejemplo, 500 USD) a cambio de aceptar un trato con condiciones.
+Veámoslo con una historia.</p>
+
+<h3>2.2 La historia del apartado (la analogía)</h3>
+<p>Estás viendo un departamento que cuesta <b>1,000,000</b> y crees que en un mes valdrá más porque van a construir un metro cerca.
+No tienes el millón hoy. Entonces le dices al dueño:</p>
+<blockquote style="margin:12px 0; padding:8px 16px; border-left:4px solid var(--line); color:var(--muted)">
+«Te pago <b>10,000</b> ahora (no te los devuelvo) y a cambio me <b>guardas el departamento a 1,000,000 durante un mes</b>.
+Si dentro de un mes quiero comprarlo, tú me lo vendes a 1,000,000, valga lo que valga».</blockquote>
+<p>Pueden pasar dos cosas:</p>
+<ul>
+  <li><b>El departamento sube a 1,200,000.</b> Haces valer tu derecho: lo compras en 1,000,000 y vale 1,200,000. Ganaste 200,000 − los 10,000 del apartado = <b>190,000</b>.</li>
+  <li><b>El departamento baja a 900,000.</b> No lo compras (sería tonto pagar 1,000,000 por algo que vale 900,000). Pierdes <b>solo los 10,000 del apartado</b>.</li>
+</ul>
+<p>Eso es exactamente una <b>opción</b>: un <b>derecho (no una obligación)</b> de comprar o vender algo a un <b>precio pactado</b>,
+durante un <b>tiempo limitado</b>, que se compra pagando un <b>anticipo no reembolsable</b>.</p>
+
+<h3>2.3 Las 5 palabras que tienes que conocer (con el ejemplo del departamento)</h3>
+<table>
+  <tr><th>Palabra en opciones</th><th>En la historia del departamento</th><th>En SPY</th></tr>
+  <tr><td><b>Subyacente</b></td><td>El departamento (lo que se compra o vende)</td><td>SPY</td></tr>
+  <tr><td><b>Strike</b> (precio pactado)</td><td>Los 1,000,000 acordados</td><td>Por ejemplo, 770 USD por acción</td></tr>
+  <tr><td><b>Vencimiento</b></td><td>El plazo de un mes</td><td>Una fecha, por ejemplo 20 de noviembre</td></tr>
+  <tr><td><b>Prima</b></td><td>Los 10,000 de anticipo</td><td>Por ejemplo, 5 USD por acción</td></tr>
+  <tr><td><b>Contrato</b></td><td>El papel firmado</td><td>1 contrato = <b>100 acciones</b>, así que la prima se multiplica ×100: 5 USD × 100 = <b>500 USD</b></td></tr>
+</table>
+<div class="box"><b>Lo más importante:</b> en una opción <b>no estás comprando acciones</b>; estás comprando el <b>derecho</b> a
+comprarlas o venderlas a un precio fijo. Por eso cuesta mucho menos que las acciones.</div>
+
+<h3>2.4 Call: el derecho a COMPRAR (apuestas a que SUBE)</h3>
+<p>Una <b>call</b> es igual al apartado del departamento: el derecho de <b>comprar</b> a un precio fijo.</p>
+<p><b>Ejemplo con números.</b> SPY vale hoy 767. Compras una call con strike <b>770</b> que vence en 2 semanas. La prima es 5 USD,
+así que pagas 5 × 100 = <b>500 USD</b>. Tienes el derecho de comprar 100 acciones de SPY a 770 cada una, pase lo que pase.</p>
+<p>Al llegar el vencimiento, ¿cuánto valía SPY?</p>
+<table>
+  <tr><th>SPY al vencimiento</th><th>¿Qué valor tiene tu derecho?</th><th>Cuenta</th><th>Resultado</th></tr>
+  <tr><td>760 (bajó)</td><td>0. Nadie quiere comprar a 770 algo que vale 760.</td><td>0 − 500</td><td class="sell">pierdes 500</td></tr>
+  <tr><td>770</td><td>0.</td><td>0 − 500</td><td class="sell">pierdes 500</td></tr>
+  <tr><td>775</td><td>(775 − 770) × 100 = 500</td><td>500 − 500</td><td>quedas en 0 (equilibrio)</td></tr>
+  <tr><td>780 (subió)</td><td>(780 − 770) × 100 = 1,000</td><td>1,000 − 500</td><td class="buy">ganas 500</td></tr>
+  <tr><td>800 (subió mucho)</td><td>(800 − 770) × 100 = 3,000</td><td>3,000 − 500</td><td class="buy">ganas 2,500</td></tr>
+</table>
+<p>Fíjate en dos cosas: lo máximo que puedes perder son los <b>500</b> que pagaste, y lo que puedes ganar no tiene tope
+(mientras más suba, más ganas). <i>Nota:</i> en la práctica casi nadie "ejerce" el derecho; se vende el contrato antes de que venza.</p>
+
+<h3>2.5 Put: el derecho a VENDER (apuestas a que BAJA)</h3>
+<p>Una <b>put</b> es lo contrario: el derecho de <b>vender</b> a un precio fijo. Es como un <b>seguro</b>: te protege si el precio cae.</p>
+<p><b>Ejemplo con números.</b> SPY vale 767. Compras una put con strike <b>760</b> y prima 4 USD → pagas 4 × 100 = <b>400 USD</b>.
+Tienes el derecho de vender 100 acciones a 760 cada una, aunque valgan mucho menos.</p>
+<table>
+  <tr><th>SPY al vencimiento</th><th>¿Qué valor tiene tu derecho?</th><th>Cuenta</th><th>Resultado</th></tr>
+  <tr><td>780 (subió)</td><td>0. Nadie quiere vender a 760 algo que vale 780.</td><td>0 − 400</td><td class="sell">pierdes 400</td></tr>
+  <tr><td>760</td><td>0.</td><td>0 − 400</td><td class="sell">pierdes 400</td></tr>
+  <tr><td>740 (bajó)</td><td>(760 − 740) × 100 = 2,000</td><td>2,000 − 400</td><td class="buy">ganas 1,600</td></tr>
+</table>
+<p>Ganas cuando el precio <b>baja</b>. Lo máximo que puedes perder también son los 400 que pagaste.</p>
+
+<h3>2.6 ¿Y "vender" una opción? (el otro lado del trato)</h3>
+<p>Si tú compras una opción, <b>alguien se la vende</b>. Ese alguien es el dueño del departamento de la historia: cobró los
+10,000 del apartado, pero ahora está <b>obligado</b> a venderte el departamento al precio acordado si tú lo pides.</p>
+<ul>
+  <li><b>Quien COMPRA la opción</b> (<span class="buy">COMPRA</span>): paga la prima, tiene un <i>derecho</i>. Pierde como máximo lo que pagó.</li>
+  <li><b>Quien VENDE la opción</b> (<span class="sell">VENTA</span>): <b>cobra</b> la prima, pero tiene una <i>obligación</i>.
+  Gana como máximo lo que cobró (los 500 de nuestro ejemplo), pero si el mercado se mueve mucho en su contra, puede perder mucho más. Por eso
+  el broker le exige más permisos (nivel de opciones) y le bloquea dinero de garantía (margen).</li>
+</ul>
+<p>Cuando una estrategia combina compras y ventas, la una compensa a la otra y el riesgo queda acotado. De eso tratan las "estrategias" (sección 7).</p>
+
+<h3>2.7 Qué tan "adentro" está una opción: ITM, ATM, OTM</h3>
+<p>Comparas el <b>strike</b> con el precio actual:</p>
+<table>
+  <tr><th></th><th>Call (derecho a comprar)</th><th>Put (derecho a vender)</th></tr>
+  <tr><td><b>ITM</b> "con valor"</td><td>strike <b>menor</b> que el precio actual (comprar barato lo que ya vale más)</td><td>strike <b>mayor</b> que el precio actual</td></tr>
+  <tr><td><b>ATM</b> "en el precio"</td><td colspan="2">strike casi igual al precio actual</td></tr>
+  <tr><td><b>OTM</b> "sin valor todavía"</td><td>strike <b>mayor</b> que el precio actual</td><td>strike <b>menor</b> que el precio actual</td></tr>
+</table>
+<p>Ejemplo con SPY a 767: la call 700 es ITM (puedes comprar a 700 algo que vale 767, por eso es cara: ~72 USD); la call 800 es OTM (barata).
+Las OTM cuestan poco pero necesitan que el precio se mueva mucho para dar ganancia.</p>
+
+<h3>2.8 Leer el nombre largo de un contrato (formato OCC)</h3>
+<p>En la aplicación cada contrato se llama algo como <code>SPY261120C00750000</code>. Parece código secreto, pero se lee por partes:</p>
+<table>
+  <tr><th>SPY</th><th>261120</th><th>C</th><th>00750000</th></tr>
+  <tr><td>de qué es (el subyacente)</td><td>fecha de vencimiento: año <b>26</b>, mes <b>11</b>, día <b>20</b></td><td>C = call (P = put)</td><td>el strike: 750.000 (el número × 1000)</td></tr>
+</table>
+<p>Léelo como: "<i>call de SPY, strike 750, vence el 20 de noviembre de 2026</i>". Y <code>SPY261120P00740000</code> sería una put con strike 740, mismo día.</p>
+
+<h3>2.9 Resumen en cuatro líneas</h3>
+<ol>
+  <li>Una opción es un <b>derecho</b> a comprar (call) o vender (put) a un <b>precio fijo</b> (strike) hasta una <b>fecha</b> (vencimiento).</li>
+  <li>Se paga un anticipo llamado <b>prima</b>; 1 contrato = 100 acciones, así que prima × 100 = dinero real.</li>
+  <li>Quien <b>compra</b> arriesga solo la prima; quien <b>vende</b> cobra la prima pero asume una obligación.</li>
+  <li>Una <b>estrategia</b> es combinar varias opciones para construir una apuesta con riesgo y ganancia que tú eliges.</li>
+</ol>
+
+<!-- ============================================================ 3 -->
+<h2 id="s3">3. Las griegas e IV</h2>
+<p>Son medidas que dicen "cuánto cambia el precio de la opción si cambia algo". Aparecen como columnas en la tabla de
+cadenas (captura en la sección 6).</p>
+<table>
+  <tr><th>Columna</th><th>Qué mide</th><th>Cómo leerla (ejemplo real)</th></tr>
+  <tr><td><b>IV</b> (volatilidad implícita)</td><td>Cuánto movimiento espera el mercado, en % anual. Más IV = opciones más caras.</td><td>Call 700: IV 24.7%.</td></tr>
+  <tr><td><b>Delta</b></td><td>Cuánto sube la opción si el subyacente sube 1 USD. También es una aproximación de la probabilidad de terminar ITM.</td><td>Call 700: 0.910. Si SPY sube 1 USD, la opción sube ≈ 0.91 USD. Las puts tienen delta negativa (put 700: −0.086).</td></tr>
+  <tr><td><b>Gamma</b></td><td>Cuánto cambia la delta cuando el subyacente se mueve 1 USD.</td><td>0.0029: la delta casi no cambia.</td></tr>
+  <tr><td><b>Theta</b></td><td>Cuánto valor pierde la opción <b>cada día</b> solo por el paso del tiempo.</td><td>−0.210: pierde ≈ 0.21 USD por acción al día (21 USD por contrato).</td></tr>
+  <tr><td><b>Vega</b></td><td>Cuánto cambia la opción si la IV cambia 1 punto.</td><td>0.370.</td></tr>
+</table>
+<div class="box">Idea clave: al <b>comprar</b> opciones el tiempo juega en tu contra (theta negativa). Al <b>vender</b> juega a tu favor.</div>
+
+<!-- ============================================================ 4 -->
+<h2 id="s4">4. Encabezado: efectivo, poder de compra, nivel de opciones</h2>
+<figure><img src="img/watchlists.jpg" alt="Encabezado de la aplicación">
+<figcaption>Arriba a la izquierda: efectivo, poder de compra, nivel de opciones y tipo de cuenta. Arriba a la derecha: la URL de la API y el estado de la conexión.</figcaption></figure>
+
+<h3>Efectivo (100,000 USD)</h3>
+<p>El dinero líquido de la cuenta. Es lo que realmente tienes.</p>
+
+<h3>Poder de compra (400,000 USD)</h3>
+<p>Cuánto puedes <b>comprar o abrir en posiciones</b> en total, contando el crédito (margen) que da el broker. En esta
+cuenta es 4 veces el efectivo. No es dinero tuyo: es una línea de crédito. Usarlo amplifica ganancias <i>y</i> pérdidas.
+Para una opción comprada basta con tener efectivo para pagar la prima; el poder de compra pesa más al vender opciones
+o al usar acciones con apalancamiento.</p>
+
+<h3>Nivel de opciones (3)</h3>
+<p>El broker limita qué estrategias puedes operar según tu experiencia y riesgo permitido. En Alpaca:</p>
+<table>
+  <tr><th>Nivel</th><th>Qué permite</th></tr>
+  <tr><td>0</td><td>Opciones deshabilitadas.</td></tr>
+  <tr><td>1</td><td>Vender calls cubiertas y puts con efectivo de respaldo.</td></tr>
+  <tr><td>2</td><td>Lo anterior + comprar calls y puts.</td></tr>
+  <tr><td>3</td><td>Lo anterior + <b>estrategias de varias piernas</b> (spreads, straddles, condors).</td></tr>
+</table>
+<p>Esta cuenta tiene nivel <b>3</b>, que es el necesario para todo lo que hace la pestaña Estrategias.</p>
+
+<h3>Conectar y el badge verde</h3>
+<p>La aplicación web es solo la pantalla; los datos vienen de la API local en <code>http://localhost:3060</code>. El
+botón <b>Conectar</b> vuelve a consultar la cuenta. "conectado · ACTIVE" significa que Alpaca respondió y la cuenta
+está activa. Si aparece "sin conexión", la API no está corriendo (<code>npm run dev</code> en <code>api/</code>).</p>
+
+<!-- ============================================================ 5 -->
+<h2 id="s5">5. Pestaña Watchlists</h2>
+<figure><img src="img/watchlists.jpg" alt="Pestaña Watchlists">
+<figcaption>La watchlist "Demo F0" con AAPL, SPY y MSFT. Cada símbolo es una "pastilla" con × para quitarlo.</figcaption></figure>
+<p>Una <b>watchlist</b> (lista de seguimiento) es una lista de símbolos que quieres vigilar. No compra nada ni cuesta
+nada: es como los favoritos del navegador, pero de activos. Se guarda en Alpaca y se refleja en Supabase.</p>
+<table>
+  <tr><th>Acción</th><th>Qué hace</th><th>Petición</th></tr>
+  <tr><td>Crear (nombre + símbolos separados por coma)</td><td>Nueva lista</td><td>POST /watchlists</td></tr>
+  <tr><td>Agregar símbolo</td><td>Añade un ticker</td><td>POST /watchlists/{id}/symbols</td></tr>
+  <tr><td>× en una pastilla</td><td>Quita ese símbolo</td><td>DELETE …/symbols/{sym}</td></tr>
+  <tr><td>Renombrar (PUT)</td><td>Reemplaza nombre y símbolos</td><td>PUT /watchlists/{id}</td></tr>
+  <tr><td>Eliminar</td><td>Borra la lista</td><td>DELETE /watchlists/{id}</td></tr>
+</table>
+<p>¿Por qué existe en un proyecto de opciones? Es el primer recurso CRUD (crear, leer, actualizar, borrar) y sirve para
+elegir los subyacentes con los que vas a trabajar después.</p>
+
+<!-- ============================================================ 6 -->
+<h2 id="s6">6. Pestaña Cadenas de opciones</h2>
+
+<h3>¿Qué es el subyacente?</h3>
+<p>El activo "de debajo" del que depende una opción. Una opción sobre SPY tiene a SPY como subyacente. Si SPY sube, las
+calls valen más; si baja, las puts valen más. En esta pestaña el campo <b>Subyacente</b> es el ticker del que quieres
+ver las opciones.</p>
+
+<h3>¿Qué es una cadena de opciones?</h3>
+<p>La <b>cadena</b> es la tabla con <b>todos los contratos disponibles</b> de un subyacente: cada strike, cada
+vencimiento, calls y puts, con sus precios y griegas. Es el "menú" de donde eliges lo que vas a combinar.</p>
+
+<figure><img src="img/cadenas.jpg" alt="Formulario y cadenas guardadas">
+<figcaption>Arriba el formulario para seguir una cadena; abajo las cadenas ya guardadas, con su precio del subyacente, rango de vencimientos y cantidad de contratos.</figcaption></figure>
+
+<h3>El formulario "Seguir una cadena"</h3>
+<table>
+  <tr><th>Campo</th><th>Para qué sirve</th></tr>
+  <tr><td>Subyacente</td><td>El ticker (SPY por defecto).</td></tr>
+  <tr><td>Vence desde / hasta</td><td>Rango de fechas de vencimiento que quieres traer (por defecto mañana a +14 días).</td></tr>
+  <tr><td>Tipo</td><td>Solo calls, solo puts o ambos.</td></tr>
+  <tr><td>Strike mín / máx</td><td>Recorta los precios de ejercicio. Muy útil porque SPY tiene cientos de strikes.</td></tr>
+  <tr><td>Ingestar desde Alpaca</td><td>"Ingestar" = traer los datos de Alpaca y guardarlos en la base (Supabase). Máximo 300 contratos por cadena.</td></tr>
+</table>
+
+<h3>Botones de cada cadena guardada</h3>
+<ul>
+  <li><b>Ver</b>: abre la tabla detallada.</li>
+  <li><b>Refresh</b>: vuelve a pedir precios a Alpaca (los precios cambian cada segundo; una cadena guardada envejece).</li>
+  <li><b>Eliminar</b>: dejar de seguirla.</li>
+</ul>
+
+<h3>La tabla de contratos</h3>
+<figure><img src="img/cadena-detalle.jpg" alt="Tabla de contratos de SPY con griegas">
+<figcaption>Cadena de SPY (766.73) al vencimiento 2026-11-20. Cada fila es un contrato; las últimas columnas son los botones +C y +V.</figcaption></figure>
+<p>Cómo leer la fila <b>call 700</b>: strike 700, bid 72.01 / ask 72.21, IV 24.7%, delta 0.910, gamma 0.0029, theta
+−0.210, vega 0.370. Tiene delta alta porque SPY (≈767) está muy por encima de 700: es una call muy ITM.</p>
+<p>Los botones <b>+C</b> y <b>+V</b> agregan esa fila como pierna de una estrategia: <b>+C = COMPRA</b> (buy) y
+<b>+V = VENTA</b> (sell). Es una "C" de compra, no de call; cuidado con la confusión.</p>
+<p>Si una fila muestra "—" en IV y griegas, Alpaca no devolvió esos datos para ese contrato (contratos poco negociados).</p>
+
+<!-- ============================================================ 7 -->
+<h2 id="s7">7. Pestaña Estrategias</h2>
+
+<h3>¿Qué es una estrategia de opciones?</h3>
+<p>Combinar <b>varias opciones a la vez</b> (cada una es una "pierna") para obtener un perfil de ganancia/pérdida que
+una sola opción no da: limitar la pérdida, cobrar dinero si el mercado se queda quieto, apostar a que habrá un gran
+movimiento sin saber hacia dónde, etc. La aplicación permite hasta <b>4 piernas</b>.</p>
+
+<h3>¿Cómo se arma una estrategia? (dos caminos)</h3>
+<p><b>Camino manual:</b></p>
+<ol>
+  <li>Ve a <b>Cadenas de opciones</b> y pulsa <b>Ver</b> en una cadena.</li>
+  <li>En la tabla pulsa <b>+C</b> (comprar) o <b>+V</b> (vender) en cada contrato que quieras. Aparecen como pastillas en la pestaña Estrategias.</li>
+  <li>Ponle nombre, cantidad, tipo y límite.</li>
+  <li>Pulsa <b>Guardar borrador</b>. Queda en estado <i>draft</i> (nada se ha enviado al broker).</li>
+  <li>Pulsa <b>Enviar a Alpaca</b> cuando quieras mandarla como orden.</li>
+</ol>
+
+<p><b>Camino con plantilla:</b> elige una plantilla y pulsa "Armar desde la cadena abierta".</p>
+<figure><img src="img/plantilla-straddle.jpg" alt="Plantilla Long straddle armada">
+<figcaption>Se eligió "Long straddle" con la cadena de SPY abierta: la aplicación puso sola una COMPRA de la call 767 y una COMPRA de la put 767 (mismo vencimiento 20 nov) y renombró la estrategia.</figcaption></figure>
+
+<h3>¿Por qué existe la "plantilla"?</h3>
+<p>Porque elegir a mano los contratos correctos de un straddle o un calendar es tedioso y se presta a errores (strike
+equivocado, vencimientos que no cuadran). La plantilla aplica la <b>regla de la estrategia</b> (por ejemplo "call y put
+en el strike más cercano al precio actual") sobre la cadena que tienes abierta. Estas son las que incluye:</p>
+<table>
+  <tr><th>Plantilla</th><th>Qué arma</th><th>Para qué sirve</th></tr>
+  <tr><td><b>Long straddle</b></td><td>Compra 1 call + 1 put con el <b>mismo strike</b> (el más cercano al precio actual) y mismo vencimiento.</td><td>Apuestas a un movimiento grande, sin importar la dirección. Pierdes si el precio se queda quieto.</td></tr>
+  <tr><td><b>Short straddle</b></td><td>Lo mismo pero <b>vendiendo</b>.</td><td>Apuestas a que el precio se queda quieto. Riesgo grande si se mueve mucho.</td></tr>
+  <tr><td><b>Long strangle</b></td><td>Compra call y put <b>fuera del dinero</b> (delta ≈ 0.25), strikes distintos.</td><td>Como el straddle pero más barato; necesita un movimiento aún mayor.</td></tr>
+  <tr><td><b>Short strangle</b></td><td>Lo mismo vendiendo.</td><td>Cobras más margen de seguridad que el short straddle.</td></tr>
+  <tr><td><b>Calendar (calls)</b></td><td>Vende una call de vencimiento cercano y compra la call del <b>mismo strike</b> de vencimiento lejano.</td><td>Aprovecha que el tiempo erosiona más rápido la opción cercana.</td></tr>
+  <tr><td><b>Diagonal (calls)</b></td><td>Como el calendar pero la call vendida tiene otro strike (delta ≈ 0.30).</td><td>Variante del calendar con sesgo direccional.</td></tr>
+</table>
+<p>Calendar y diagonal necesitan una cadena con <b>dos vencimientos o más</b>; si no, la aplicación avisa. También avisa
+si abriste una cadena solo de calls y pides un straddle (necesita puts): ábrela con "Tipo: ambos".</p>
+
+<h3>¿Por qué se llama "Bull call spread", "Iron condor", etc.?</h3>
+<p>Los nombres son convención del mercado, no de la aplicación:</p>
+<ul>
+  <li><b>Bull</b> = toro (mercado alcista); <b>Bear</b> = oso (bajista).</li>
+  <li><b>Spread</b> = "diferencia": combinas una opción comprada y otra vendida del mismo tipo con strikes distintos.</li>
+  <li><b>Straddle</b> = "a horcajadas": call y put en el mismo strike, "montando" el precio.</li>
+  <li><b>Strangle</b> = "estrangular": igual, pero con strikes separados.</li>
+  <li><b>Iron condor</b> = el perfil de ganancias dibuja un cóndor (el ave): dos alas y un cuerpo plano. "Iron" por mezclar calls y puts.</li>
+  <li><b>Calendar</b> = juega con calendarios distintos; <b>Diagonal</b> = calendario + strikes distintos.</li>
+</ul>
+
+<h3>Ejemplo 1: Bull call spread (apuesta a que sube, con pérdida limitada)</h3>
+<p>Ejemplo real de la aplicación: <span class="buy">COMPRA</span> call 750 (mid 23.07) + <span class="sell">VENTA</span> call 780 (mid 3.66), vencimiento 20 nov, SPY ≈ 767.</p>
+<ul>
+  <li>Costo neto = 23.07 − 3.66 ≈ <b>19.41</b> por acción → ×100 = <b>1,941.50 USD de débito</b> (pagas).</li>
+  <li>Pérdida máxima: lo que pagaste (≈ 1,943 USD). Pasa si SPY termina ≤ 750.</li>
+  <li>Ganancia máxima: (780 − 750) × 100 − 1,941.50 ≈ <b>1,058 USD</b>. Pasa si SPY termina ≥ 780.</li>
+  <li>Punto de equilibrio: 750 + 19.41 = 769.41.</li>
+</ul>
+<p>La call vendida abarata la compra a cambio de renunciar a las ganancias por encima de 780.</p>
+
+<h3>Ejemplo 2: Iron condor (apuesta a que NO se mueve mucho)</h3>
+<p>La aplicación tiene guardado "Iron condor SPY 720/740/790/810" con 4 piernas:</p>
+<table>
+  <tr><th>Pierna</th><th>Lado</th><th>Mid</th></tr>
+  <tr><td>Put 720</td><td class="buy">Compra</td><td>1.06</td></tr>
+  <tr><td>Put 740</td><td class="sell">Venta</td><td>2.24</td></tr>
+  <tr><td>Call 790</td><td class="sell">Venta</td><td>1.21</td></tr>
+  <tr><td>Call 810</td><td class="buy">Compra</td><td>0.10</td></tr>
+</table>
+<p>Cobras 2.24 + 1.21 y pagas 1.06 + 0.10 → <b>crédito de 2.29</b> por acción = <b>229 USD</b> (es ganancia máxima si SPY
+termina entre 740 y 790). Las alas compradas (720 y 810) te protegen: la pérdida máxima es (740−720)×100 − 229 = 1,771 USD.
+En la lista, el costo se muestra como <code>-2.29</code> y la palabra <b>crédito</b>.</p>
+
+<h3>Los campos del formulario "Armar estrategia"</h3>
+<table>
+  <tr><th>Campo</th><th>Explicación</th></tr>
+  <tr><td>Nombre</td><td>Etiqueta tuya para reconocerla.</td></tr>
+  <tr><td>Cantidad</td><td>Cuántas veces repites toda la estrategia (1 = un contrato por pierna = 100 acciones).</td></tr>
+  <tr><td>Tipo: limit / market</td><td><b>market</b>: ejecuta al precio que haya ahora (rápido, pero no controlas el precio).
+  <b>limit</b>: solo ejecuta a tu precio o mejor (controlas el precio, pero quizá nunca se llene).</td></tr>
+  <tr><td><b>Límite (neto)</b></td><td>El precio máximo que aceptas pagar (positivo) o el mínimo que aceptas cobrar (con
+  signo negativo), <b>sumando todas las piernas</b>. "Neto" porque no es por pierna, es el total de la combinación por
+  acción. El iron condor guardado tiene <code>@ -5</code>: pide cobrar al menos 5 por acción.</td></tr>
+</table>
+<div class="box"><b>¿Por qué el límite está por defecto en 0.01?</b> Es un valor de seguridad para las pruebas: con un precio
+tan bajo, la orden casi nunca se ejecuta, así que se puede practicar el ciclo (enviar, ver, cancelar) sin que se llene.
+Para una orden real, cámbialo por el costo neto que ves en el borrador.</div>
+
+<h3>Estados de una estrategia</h3>
+<table>
+  <tr><th>Estado</th><th>Significado</th></tr>
+  <tr><td><span style="color:#9a6200">draft</span></td><td>Solo guardada, no enviada. Se puede editar (PUT) y borrar.</td></tr>
+  <tr><td><span style="color:var(--ok)">submitted</span></td><td>Enviada a Alpaca como una sola orden de varias piernas ("mleg").</td></tr>
+  <tr><td><span style="color:var(--bad)">canceled</span></td><td>Cancelada.</td></tr>
+</table>
+
+<!-- ============================================================ 8 -->
+<h2 id="s8">8. Riesgo: el motor y sus números</h2>
+<p>El botón <b>Riesgo (motor)</b> de cada estrategia corre un programa escrito en <b>Rust</b> (compilado a WebAssembly)
+que calcula qué podría pasar. Los datos de entrada son reales: precio actual, volatilidad implícita media y días a vencimiento.</p>
+<figure><img src="img/riesgo.jpg" alt="Panel de riesgo de la estrategia Bull call spread">
+<figcaption>Riesgo del Bull call spread 750/780: probabilidad de ganar 47.5%, ganancia máxima +1,056.57 USD y pérdida máxima −1,943.43 USD.</figcaption></figure>
+<table>
+  <tr><th>Indicador</th><th>Qué significa</th></tr>
+  <tr><td><b>Prob. de ganancia</b></td><td>De miles de futuros simulados, en qué porcentaje terminas con ganancia.</td></tr>
+  <tr><td><b>P&amp;L esperado</b></td><td>Promedio de ganancia/pérdida de todas las simulaciones. P&amp;L = "profit and loss".</td></tr>
+  <tr><td><b>Ganancia máx. / Pérdida máx.</b></td><td>Los extremos posibles. En un spread son fijos y conocidos de antemano.</td></tr>
+  <tr><td><b>VaR 95%</b></td><td>"Value at Risk": la pérdida que no se superaría en el 95% de los escenarios.</td></tr>
+  <tr><td><b>Margen Reg T / SPAN</b></td><td>Dinero que el broker te bloquea como garantía. Reg T es la regla clásica de EE. UU.; SPAN es el método más fino basado en escenarios.</td></tr>
+  <tr><td><b>Delta · Theta/día</b></td><td>Delta 44.9: la posición se comporta como ≈ 45 acciones de SPY. Theta −12.50: pierde ≈ 12.50 USD cada día que pasa.</td></tr>
+  <tr><td><b>Velocidad</b></td><td>Cuánto tardó el motor: 100,000 trayectorias en 14.7 ms.</td></tr>
+</table>
+<ul>
+  <li><b>Monte Carlo</b>: se simulan muchísimos "futuros posibles" del precio con números aleatorios y se mira qué pasa con la
+  estrategia en cada uno. El histograma muestra cuántas simulaciones terminaron en cada ganancia/pérdida. En este spread hay dos
+  barras gigantes en los extremos porque casi siempre terminas en máximo o en mínimo.</li>
+  <li><b>Tabla P&amp;L al vencimiento</b>: ganancia/pérdida si SPY se mueve −10%, −5%, 0%, +5%, +10%… Con un movimiento de +2.5% (786) ya ganas el máximo.</li>
+  <li><b>Matriz precio × volatilidad</b>: ganancia/pérdida <i>hoy</i> si cambian el precio y la IV a la vez. Rojo = pierdes, verde = ganas.</li>
+  <li><b>El motor contra el mercado</b>: compara el precio que calcula el modelo (Black-Scholes) con el precio real de Alpaca. Si son parecidos
+  (aquí difieren centavos), el motor es confiable.</li>
+</ul>
+<div class="box warn">Un P&amp;L esperado negativo (−315 USD) <b>no</b> es un error: el modelo no asume que SPY vaya a subir; simula con la
+volatilidad y la tasa de interés. Dice que, con esos supuestos, pagar 19.41 por este spread cuesta más de lo que vale en promedio.</div>
+
+<!-- ============================================================ 9 -->
+<h2 id="s9">9. Pestaña Órdenes</h2>
+<p>Una <b>orden</b> es la instrucción que le mandas al broker: "compra/vende esto, a este precio". Aquí puedes mandar
+órdenes simples (un solo símbolo) y revisar todas (incluidas las que salen de una estrategia).</p>
+<figure><img src="img/ordenes.jpg" alt="Pestaña Órdenes">
+<figcaption>Formulario de nueva orden y tabla de órdenes con sus estados.</figcaption></figure>
+
+<h3>Campos del formulario</h3>
+<table>
+  <tr><th>Campo</th><th>Significado</th></tr>
+  <tr><td>Símbolo</td><td>Qué comprar o vender (AAPL, o un contrato OCC).</td></tr>
+  <tr><td>Cant.</td><td>Cuántas acciones (o contratos).</td></tr>
+  <tr><td>Lado</td><td><span class="buy">buy</span> = comprar, <span class="sell">sell</span> = vender.</td></tr>
+  <tr><td>Tipo</td><td>market (al precio actual) o limit (a tu precio).</td></tr>
+  <tr><td>Límite</td><td>Precio que fijas. Con una compra limit a 1.00 de AAPL, solo se llena si AAPL cotiza a 1.00 o menos, es decir, casi nunca (por eso las órdenes de prueba nunca se ejecutan).</td></tr>
+  <tr><td>Vigencia</td><td><b>gtc</b> ("good till canceled"): vive hasta que la canceles. <b>day</b>: solo vale hoy.</td></tr>
+</table>
+
+<h3>Columnas de la tabla</h3>
+<ul>
+  <li><b>Clase</b>: <code>simple</code> (un símbolo) o <code>mleg</code> ("multi-leg", varias piernas, viene de una estrategia).</li>
+  <li><b>Estado</b>:</li>
+</ul>
+<table>
+  <tr><th>Estado</th><th>Qué pasó</th></tr>
+  <tr><td>new / accepted / pending_new</td><td>Alpaca la recibió; espera a que se cumpla tu precio.</td></tr>
+  <tr><td>partially_filled</td><td>Se llenó una parte.</td></tr>
+  <tr><td>filled</td><td>Se ejecutó completa.</td></tr>
+  <tr><td>canceled</td><td>La cancelaste.</td></tr>
+  <tr><td>replaced</td><td>Cambiaste el precio con "Cambiar precio" (PATCH). La orden vieja queda "replaced" y se crea una nueva.</td></tr>
+  <tr><td>expired</td><td>Venció su vigencia sin llenarse (como la de 18.40 del 20/10 en la captura).</td></tr>
+  <tr><td>rejected</td><td>Alpaca la rechazó.</td></tr>
+</table>
+<p><b>Cancelar todas</b> cancela todas las órdenes abiertas de la cuenta. Las órdenes <b>mleg</b> no permiten "Cambiar
+precio" desde aquí.</p>
+
+<!-- ============================================================ 10 -->
+<h2 id="s10">10. Gráfica en vivo</h2>
+<figure><img src="img/grafica.jpg" alt="Gráfica en vivo de SPY">
+<figcaption>SPY en velas de 5 minutos con volumen, SMA20 (amarillo), EMA9 (azul) y bandas de Bollinger (punteadas).</figcaption></figure>
+
+<h3>Velas (candlesticks)</h3>
+<p>Cada vela resume un periodo: el cuerpo va del precio de <b>apertura</b> al de <b>cierre</b>; las mechas llegan al
+<b>máximo</b> y <b>mínimo</b>. <span class="buy">Verde</span> = cerró más alto que abrió; <span class="sell">rojo</span> = cerró más bajo.
+Las barras de abajo son el <b>volumen</b> (cuánto se operó).</p>
+
+<h3>Temporalidad</h3>
+<p>Es el tiempo que representa <b>cada vela</b>: 1Min, 5Min, 15Min, 1Hour, 1Day. Con 5Min, cada vela son 5 minutos de
+mercado; con 1Day, cada vela es un día completo. Temporalidades cortas sirven para ver el movimiento reciente; largas, para ver la tendencia.
+La aplicación trae las últimas 300 velas.</p>
+
+<h3>Los indicadores técnicos</h3>
+<table>
+  <tr><th>Indicador</th><th>Qué es</th><th>Cómo se lee</th></tr>
+  <tr><td><b>SMA20</b></td><td>Promedio simple del precio de las últimas 20 velas.</td><td>Precio arriba = presión alcista; abajo = bajista.</td></tr>
+  <tr><td><b>EMA9</b></td><td>Promedio de 9 velas que da más peso a lo reciente; reacciona más rápido.</td><td>Cuando cruza la SMA20 hacia arriba suele leerse como señal alcista.</td></tr>
+  <tr><td><b>Bandas de Bollinger</b></td><td>Dos líneas a 2 desviaciones estándar de la SMA20. Se ensanchan cuando hay volatilidad.</td><td>Tocar la banda superior = "caro", la inferior = "barato". El panel dice "dentro de bandas" o "sobre/bajo banda".</td></tr>
+  <tr><td><b>RSI14</b></td><td>Número de 0 a 100 que mide la fuerza de las subidas contra las bajadas recientes.</td><td>&gt;70 sobrecompra (pudo subir demasiado); &lt;30 sobreventa. Ahora: 43.4, neutral.</td></tr>
+  <tr><td><b>MACD 12/26/9</b></td><td>Diferencia entre dos promedios, con su línea de señal e histograma.</td><td>MACD sobre la señal = alcista; debajo = bajista (ahora: bajista).</td></tr>
+</table>
+<p>Las tarjetas de arriba resumen el último precio, el cambio contra el cierre anterior (+1.66%), bid/ask y el
+estado de cada indicador. La casilla <b>En vivo</b> refresca cada 5 segundos. Los indicadores se calculan en el microservicio, no en el navegador.</p>
+
+<h3>Superponer estrategia</h3>
+<p>Este selector toma una estrategia guardada y dibuja <b>sus strikes como líneas horizontales sobre el precio</b>:
+<span class="buy">verde = pierna comprada</span>, <span class="sell">roja = pierna vendida</span>, con una etiqueta tipo
+<code>C call 11-20</code> (compra, call, vence 20 de noviembre). Sirve para ver de un vistazo <b>dónde está el precio respecto a tus strikes</b>:
+si el precio ya pasó el strike vendido, esa pierna está en problemas.</p>
+<figure><img src="img/grafica-superpuesta.jpg" alt="Bull call spread superpuesto en la gráfica">
+<figcaption>Con el Bull call spread seleccionado aparece la línea verde del strike 750 ("C call 11-20"). El strike 780 queda fuera del rango visible de precios.</figcaption></figure>
+<p>Solo se dibuja si el símbolo de la gráfica coincide con el subyacente de la estrategia; al elegirla, el símbolo se cambia solo.
+Si un strike queda muy lejos del precio, la línea no se ve (como en el iron condor 720/740/790/810).</p>
+
+<!-- ============================================================ 11 -->
+<h2 id="s11">11. Por qué el campo de Peticiones está abajo de cada pestaña</h2>
+<figure><img src="img/peticiones.jpg" alt="Bitácora de peticiones">
+<figcaption>La bitácora al final de la página: código de estado, método, ruta, tiempo y, al hacer clic, la respuesta.</figcaption></figure>
+<p>Este proyecto es una práctica de <b>servicios web</b>: la pantalla no calcula nada por sí misma, solo manda <b>peticiones HTTP</b>
+a la API y muestra lo que responde. La bitácora está ahí para <b>ver esas conversaciones en vivo</b>. Está al final y
+fuera de las pestañas, así que se mantiene en todas, para que se vea qué petición dispara cada botón.</p>
+<p>Cómo leer una línea: <code>200 GET /option-chains 177 ms</code></p>
+<table>
+  <tr><th>Parte</th><th>Significa</th></tr>
+  <tr><td><code>200</code></td><td>Código de estado: 2xx = éxito, 4xx = error tuyo (datos mal), 5xx = error del servidor. Verde = bien, rojo = falló.</td></tr>
+  <tr><td><code>GET</code></td><td>Método: <b>GET</b> leer, <b>POST</b> crear, <b>PUT</b> reemplazar, <b>PATCH</b> modificar un campo, <b>DELETE</b> borrar.</td></tr>
+  <tr><td><code>/option-chains</code></td><td>Recurso (la dirección) pedido a la API.</td></tr>
+  <tr><td><code>177 ms</code></td><td>Cuánto tardó la respuesta.</td></tr>
+</table>
+<p>Haz clic en una línea para ver el JSON completo que devolvió la API. Los textos pequeños de cada tarjeta ("POST /watchlists",
+"GET /option-chains") te dicen qué endpoint usa esa sección.</p>
+
+<!-- ============================================================ 12 -->
+<h2 id="s12">12. Receta completa paso a paso</h2>
+<ol>
+  <li><b>Revisa el encabezado</b>: ¿dice "conectado · ACTIVE"? Si no, levanta la API.</li>
+  <li><b>Watchlists</b>: crea una lista con los tickers que te interesan (opcional).</li>
+  <li><b>Cadenas</b>: deja SPY, elige fechas (por ejemplo la próxima semana), tipo "ambos", y un rango de strikes cerca del precio actual (por ejemplo ±40). Pulsa "Ingestar". Pulsa <b>Ver</b>.</li>
+  <li><b>Estrategias</b>: elige la plantilla "Long straddle" y pulsa "Armar desde la cadena abierta" (o agrega piernas con +C/+V).</li>
+  <li>Revisa el costo; ajusta el <b>Límite (neto)</b>; pulsa <b>Guardar borrador</b>.</li>
+  <li>Pulsa <b>Riesgo (motor)</b>: mira probabilidad, pérdida máxima y margen. Si no te gusta, borra el borrador.</li>
+  <li><b>Gráfica en vivo</b>: superpón la estrategia y mira dónde está el precio respecto a tus strikes.</li>
+  <li>Opcional: <b>Enviar a Alpaca</b> (con dinero de práctica) y revisa su estado en <b>Órdenes</b>. Cancélala si ya no la quieres.</li>
+</ol>
+
+<!-- ============================================================ 13 -->
+<h2 id="s13">13. Glosario rápido</h2>
+<table>
+  <tr><th>Término</th><th>Significado</th></tr>
+  <tr><td>Subyacente</td><td>Activo del que depende la opción (SPY).</td></tr>
+  <tr><td>Cadena de opciones</td><td>Tabla con todos los contratos de un subyacente.</td></tr>
+  <tr><td>Ingestar</td><td>Traer datos de Alpaca y guardarlos en la base.</td></tr>
+  <tr><td>Call / Put</td><td>Derecho de comprar / vender al strike.</td></tr>
+  <tr><td>Strike</td><td>Precio pactado.</td></tr>
+  <tr><td>Prima</td><td>Precio de la opción (por acción; ×100 por contrato).</td></tr>
+  <tr><td>Pierna (leg)</td><td>Una opción dentro de una estrategia.</td></tr>
+  <tr><td>Débito / crédito</td><td>La estrategia te cuesta / te paga al abrirla.</td></tr>
+  <tr><td>mleg</td><td>Orden de varias piernas.</td></tr>
+  <tr><td>IV</td><td>Volatilidad implícita: movimiento esperado según el precio de las opciones.</td></tr>
+  <tr><td>ITM / ATM / OTM</td><td>Con valor / en el precio / sin valor.</td></tr>
+  <tr><td>Poder de compra</td><td>Capacidad total de compra con margen.</td></tr>
+  <tr><td>Margen</td><td>Garantía que bloquea el broker.</td></tr>
+  <tr><td>Paper trading</td><td>Cuenta de práctica con dinero ficticio.</td></tr>
+  <tr><td>Temporalidad</td><td>Duración de cada vela en la gráfica.</td></tr>
+  <tr><td>Monte Carlo</td><td>Simulación de miles de futuros aleatorios para medir riesgo.</td></tr>
+  <tr><td>VaR</td><td>Pérdida que no se superaría con cierta confianza (95%).</td></tr>
+  <tr><td>P&amp;L</td><td>Ganancias y pérdidas.</td></tr>
+  <tr><td>CRUD</td><td>Crear, leer, actualizar, borrar: las 4 operaciones básicas de una API.</td></tr>
+  <tr><td>GTC / Day</td><td>Vigencia de una orden: hasta cancelar / solo hoy.</td></tr>
+</table>
+<p class="lead">Para profundizar, el repositorio ya trae <code>docs/guia/</code> (introducción, opciones, brokers) y
+<code>docs/ESTUDIO-ESTRATEGIAS.md</code> (Black-Scholes, griegas y cada estrategia con cuentas completas).</p>
+
+</div>
+</body>
+</html>
