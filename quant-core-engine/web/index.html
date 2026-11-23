@@ -325,6 +325,15 @@ dialog#dlgStrat:not([open]) { display: none; }
    < 1100 px: el riel pasa a franja horizontal de chips sobre la gráfica.
    <  800 px: todo apilado (gráfica, recomendador, dock) con scroll de página normal.
    ===================================================================================== */
+/* Ampliar un panel (cubre la página) o ponerlo en pantalla completa; Esc o el mismo botón lo regresa */
+.maxacts { display: flex; gap: 4px; margin-left: auto; }
+.pnl.max { position: fixed; inset: 10px; z-index: 45; margin: 0; max-height: none; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .55), var(--shadow); animation: rise var(--t) both; }
+.pnl.max .body, .pnl.max #recOut { overflow: auto; }
+#recCard.max { display: flex; flex-direction: column; overflow: auto; }
+.pnl:fullscreen { background: var(--panel); display: flex; flex-direction: column; overflow: auto; margin: 0; border-radius: 0; max-height: none; }
+.pnl:fullscreen::backdrop { background: var(--bg); }
+body.has-max { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .pnl.max { animation: none; } }
 @media (max-width: 1450px) { .hs, .chh .muted { display: none; } #flow .step small { display: none; } }
 @media (max-width: 1100px) {
   :root { --side: 310px; }
@@ -406,7 +415,7 @@ dialog#dlgStrat:not([open]) { display: none; }
   <!-- 3) CENTRO: tarjetas de cotización + gráfica a todo el alto (RSI/MACD plegables) -->
   <section id="center">
     <div class="pnl" id="mkQuote"></div>
-    <div class="pnl chartbox">
+    <div class="pnl chartbox" data-max="la gráfica">
       <div class="ph"><b><i class="sn">2</i>Gráfica</b>
         <span class="acts zoom" title="También: rueda del mouse para acercar, arrastrar para moverte">
           <button type="button" class="ghost sm ic" id="zOut" aria-label="Alejar">−</button>
@@ -444,7 +453,7 @@ dialog#dlgStrat:not([open]) { display: none; }
 
   <!-- 4) LATERAL DERECHO: recomendador y ejecución automática -->
   <aside id="side">
-    <div class="pnl" id="recCard">
+    <div class="pnl" id="recCard" data-max="el recomendador">
       <div class="ph"><b><i class="sn">3</i>Recomendador</b><span class="acts"><button class="ghost sm" id="recRun" title="Volver a calcular">Recalcular</button><button class="ghost sm" id="recBacktest" title="Qué tan seguido acertó en el último año">Backtest</button><button class="ghost sm ic" id="recWide" title="Expandir el recomendador" aria-label="Expandir el recomendador">⤢</button></span></div>
       <fieldset id="coreControls" title="El puntaje usa solo los cores marcados. Al operar, los filtros de riesgo e IA siguen siendo obligatorios."><legend>Cores para el análisis</legend>
         <label><input type="checkbox" value="technical" checked> Técnico</label>
@@ -469,15 +478,15 @@ dialog#dlgStrat:not([open]) { display: none; }
 
 <!-- 5) DOCK INFERIOR: Órdenes | Estrategias guardadas | Cadena de opciones (cada panel con su scroll) -->
 <section id="dock">
-  <div class="pnl dp">
+  <div class="pnl dp" data-max="las órdenes">
     <div class="ph"><b><i class="sn">4</i>Órdenes</b><span class="acts"><select id="orStatus" aria-label="Filtro de órdenes"><option value="open">Abiertas</option><option value="all">Historial</option></select><button class="sm" id="btnNewOrder">＋ Nueva</button><button class="ghost sm" id="orRefresh">↻</button><button class="danger sm" id="orCancelAll">Cancelar todas</button></span></div>
     <div class="body"><table id="orTable"></table></div>
   </div>
-  <div class="pnl dp">
+  <div class="pnl dp" data-max="las estrategias">
     <div class="ph"><b><i class="sn">4</i>Estrategias guardadas</b><button class="sm" id="btnStrat">＋ Armar manual</button></div>
     <div class="body" id="stList"></div>
   </div>
-  <div class="pnl dp">
+  <div class="pnl dp" data-max="la cadena">
     <div class="ph"><b><i class="sn">4</i>Cadena de opciones</b><button class="ghost sm" id="btnChains">Gestionar cadenas</button></div>
     <div class="body" id="chDetail"></div>
   </div>
@@ -1875,6 +1884,42 @@ $('#split').onkeydown = (e) => {
   if (e.key === 'Enter') toggleWide();
 };
 if (store.get('f0.side')) setSide(Number(store.get('f0.side')), false);
+
+// Ampliar / pantalla completa por panel. El mismo botón (o Esc) lo regresa a su lugar.
+const MAX_ICON = { max: ['⤢', '⤡'], full: ['⛶', '⛶'] };
+function maxLabels(p) {
+  const name = p.dataset.max, isMax = p.classList.contains('max'), isFull = document.fullscreenElement === p;
+  const [bMax, bFull] = p.querySelectorAll('.maxacts button');
+  bMax.textContent = isMax ? 'Regresar' : MAX_ICON.max[0];
+  bMax.title = bMax.ariaLabel = isMax ? `Regresar ${name} a su lugar (Esc)` : `Ampliar ${name} a toda la página`;
+  bMax.classList.toggle('ic', !isMax); bMax.style.display = isFull ? 'none' : '';
+  bFull.textContent = isFull ? 'Salir de pantalla completa' : MAX_ICON.full[0];
+  bFull.title = bFull.ariaLabel = isFull ? 'Salir de pantalla completa (Esc)' : `Ver ${name} en pantalla completa`;
+  bFull.classList.toggle('ic', !isFull);
+}
+function setMax(p, on) {
+  document.querySelectorAll('.pnl.max').forEach((o) => { if (o !== p) { o.classList.remove('max'); maxLabels(o); } });
+  p.classList.toggle('max', on);
+  document.body.classList.toggle('has-max', on);
+  maxLabels(p);
+}
+document.querySelectorAll('.pnl[data-max]').forEach((p) => {
+  const acts = document.createElement('span');
+  acts.className = 'maxacts';
+  acts.innerHTML = '<button type="button" class="ghost sm ic"></button><button type="button" class="ghost sm ic"></button>';
+  p.querySelector('.ph').append(acts);
+  const [bMax, bFull] = acts.children;
+  bMax.onclick = () => setMax(p, !p.classList.contains('max'));
+  bFull.onclick = () => (document.fullscreenElement === p ? document.exitFullscreen() : p.requestFullscreen?.().catch(() => setMax(p, true)));
+  maxLabels(p);
+  if (!document.fullscreenEnabled) bFull.hidden = true;
+});
+document.addEventListener('fullscreenchange', () => document.querySelectorAll('.pnl[data-max]').forEach(maxLabels));
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || document.querySelector('dialog[open], .menu:not([hidden])')) return;
+  const p = $('.pnl.max');
+  if (p) setMax(p, false);
+});
 
 // Barra de flujo: el paso actual sigue a la zona donde trabaja la persona (al entrar, el 1).
 // Los pasos anteriores quedan con ✓. Clic en un paso = lleva a su panel y lo resalta.
