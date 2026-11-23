@@ -258,12 +258,23 @@ body.resizing { cursor: col-resize; user-select: none; }
 /* despliegue animado de una estrategia guardada: filas de rejilla 0fr → 1fr (abre a la altura real del contenido) */
 .stx { display: flex; gap: 6px; align-items: center; width: 100%; margin-top: 4px; padding: 2px 0; background: none; color: var(--muted); font-weight: 400; font-size: 12px; text-align: left; white-space: normal; }
 .stx:hover { filter: none; color: var(--text); }
-.stx::before { content: '▸'; color: var(--accent); transition: transform 240ms ease; }
-.st.open .stx::before { transform: rotate(90deg); }
-.stbody { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 280ms ease; }
-.st.open .stbody { grid-template-rows: 1fr; }
-.stin { overflow: hidden; min-height: 0; font-size: 12px; }
-.st.open .stin { animation: rise 320ms 80ms both; }
+.stx::before { content: '▸'; color: var(--accent); }
+.stx b { color: var(--accent); font-weight: 500; }
+/* ventana emergente de la estrategia: ~68 % de la pantalla, abre con un escalado breve */
+#dlgStratView { width: min(68vw, 1200px); height: min(76vh, 860px); padding: 14px 16px; display: none; flex-direction: column; gap: 6px; overflow: auto; }
+#dlgStratView[open] { display: flex; animation: pop 220ms ease-out; }
+@keyframes pop { from { opacity: 0; transform: scale(.96); } }
+#dlgStratView .dh { margin-bottom: 0; gap: 10px; flex-wrap: wrap; }
+#svTitle { font-family: var(--display); font-size: 18px; }
+.sv-status { margin: 0; font-size: 13px; }
+#svChart { flex: 1 0 300px; min-height: 300px; border: 1px solid var(--line); border-radius: var(--r-sm); }
+.sv-legend { margin: 0; font-size: 11px; }
+.sv-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; align-items: start; flex: none; }
+#svLegs td { white-space: normal; vertical-align: top; }
+#svLegs td.wrap { min-width: 180px; }
+#svLegs .badge { white-space: nowrap; }
+@media (max-width: 1100px) { #dlgStratView { width: 94vw; height: 90vh; } .sv-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { #dlgStratView[open] { animation: none; } }
 .payoff { margin: 8px 0 4px; }
 .payoff svg { display: block; width: 100%; height: auto; }
 .payoff .curve { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 700ms 120ms ease-out forwards; }
@@ -271,7 +282,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 .payoff .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 6px 0; gap: 6px; }
 .payoff .kpi { padding: 4px 7px; } .payoff .kpi b { font-size: 13px; }
 .payoff .note { font-size: 11px; margin: 2px 0 0; }
-@media (prefers-reduced-motion: reduce) { .payoff .curve { animation: none; stroke-dashoffset: 0; } .st.open .stin { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .payoff .curve { animation: none; stroke-dashoffset: 0; } }
 .chh { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
 .chh select { padding: 2px 6px; }
 .chh .muted { margin-left: auto; }
@@ -537,6 +548,19 @@ dialog#dlgStrat:not([open]) { display: none; }
     <button type="button" class="ghost" id="tplBuild">Armar desde la cadena abierta</button>
   </div>
   <div id="legs" style="margin-top:10px"></div>
+</dialog>
+
+<!-- Estrategia guardada sobre la gráfica real: velas del subyacente con sus strikes, equilibrios y dónde se armó -->
+<dialog id="dlgStratView" aria-labelledby="svTitle">
+  <div class="dh"><span><span id="svTitle"></span> <span class="muted" id="svMeta"></span></span>
+    <span class="row" style="align-items:center"><button class="ghost sm" id="svToMain" title="Dibujar estas piernas también en la gráfica principal">Dibujar en la gráfica principal</button><button class="ghost sm" data-close aria-label="Cerrar">Cerrar ✕</button></span></div>
+  <p id="svStatus" class="sv-status"></p>
+  <div id="svChart"></div>
+  <p class="muted sv-legend"><span class="buy">━ compra</span> · <span class="sell">━ venta</span> · <span style="color:var(--accent)">┄ equilibrio</span> · ▲ cuándo se armó · ● hoy. Rueda del mouse para acercar; arrastra los ejes para estirar días o precios.</p>
+  <div class="sv-grid">
+    <div class="scroll" id="svLegs"></div>
+    <div class="payoff" id="svPayoff"></div>
+  </div>
 </dialog>
 
 <!-- MODAL "ver más": riesgo del motor, detalle de la fila elegida y backtest (uno a la vez, ver verMas) -->
@@ -806,58 +830,89 @@ async function loadStrategies() {
         <span class="n muted">${s.pricing ? `${num(s.pricing.netPerUnit)} ${s.pricing.netPerUnit >= 0 ? 'débito' : 'crédito'}` : 'sin cotización'}</span></div>
       <div class="acts">
         ${s.status === 'draft' ? '<button class="sm" data-act="submit">Enviar a Alpaca</button><button class="ghost sm" data-act="rename">Renombrar</button>' : ''}
-        <button class="ghost sm" data-act="chart">En gráfica</button>
         <button class="ghost sm" data-act="risk">Riesgo</button>
         <button class="danger sm" data-act="delete">Eliminar</button>
       </div>
-      <button type="button" class="stx" data-act="expand" aria-expanded="false">${s.legs.length} piernas · ${s.qty} × ${s.orderType}${s.limitPrice != null ? ' @ ' + s.limitPrice : ''}${s.pricing ? ` · total ${money(s.pricing.netTotal)}` : ''}</button>
-      <div class="stbody"><div class="stin">
-        <div class="payoff" data-payoff></div>
-        <div class="scroll"><table><tr><th>Lado</th><th>Contrato</th><th class="n">Strike</th><th>Vence</th><th class="n">Bid</th><th class="n">Ask</th><th class="n">Mid</th><th class="n">Delta</th><th>Hoy</th></tr>
-        ${s.legs.map((l) => `<tr><td class="${l.side}">${l.side === 'buy' ? 'Compra' : 'Venta'} ×${l.ratioQty}</td><td class="mono">${esc(l.symbol)}</td><td class="n">${num(l.strike)}</td><td>${l.expiration}</td>
-          <td class="n">${px(l.quote?.bid)}</td><td class="n">${px(l.quote?.ask)}</td><td class="n">${num(l.quote?.mid)}</td><td class="n">${num(l.quote?.delta, 3)}</td><td data-money="${l.type}|${l.strike}">—</td></tr>`).join('')}
-        </table></div>${s.alpacaOrderId ? `<p class="muted" style="margin:4px 0">orden <code>${s.alpacaOrderId.slice(0, 8)}</code></p>` : ''}
-      </div></div>
+      <button type="button" class="stx" data-act="view" title="Abrir la estrategia sobre la gráfica real">${s.legs.length} piernas · ${s.qty} × ${s.orderType}${s.limitPrice != null ? ' @ ' + s.limitPrice : ''}${s.pricing ? ` · total ${money(s.pricing.netTotal)}` : ''} · <b>Ver en gráfica</b></button>
     </div>`).join('') : '<div class="empty">No hay estrategias. Pulsa “＋ Armar manual” o usa el recomendador.</div>';
-  // Las que estaban abiertas se quedan abiertas tras recargar la lista (enviar, renombrar…).
-  document.querySelectorAll('#stList .st').forEach((card) => { if (openStrats.has(card.dataset.id)) toggleStrat(card, true, false); });
 }
 
-// ---- despliegue de una estrategia guardada: animación + gráfica de P&L al vencimiento con strikes y precio de hoy
-const openStrats = new Set(), spotCache = {};
-async function spotOf(sym) {
-  if (quoteCache[sym]?.price) return quoteCache[sym].price;
-  if (!spotCache[sym]) spotCache[sym] = api('GET', `/market/overview?symbol=${encodeURIComponent(sym)}`, undefined, true).then((d) => d.quote.price).catch(() => { delete spotCache[sym]; return null; });
-  return spotCache[sym];
-}
-async function toggleStrat(card, open = !card.classList.contains('open'), animate = true) {
-  const id = card.dataset.id, s = (window.savedStrategies ?? []).find((x) => x.id === id);
-  card.classList.toggle('open', open);
-  card.querySelector('.stx').setAttribute('aria-expanded', open);
-  if (!animate) { // al recargar la lista se reabre sin animación
-    const body = card.querySelector('.stbody');
-    body.style.transition = 'none';
-    requestAnimationFrame(() => { body.style.transition = ''; });
+// ---- ventana emergente de una estrategia guardada: velas reales del subyacente con sus strikes, equilibrios
+// y la marca de cuándo y a qué precio se armó (igual que las señales de Bollinger, medias, RSI…).
+let svChart = null, svCandles = null, svLines = [], svStrategy = null;
+const fmtDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+// Qué hace cada pierna, en palabras: cuándo gana y cuándo pierde.
+const legText = (l, sym) => {
+  const k = num(l.strike), up = l.type === 'call';
+  if (l.side === 'buy') return up ? `Gana si ${sym} sube por encima de ${k} antes del vencimiento.` : `Gana si ${sym} baja de ${k} antes del vencimiento.`;
+  return up ? `Cobras la prima; pierdes si ${sym} sube por encima de ${k}.` : `Cobras la prima; pierdes si ${sym} baja de ${k}.`;
+};
+async function openStratView(s) {
+  svStrategy = s;
+  const dlg = $('#dlgStratView');
+  $('#svTitle').textContent = `${s.name}`;
+  $('#svMeta').textContent = `${s.underlying} · ${s.legs.length} piernas · ${s.qty} × ${s.orderType}${s.pricing ? ` · ${num(s.pricing.netPerUnit)} ${s.pricing.netPerUnit >= 0 ? 'débito' : 'crédito'}` : ''}`;
+  $('#svStatus').innerHTML = '<span class="skel" style="height:14px;width:60%"></span>';
+  $('#svLegs').innerHTML = '';
+  $('#svPayoff').innerHTML = '';
+  if (!dlg.open) dlg.showModal();
+  const LC = LightweightCharts;
+  if (!svChart) {
+    svChart = LC.createChart($('#svChart'), {
+      autoSize: true, ...chartTheme(),
+      timeScale: { borderColor: css('--line'), rightOffset: 6, minBarSpacing: 2, fixLeftEdge: true },
+      rightPriceScale: { borderColor: css('--line'), minimumWidth: 70 },
+    });
+    svCandles = svChart.addCandlestickSeries({ upColor: css('--ok'), downColor: css('--bad'), wickUpColor: css('--ok'), wickDownColor: css('--bad'), borderVisible: false });
+  } else svChart.applyOptions(chartTheme());
+  svLines.forEach((l) => svCandles.removePriceLine(l));
+  svLines = [];
+  svCandles.setData([]); svCandles.setMarkers([]);
+  try {
+    const d = await api('GET', `/market/${encodeURIComponent(s.underlying)}/bars?timeframe=1Day&limit=260`, undefined, true);
+    if (svStrategy !== s) return; // se abrió otra mientras cargaba
+    const bars = d.bars, spot = d.quote?.price ?? bars.at(-1)?.close;
+    svCandles.setData(bars.map((b) => ({ time: localTime(b.time), open: b.open, high: b.high, low: b.low, close: b.close })));
+    // Cada pierna es una línea horizontal en su strike: verde compra, rojo venta (como las flechas de señales).
+    const model = payoffModel(s, spot);
+    for (const l of s.legs) svLines.push(svCandles.createPriceLine({
+      price: l.strike, color: l.side === 'buy' ? css('--ok') : css('--bad'), lineWidth: 2, lineStyle: 0, axisLabelVisible: true,
+      title: `${l.side === 'buy' ? 'COMPRA' : 'VENTA'} ${l.type.toUpperCase()} ${num(l.strike, 0)} · vence ${l.expiration.slice(5)}`,
+    }));
+    for (const v of model?.be ?? []) svLines.push(svCandles.createPriceLine({ price: v, color: css('--accent'), lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `Equilibrio ${num(v)}` }));
+    // Marca de cuándo se armó: la vela del día de creación (o la más cercana anterior) y su precio de cierre.
+    const created = new Date(s.createdAt).getTime() / 1000;
+    const at = bars.findLast((b) => b.time <= created) ?? bars.at(-1);
+    const markers = [];
+    if (at) markers.push({ time: localTime(at.time), position: 'belowBar', color: css('--accent'), shape: 'arrowUp', text: `Se armó aquí · ${num(at.close)}` });
+    if (bars.at(-1) && bars.at(-1) !== at) markers.push({ time: localTime(bars.at(-1).time), position: 'aboveBar', color: css('--text'), shape: 'circle', text: `Hoy · ${num(spot)}` });
+    svCandles.setMarkers(markers);
+    // Que entren las velas recientes y todos los strikes en la vista.
+    svCandles.applyOptions({ autoscaleInfoProvider: (orig) => { const r = orig(); if (!r) return r; const p = [...s.legs.map((l) => l.strike), ...(model?.be ?? [])];
+      return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...p), maxValue: Math.max(r.priceRange.maxValue, ...p) } }; } });
+    svChart.timeScale().setVisibleLogicalRange({ from: Math.max(-1, bars.length - 130), to: bars.length + 6 });
+    const pct = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+    $('#svStatus').innerHTML = at
+      ? `Al armarla (${esc(new Date(s.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }))}) ${esc(s.underlying)} cerró en <b>${num(at.close)}</b>; hoy está en <b>${num(spot)}</b> (<span class="${spot >= at.close ? 'buy' : 'sell'}">${pct((spot / at.close - 1) * 100)}</span>).${model?.be?.length ? ` Equilibrio en <b>${model.be.map((v) => num(v)).join('</b> y <b>')}</b>.` : ''}`
+      : '';
+    // Tabla de piernas: dónde está cada strike frente al precio de hoy y qué significa.
+    $('#svLegs').innerHTML = `<table><tr><th>Pierna</th><th class="n">Strike</th><th>Vence</th><th class="n">Prima (mid)</th><th>Dónde está hoy</th><th>Qué hace</th></tr>
+      ${s.legs.map((l) => {
+        const itm = l.type === 'call' ? spot > l.strike : spot < l.strike;
+        return `<tr><td class="${l.side}">${l.side === 'buy' ? 'Compra' : 'Venta'} ${l.type} ×${l.ratioQty}</td><td class="n">${num(l.strike)}</td><td>${esc(fmtDay(l.expiration))}</td><td class="n">${num(l.quote?.mid)}</td>
+          <td><span class="badge ${itm ? 'ok' : ''}">${itm ? 'dentro del dinero' : 'fuera del dinero'}</span> <span class="muted">${pct((l.strike / spot - 1) * 100)} del precio</span></td><td class="wrap">${esc(legText(l, s.underlying))}</td></tr>`;
+      }).join('')}</table>`;
+    $('#svPayoff').innerHTML = payoffHtml(s, spot);
+  } catch (err) {
+    $('#svStatus').innerHTML = `<span class="sell">No se pudo cargar la gráfica de ${esc(s.underlying)}: ${esc(err.message)}</span>`;
   }
-  open ? openStrats.add(id) : openStrats.delete(id);
-  if (open && animate) setTimeout(() => card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); // que se vea lo desplegado
-  const box = card.querySelector('[data-payoff]');
-  if (!open || !s || box.dataset.done) return;
-  box.dataset.done = '1';
-  box.innerHTML = '<span class="skel" style="height:120px"></span>';
-  const spot = await spotOf(s.underlying);
-  box.innerHTML = payoffHtml(s, spot);
-  // Columna "Hoy": qué tan lejos está cada strike del precio actual y si ya está dentro del dinero.
-  if (spot) card.querySelectorAll('[data-money]').forEach((td) => {
-    const [type, k] = td.dataset.money.split('|'), strike = Number(k), itm = type === 'call' ? spot > strike : spot < strike;
-    td.innerHTML = `<span class="badge ${itm ? 'ok' : ''}" title="Precio de hoy ${num(spot)}">${itm ? 'dentro' : 'fuera'} · ${((strike / spot - 1) * 100).toFixed(1)}%</span>`;
-  });
 }
 
 // P&L al vencimiento de las piernas: Σ lado × razón × (valor intrínseco − prima mid) × 100 × cantidad.
-function payoffHtml(s, spot) {
+// Devuelve la curva, el rango de precios dibujado y los puntos de equilibrio (donde la curva cruza el cero).
+function payoffModel(s, spot) {
   const legs = s.legs.filter((l) => l.strike != null && l.type);
-  if (!legs.length) return '<p class="muted">Sin datos de strike para graficar.</p>';
+  if (!legs.length) return null;
   const mult = 100 * (s.qty || 1), missing = legs.some((l) => l.quote?.mid == null);
   const pnl = (S) => legs.reduce((sum, l) => {
     const intrinsic = l.type === 'call' ? Math.max(S - l.strike, 0) : Math.max(l.strike - S, 0);
@@ -869,17 +924,22 @@ function payoffHtml(s, spot) {
   const lo = Math.max(0, Math.min(...ref) * 0.92 - net * 1.3), hi = Math.max(...ref) * 1.08 + net * 1.3;
   const xs = [...Array.from({ length: 121 }, (_, i) => lo + (hi - lo) * i / 120), ...ks].sort((a, b) => a - b);
   const pts = xs.map((S) => [S, pnl(S)]);
-  const ys = pts.map((p) => p[1]), yMax = Math.max(0, ...ys), yMin = Math.min(0, ...ys), span = (yMax - yMin) || 1;
-  const W = 560, H = 190, L = 8, R = 8, T = 22, B = 26;
-  const X = (S) => L + (S - lo) / (hi - lo) * (W - L - R), Y = (v) => T + (yMax - v) / span * (H - T - B), y0 = Y(0);
-  const line = pts.map(([S, v], i) => `${i ? 'L' : 'M'}${X(S).toFixed(1)},${Y(v).toFixed(1)}`).join('');
-  const area = `${line}L${X(hi).toFixed(1)},${y0}L${X(lo).toFixed(1)},${y0}Z`;
-  // Puntos de equilibrio: donde la curva cruza el cero.
   const be = [];
   for (let i = 1; i < pts.length; i++) {
     const [a, va] = pts[i - 1], [b, vb] = pts[i];
     if ((va < 0 && vb >= 0) || (va > 0 && vb <= 0)) be.push(a + (b - a) * (0 - va) / (vb - va));
   }
+  return { legs, pnl, lo, hi, pts, be, missing, exps: new Set(legs.map((l) => l.expiration)) };
+}
+function payoffHtml(s, spot) {
+  const model = payoffModel(s, spot);
+  if (!model) return '<p class="muted">Sin datos de strike para graficar.</p>';
+  const { legs, pnl, lo, hi, pts, be, missing, exps } = model;
+  const ys = pts.map((p) => p[1]), yMax = Math.max(0, ...ys), yMin = Math.min(0, ...ys), span = (yMax - yMin) || 1;
+  const W = 560, H = 190, L = 8, R = 8, T = 22, B = 26;
+  const X = (S) => L + (S - lo) / (hi - lo) * (W - L - R), Y = (v) => T + (yMax - v) / span * (H - T - B), y0 = Y(0);
+  const line = pts.map(([S, v], i) => `${i ? 'L' : 'M'}${X(S).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  const area = `${line}L${X(hi).toFixed(1)},${y0}L${X(lo).toFixed(1)},${y0}Z`;
   const uid = `po${s.id.slice(0, 8)}`, ok = css('--ok'), bad = css('--bad');
   const strikes = legs.map((l, i) => `<line x1="${X(l.strike)}" x2="${X(l.strike)}" y1="${T}" y2="${H - B}" stroke="${l.side === 'buy' ? ok : bad}" stroke-width="1" stroke-dasharray="2 3" opacity=".7"/>
     <text x="${X(l.strike)}" y="${H - B + 12 + (i % 2) * 10}" text-anchor="middle" fill="${l.side === 'buy' ? ok : bad}">${l.side === 'buy' ? 'C' : 'V'} ${l.type === 'call' ? 'call' : 'put'} ${num(l.strike, 0)}</text>`).join('');
@@ -887,7 +947,6 @@ function payoffHtml(s, spot) {
     <text x="${X(spot)}" y="${T - 9}" text-anchor="middle" fill="var(--text)">Hoy ${num(spot)} · ${money(pnl(spot))}</text>` : '';
   const beMarks = be.map((v) => `<circle cx="${X(v)}" cy="${y0}" r="3.5" fill="var(--accent)"/>`).join('');
   const inRangeMax = Math.max(...ys), inRangeMin = Math.min(...ys);
-  const exps = new Set(legs.map((l) => l.expiration));
   return `
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ganancia o pérdida al vencimiento de ${esc(s.name)} según el precio de ${esc(s.underlying)}">
       <defs><clipPath id="${uid}u"><rect x="0" y="0" width="${W}" height="${y0}"/></clipPath><clipPath id="${uid}d"><rect x="0" y="${y0}" width="${W}" height="${H}"/></clipPath></defs>
@@ -910,8 +969,8 @@ function payoffHtml(s, spot) {
 $('#stList').onclick = async (e) => {
   const act = e.target.dataset.act;
   const card = e.target.closest('[data-id]');
+  if (card && e.target.closest('[data-act=view]')) return openStratView(window.savedStrategies.find((x) => x.id === card.dataset.id));
   if (!act || !card) return;
-  if (act === 'expand') return toggleStrat(card);
   const id = card.dataset.id;
   e.target.disabled = true;
   try {
@@ -1542,7 +1601,11 @@ $('#signalControls').onchange = renderMarketSignals;
 function includeStrikes(original) {
   const r = original();
   if (!r || !overlayLegs.length) return r;
-  const k = overlayLegs.map((l) => l.strike);
+  // Solo se amplía por strikes cercanos (±25 % del rango de las velas): uno lejano aplastaba las velas.
+  // Los lejanos siguen marcados con su etiqueta en el eje.
+  const { minValue: lo, maxValue: hi } = r.priceRange, pad = (hi - lo) * 0.25;
+  const k = overlayLegs.map((l) => l.strike).filter((v) => v >= lo - pad && v <= hi + pad);
+  if (!k.length) return r;
   return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...k), maxValue: Math.max(r.priceRange.maxValue, ...k) } };
 }
 // Colores de las gráficas tomados de las variables CSS (se reaplican si cambia el modo claro/oscuro).
@@ -1554,12 +1617,13 @@ const chartTheme = () => ({
 function makeCharts() {
   const LC = LightweightCharts;
   // Zoom acotado: las velas no se estiran más de 26 px ni se aplastan a menos de 3; no se puede arrastrar al vacío
-  // antes de la primera vela; el eje de precio ya no se deforma al arrastrarlo (doble clic en un eje lo restablece).
+  // antes de la primera vela. Arrastrar el eje de días o el de precios estira las velas; doble clic en un eje o
+  // "Ajustar" lo restablece.
   const opts = {
     autoSize: true, ...chartTheme(),
     timeScale: { timeVisible: true, borderColor: css('--line'), rightOffset: 4, minBarSpacing: 3, maxBarSpacing: 26, fixLeftEdge: true, lockVisibleTimeRangeOnResize: true },
     rightPriceScale: { borderColor: css('--line'), minimumWidth: 70 },
-    handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: false }, axisDoubleClickReset: { time: true, price: true } },
+    handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: { time: true, price: true } },
     handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
     kineticScroll: { mouse: false, touch: true },
   };
@@ -1610,6 +1674,8 @@ let lastKey = '', barsRequest = 0, barCount = 0;
 
 // Vista inicial: las ~150 velas más recientes (con todas, 1000 velas quedaban aplastadas; con pocas, estiradas).
 function resetZoom() {
+  // Precios: vuelve al autoajuste (si se estiró el eje a mano, el autoajuste se apaga hasta aquí).
+  charts.all?.forEach((c) => c.priceScale?.('right').applyOptions({ autoScale: true }));
   const ts = charts.price.timeScale();
   if (!ts.setVisibleLogicalRange || !barCount) return ts.fitContent();
   ts.setVisibleLogicalRange({ from: Math.max(-1, barCount - 150), to: barCount + 3 });
@@ -1763,6 +1829,14 @@ document.addEventListener('click', (e) => {
 const setDock = (off) => { $('#app').classList.toggle('dockOff', off); $('#btnDock').textContent = off ? '▴ Mostrar panel inferior' : '▾ Ocultar panel inferior'; store.set('f0.dock', off ? 'off' : 'on'); };
 $('#btnDock').onclick = () => setDock(!$('#app').classList.contains('dockOff'));
 setDock(store.get('f0.dock', 'on') === 'off');
+
+// Desde la ventana de la estrategia: dibujar sus piernas también en la gráfica principal.
+$('#svToMain').onclick = () => {
+  if (!svStrategy) return;
+  $('#dlgStratView').close();
+  $('#mkStrat').value = svStrategy.id;
+  $('#mkStrat').onchange();
+};
 
 // Zoom de la gráfica con botones (además de rueda del mouse y arrastre).
 $('#zIn').onclick = () => zoomBy(0.7);
