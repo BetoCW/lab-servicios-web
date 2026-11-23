@@ -17,7 +17,7 @@ que hoy no se pueden contestar sin teclear empresa por empresa:
   definida en `api/src/config`.
 - **Horizonte**: `horizonDays` (30–120, por defecto 90) acota la ventana de vencimientos que hoy está fija
   (cercano 14–45 días, lejano 46–100) en `loadMarket`.
-- **Costo controlado**: máximo 4 empresas en paralelo, `paths` reducido (5 000) en el recorrido, caché de 10 min por
+- **Costo controlado**: máximo 4 empresas en paralelo, `paths` reducido (4 000) en el recorrido, caché de 10 min por
   `(universo, horizonte, cores)`; las empresas que fallen (sin opciones, error de Alpaca) se listan en `skipped`
   y no tumban la respuesta.
 - **GraphQL**: queries `strategyScan(...)` y `strategyScreen(...)` con los mismos argumentos.

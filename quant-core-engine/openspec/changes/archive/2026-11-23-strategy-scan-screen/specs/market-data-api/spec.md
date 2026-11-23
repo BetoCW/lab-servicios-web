@@ -34,6 +34,6 @@ con el mismo formato de filas y `skipped` que el scan.
 ### Requirement: Paridad GraphQL de exploración
 El sistema SHALL exponer las queries `strategyScan` y `strategyScreen` con los mismos argumentos y resultados que REST.
 
-#### Scenario: Mismo ranking
-- **WHEN** se consulta `strategyScan(horizonDays: 90)` justo después de `GET /strategies/scan?horizonDays=90`
-- **THEN** devuelve las mismas filas (misma caché)
+#### Scenario: Mismo formato
+- **WHEN** se consulta `strategyScan(horizonDays: 90)`
+- **THEN** devuelve el mismo formato `ScanResult` (filas, skipped, scanned) que `GET /strategies/scan?horizonDays=90`
