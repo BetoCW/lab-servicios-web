@@ -273,6 +273,26 @@ body.resizing { cursor: col-resize; user-select: none; }
 #svLegs td { white-space: normal; vertical-align: top; }
 #svLegs td.wrap { min-width: 180px; }
 #svLegs .badge { white-space: nowrap; }
+/* Explorar: oportunidades en varias empresas (scan) y top por estrategia (screen) */
+#dlgExplore { width: min(72vw, 1180px); height: min(80vh, 880px); padding: 14px 16px; display: none; flex-direction: column; gap: 10px; }
+#dlgExplore[open] { display: flex; animation: pop 220ms ease-out; }
+#dlgExplore .dh { margin-bottom: 0; gap: 10px; flex-wrap: wrap; }
+#exTitle { font-family: var(--display); font-size: 18px; }
+.ex-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; margin-right: auto; }
+.ex-tabs button { background: none; color: var(--muted); border: 0; border-radius: 0; padding: 5px 14px; font-weight: 500; }
+.ex-tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+.ex-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.ex-form label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.ex-q { margin: 0; font-size: 13px; }
+#exStatus { margin: 0; font-size: 12px; }
+#exOut { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-sm); }
+#exOut tbody tr { cursor: pointer; transition: background var(--t); }
+#exOut tbody tr:hover, #exOut tbody tr:focus-visible { background: var(--accent-soft); outline: none; }
+#exOut td.n { font-family: var(--mono); text-align: right; white-space: nowrap; }
+#exOut .bar { display: inline-block; height: 4px; border-radius: 2px; background: var(--accent); vertical-align: middle; margin-left: 6px; }
+.ex-skip { margin: 0; font-size: 11px; }
+@media (prefers-reduced-motion: reduce) { #dlgExplore[open] { animation: none; } }
+@media (max-width: 1100px) { #dlgExplore { width: 94vw; height: 90vh; } }
 @media (max-width: 1100px) { #dlgStratView { width: 94vw; height: 90vh; } .sv-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { #dlgStratView[open] { animation: none; } }
 .payoff { margin: 8px 0 4px; }
@@ -454,7 +474,7 @@ body.has-max { overflow: hidden; }
   <!-- 4) LATERAL DERECHO: recomendador y ejecución automática -->
   <aside id="side">
     <div class="pnl" id="recCard" data-max="el recomendador">
-      <div class="ph"><b><i class="sn">3</i>Recomendador</b><span class="acts"><button class="ghost sm" id="recRun" title="Volver a calcular">Recalcular</button><button class="ghost sm" id="recBacktest" title="Qué tan seguido acertó en el último año">Backtest</button><button class="ghost sm ic" id="recWide" title="Expandir el recomendador" aria-label="Expandir el recomendador">⤢</button></span></div>
+      <div class="ph"><b><i class="sn">3</i>Recomendador</b><span class="acts"><button class="sm" id="recExplore" title="Buscar oportunidades en varias empresas sin elegirlas tú">Explorar</button><button class="ghost sm" id="recRun" title="Volver a calcular">Recalcular</button><button class="ghost sm" id="recBacktest" title="Qué tan seguido acertó en el último año">Backtest</button><button class="ghost sm ic" id="recWide" title="Expandir el recomendador" aria-label="Expandir el recomendador">⤢</button></span></div>
       <fieldset id="coreControls" title="El puntaje usa solo los cores marcados. Al operar, los filtros de riesgo e IA siguen siendo obligatorios."><legend>Cores para el análisis</legend>
         <label><input type="checkbox" value="technical" checked> Técnico</label>
         <label><input type="checkbox" value="probability" checked> Probabilidad</label>
@@ -570,6 +590,27 @@ body.has-max { overflow: hidden; }
     <div class="scroll" id="svLegs"></div>
     <div class="payoff" id="svPayoff"></div>
   </div>
+</dialog>
+
+<!-- Explorar: el recomendador corrido en muchas empresas a la vez -->
+<dialog id="dlgExplore" aria-labelledby="exTitle">
+  <div class="dh"><span id="exTitle">Explorar oportunidades</span>
+    <span class="ex-tabs" role="tablist" aria-label="Qué buscar">
+      <button type="button" role="tab" aria-selected="true" data-ex="scan">Mejores operaciones</button>
+      <button type="button" role="tab" aria-selected="false" data-ex="screen">Mejores empresas para una estrategia</button>
+    </span>
+    <button class="ghost sm" data-close aria-label="Cerrar">Cerrar ✕</button></div>
+  <p class="ex-q muted" id="exQ"></p>
+  <form class="ex-form" id="exForm">
+    <label id="exTplBox" hidden>Estrategia <select name="template" id="exTpl"></select></label>
+    <label>Vencen en <select name="horizonDays"><option value="30">30 días</option><option value="60">60 días</option><option value="90" selected>90 días</option><option value="120">120 días</option></select></label>
+    <label>Empresas <select name="universe"><option value="liquid">24 con opciones líquidas</option><option value="watchlists">Las de mis watchlists</option></select></label>
+    <label>Mostrar <select name="limit"><option value="10">10</option><option value="20" selected>20</option><option value="50">50</option></select></label>
+    <button type="submit" id="exRun">Buscar</button>
+  </form>
+  <p id="exStatus" class="muted" role="status" aria-live="polite"></p>
+  <div id="exOut"></div>
+  <p class="ex-skip muted" id="exSkip"></p>
 </dialog>
 
 <!-- MODAL "ver más": riesgo del motor, detalle de la fila elegida y backtest (uno a la vez, ver verMas) -->
@@ -1884,6 +1925,57 @@ $('#split').onkeydown = (e) => {
   if (e.key === 'Enter') toggleWide();
 };
 if (store.get('f0.side')) setSide(Number(store.get('f0.side')), false);
+
+// Explorar: corre el recomendador en muchas empresas (GET /strategies/scan) o busca las mejores
+// empresas para una estrategia (GET /strategies/screen). Clic o Enter en una fila = carga ese ticker.
+let exMode = 'scan';
+const EX_Q = {
+  scan: 'Qué operaciones conviene abrir, buscando en varias empresas y con todas las estrategias. Ordenadas por el puntaje del recomendador.',
+  screen: 'Eliges la estrategia y te decimos en qué empresas sale mejor. Ordenadas por su puntaje en esa estrategia.',
+};
+$('#exTpl').innerHTML = Object.entries(F0Templates.TEMPLATES).map(([k, v]) => `<option value="${k}"${k === 'short-strangle' ? ' selected' : ''}>${esc(v)}</option>`).join('');
+function exTab(mode) {
+  exMode = mode;
+  document.querySelectorAll('[data-ex]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ex === mode)));
+  $('#exTplBox').hidden = mode !== 'screen';
+  $('#exForm').limit.value = mode === 'screen' ? '10' : '20';
+  $('#exQ').textContent = EX_Q[mode];
+  $('#exOut').innerHTML = '<div class="pad muted">Elige los filtros y pulsa <b>Buscar</b>.</div>';
+  $('#exStatus').textContent = $('#exSkip').textContent = '';
+}
+document.querySelectorAll('[data-ex]').forEach((b) => { b.onclick = () => exTab(b.dataset.ex); });
+function exRender(d) {
+  const top = Math.max(...d.rows.map((r) => r.score), 1);
+  const due = (r) => ['calendar', 'diagonal'].includes(r.template) && r.farExpiration ? `${r.nearExpiration} / ${r.farExpiration}` : r.nearExpiration;
+  $('#exOut').innerHTML = d.rows.length ? `<table><thead><tr><th>#</th><th>Empresa</th><th>Estrategia</th><th>Puntaje</th><th>Prob. de ganar</th><th>Valor esperado</th><th>Precio</th><th>IV / HV30</th><th>Vence</th><th></th></tr></thead><tbody>${
+    d.rows.map((r, i) => `<tr tabindex="0" data-sym="${esc(r.symbol)}" title="Cargar ${esc(r.symbol)} en la gráfica y el recomendador">
+      <td>${i + 1}</td><td><b>${esc(r.symbol)}</b></td><td>${esc(r.name)}</td>
+      <td class="n">${num(r.score, 1)}<span class="bar" style="width:${Math.max(2, Math.round((r.score / top) * 48))}px"></span></td>
+      <td class="n">${r.probProfit == null ? '—' : (r.probProfit * 100).toFixed(1) + ' %'}</td>
+      <td class="n ${r.expectedValue > 0 ? 'buy' : 'sell'}">${money(r.expectedValue)}</td>
+      <td class="n">${num(r.spot)}</td><td class="n">${num(r.ivPct, 1)} / ${num(r.hv30Pct, 1)} %</td><td>${esc(due(r))}</td>
+      <td>${r.actionable ? '<span class="badge ok" title="Valor esperado positivo">EV +</span>' : '<span class="badge warn" title="Valor esperado negativo: no se operaría en automático">EV −</span>'}</td></tr>`).join('')
+  }</tbody></table>` : '<div class="pad muted">Ninguna empresa devolvió estrategias con esos filtros. Prueba otro plazo u otras empresas.</div>';
+  const when = new Date(d.generatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  $('#exStatus').textContent = `${d.scanned} empresas revisadas, ${d.rows.length} resultados. Calculado a las ${when}; se reutiliza durante 10 minutos. Clic en una fila para abrirla.`;
+  $('#exSkip').textContent = d.skipped.length ? `Sin datos suficientes: ${d.skipped.map((s) => s.symbol).join(', ')}.` : '';
+}
+$('#exForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const params = new URLSearchParams(formData(e.target));
+  if (exMode !== 'screen') params.delete('template');
+  $('#exRun').disabled = true;
+  $('#exOut').innerHTML = '<div class="pad muted">Corriendo el recomendador en cada empresa. La primera vez tarda entre 20 y 60 segundos.</div>';
+  $('#exStatus').textContent = $('#exSkip').textContent = '';
+  try { exRender(await api('GET', `/strategies/${exMode}?${params}`, null, true)); }
+  catch (err) { $('#exOut').innerHTML = `<div class="pad"><span class="badge bad">Error</span> ${esc(err.message)}</div>`; }
+  finally { $('#exRun').disabled = false; }
+};
+const exPick = (tr) => { $('#dlgExplore').close(); setTicker(tr.dataset.sym); flowAt(3); };
+$('#exOut').onclick = (e) => { const tr = e.target.closest('tr[data-sym]'); if (tr) exPick(tr); };
+$('#exOut').onkeydown = (e) => { const tr = e.target.closest('tr[data-sym]'); if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); exPick(tr); } };
+exTab('scan');
+$('#recExplore').onclick = () => $('#dlgExplore').showModal();
 
 // Ampliar / pantalla completa por panel. El mismo botón (o Esc) lo regresa a su lugar.
 const MAX_ICON = { max: ['⤢', '⤡'], full: ['⛶', '⛶'] };
