@@ -9,6 +9,7 @@ import { overviewService } from '../services/overview.service.js';
 import { assetsService } from '../services/assets.service.js';
 import { recommendService } from '../services/recommend.service.js';
 import { backtestService } from '../services/backtest.service.js';
+import { scanService } from '../services/scan.service.js';
 import { autoTradeService } from '../services/autoTrade.service.js';
 import { aiService } from '../services/ai.service.js';
 import { assertUuid, badRequest } from '../lib/errors.js';
@@ -60,10 +61,19 @@ optionChainsRouter.delete('/:id', uuid, async (req, res) => {
 const RECOMMEND_TTL_MS = 20_000;
 const recommendCached = memo(RECOMMEND_TTL_MS, (symbol, query) => recommendService.recommend(symbol, query), (symbol, query) => `${String(symbol).toUpperCase()}|${query?.paths ?? ''}|${parseCores(query?.cores).join(',')}`);
 
+// Explorar (scan / screen): recorre ~24 empresas, así que se guarda 10 min por combinación de parámetros.
+// Los errores de validación (400) no se cachean (memo descarta promesas rechazadas).
+const SCAN_TTL_MS = 600_000;
+const scanKey = (q = {}) => [q.horizonDays ?? 90, q.universe ?? 'liquid', q.limit ?? '', parseCores(q.cores).join(','), q.template ?? ''].join('|');
+const scanCached = memo(SCAN_TTL_MS, (query) => scanService.scan(query), scanKey);
+const screenCached = memo(SCAN_TTL_MS, (query) => scanService.screen(query), scanKey);
+
 // ---------------------------------------------------------------- 4. strategies
 const strategiesRouter = Router();
 // Rutas fijas ANTES de '/:id', si no Express las confunde con un id.
 strategiesRouter.get('/recommend', async (req, res) => res.json(await recommendCached(req.query.symbol, req.query)));
+strategiesRouter.get('/scan', async (req, res) => res.json(await scanCached(req.query)));
+strategiesRouter.get('/screen', async (req, res) => res.json(await screenCached(req.query)));
 strategiesRouter.get('/recommend/backtest', async (req, res) => res.json(await backtestService.run(req.query.symbol, req.query)));
 strategiesRouter.post('/auto', async (req, res) => res.json(await autoTradeService.run(req.body)));
 strategiesRouter.get('/', async (req, res) => res.json(await strategies.list(req.query)));

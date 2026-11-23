@@ -7,6 +7,7 @@ import { optionChainsService as chains } from '../services/optionChains.service.
 import { strategiesService as strategies } from '../services/strategies.service.js';
 import { riskService } from '../services/risk.service.js';
 import { recommendService } from '../services/recommend.service.js';
+import { scanService } from '../services/scan.service.js';
 
 const typeDefs = /* GraphQL */ `
   type Watchlist { id: ID! name: String! symbols: [String!]! createdAt: String updatedAt: String }
@@ -58,6 +59,17 @@ const typeDefs = /* GraphQL */ `
     rank: Int! name: String! score: Float! probProfit: Float expectedValue: Float
     worstSimulated: Float var95: Float marginRegT: Float error: String
   }
+  type ScanLeg { symbol: String! side: String! ratio_qty: Int! }
+  type ScanRow {
+    symbol: String! template: String! name: String! score: Float! actionable: Boolean!
+    probProfit: Float expectedValue: Float var95: Float netCost: Float spot: Float ivPct: Float hv30Pct: Float
+    nearExpiration: String farExpiration: String legs: [ScanLeg!]!
+  }
+  type ScanSkip { symbol: String! reason: String! }
+  type ScanResult {
+    generatedAt: String! horizonDays: Int! universe: String! limit: Int! cores: [String!]! scanned: Int!
+    template: String name: String rows: [ScanRow!]! skipped: [ScanSkip!]!
+  }
   type Recommendation { symbol: String! cores: [String!]! explanation: String! volView: String! ranking: [RankedStrategy!]! }
 
   input WatchlistInput { name: String! symbols: [String!] }
@@ -87,6 +99,8 @@ const typeDefs = /* GraphQL */ `
     strategy(id: ID!): Strategy
     strategyRisk(id: ID!, paths: Int, seed: Int): StrategyRisk
     recommendStrategies(symbol: String!, cores: [String!]): Recommendation!
+    strategyScan(horizonDays: Int, universe: String, limit: Int, cores: [String!]): ScanResult!
+    strategyScreen(template: String!, horizonDays: Int, universe: String, limit: Int, cores: [String!]): ScanResult!
   }
 
   type Mutation {
@@ -150,6 +164,8 @@ const resolvers = {
         monteCarloMs: riskAnalysisResult.performance.monteCarloMs,
       };
     }),
+    strategyScan: wrap((_, args) => scanService.scan(args)),
+    strategyScreen: wrap((_, args) => scanService.screen(args)),
     recommendStrategies: wrap(async (_, { symbol, cores }) => {
       const recommendation = await recommendService.recommend(symbol, { cores });
       return {

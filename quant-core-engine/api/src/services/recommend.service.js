@@ -94,27 +94,29 @@ function atmIv(quotes, spot) {
 /**
  * Descarga y normaliza lo necesario de Alpaca para recomendar sobre un ticker.
  * @param {string} symbol - Ticker en mayúsculas.
+ * @param {number} [horizonDays=100] - Último día de vencimiento aceptado (el scan lo baja a 90).
  * @returns {Promise<object>} Spot, historial, cotizaciones y vencimientos elegidos.
  */
-async function loadMarket(symbol) {
+async function loadMarket(symbol, horizonDays = 100) {
   const [stock, history] = await Promise.all([alpaca.stockSnapshot(symbol), getHistory(symbol)]);
   const spot = stock?.latestTrade?.p ?? stock?.dailyBar?.c;
   if (!spot) throw badRequest(`Alpaca no tiene precio para ${symbol}`);
 
   const base = { underlying_symbols: symbol, status: 'active' };
+  const nearMax = Math.min(45, horizonDays);
   const [nearContracts, farContracts] = await Promise.all([
     alpaca.listOptionContracts(
-      { ...base, expiration_date_gte: isoDate(14), expiration_date_lte: isoDate(45), strike_price_gte: Math.floor(spot * 0.9), strike_price_lte: Math.ceil(spot * 1.1) },
+      { ...base, expiration_date_gte: isoDate(14), expiration_date_lte: isoDate(nearMax), strike_price_gte: Math.floor(spot * 0.9), strike_price_lte: Math.ceil(spot * 1.1) },
       250,
     ),
-    alpaca.listOptionContracts(
-      { ...base, type: 'call', expiration_date_gte: isoDate(46), expiration_date_lte: isoDate(100), strike_price_gte: Math.floor(spot * 0.96), strike_price_lte: Math.ceil(spot * 1.04) },
+    horizonDays < 46 ? [] : alpaca.listOptionContracts(
+      { ...base, type: 'call', expiration_date_gte: isoDate(46), expiration_date_lte: isoDate(horizonDays), strike_price_gte: Math.floor(spot * 0.96), strike_price_lte: Math.ceil(spot * 1.04) },
       80,
     ),
   ]);
-  const nearExpiration = closestExpiration(nearContracts, NEAR_TARGET_DAYS);
-  if (!nearExpiration) throw badRequest(`${symbol} no tiene opciones listadas en los próximos 14–45 días`);
-  const farExpiration = closestExpiration(farContracts, FAR_TARGET_DAYS);
+  const nearExpiration = closestExpiration(nearContracts, Math.min(NEAR_TARGET_DAYS, nearMax));
+  if (!nearExpiration) throw badRequest(`${symbol} no tiene opciones listadas en los próximos 14–${nearMax} días`);
+  const farExpiration = closestExpiration(farContracts, Math.min(FAR_TARGET_DAYS, horizonDays));
 
   const chosen = [
     ...nearContracts.filter((contract) => contract.expiration_date === nearExpiration),
@@ -286,7 +288,9 @@ export const recommendService = {
    * Recomienda y ordena las 4 estrategias (Straddle, Strangle, Calendar, Diagonal) para un ticker.
    *
    * @param {string} rawSymbol - Ticker (ej. 'AAPL').
-   * @param {{paths?: number}} [query={}] - Trayectorias de Monte Carlo por estrategia (por defecto 20 000).
+   * @param {{paths?: number, cores?: string|string[], horizonDays?: number, templates?: string[]}} [query={}] - Trayectorias de Monte Carlo
+   *   (por defecto 20 000), cores, horizonDays (último vencimiento aceptado, por defecto 100) y templates
+   *   (fuerza qué plantillas evaluar; lo usa el screen para medir una sola estrategia en todas las empresas).
    * @returns {Promise<object>} Señales, ranking ordenado por puntaje, ganadora con reporte completo y explicación.
    * @throws {import('../lib/errors.js').HttpError} Si el ticker es inválido o no tiene opciones.
    */
@@ -295,7 +299,8 @@ export const recommendService = {
     const cores = parseCores(query.cores);
     const paths = Math.min(Math.max(Number(query.paths ?? 20000), 2000), 100000);
 
-    const market = await loadMarket(symbol);
+    const horizonDays = Number(query.horizonDays ?? 100);
+    const market = await loadMarket(symbol, horizonDays);
     const { spot, quotes, nearExpiration, farExpiration, history } = market;
     const nearQuotes = quotes.filter((quote) => quote.expiration === nearExpiration);
     const farQuotes = quotes.filter((quote) => quote.expiration === farExpiration);
@@ -315,7 +320,8 @@ export const recommendService = {
     const side = volSide(signals.ivToHv);
     const fits = cores.includes('technical') ? templateFit({ ivToHv: signals.ivToHv, termSlope: signals.termSlope, signals }) : {};
     // Sin core técnico no se descartan compras/ventas por su criterio de volatilidad.
-    const candidates = cores.includes('technical') ? [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal']
+    const candidates = query.templates?.length ? query.templates
+      : cores.includes('technical') ? [`${side}-straddle`, `${side}-strangle`, 'calendar', 'diagonal']
       : ['long-straddle', 'short-straddle', 'long-strangle', 'short-strangle', 'calendar', 'diagonal'];
     const hasHv30 = Number.isFinite(marketView.hv30) && marketView.hv30 > 0;
     const simQuery = hasHv30 ? { paths, seed: 42, simulationVol: marketView.hv30, simulationVolSource: 'hv30' } : { paths, seed: 42 };

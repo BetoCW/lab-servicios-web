@@ -128,6 +128,32 @@ export const openapi = {
         responses: ok({ type: 'object' }),
       }),
     },
+    '/strategies/scan': {
+      get: op('Strategies', 'Explorar: mejores operaciones en varias empresas para los próximos N días', {
+        description:
+          'Corre el recomendador en cada empresa del universo (liquid = 24 tickers con opciones líquidas; watchlists = símbolos de tus watchlists) con vencimientos de hasta horizonDays y junta todas las estrategias evaluadas en un ranking único empresa + estrategia, ordenado por puntaje. Máximo 4 empresas en paralelo, 4 000 trayectorias por estrategia y caché de 10 min. Las empresas que fallan salen en skipped.',
+        parameters: [
+          { name: 'horizonDays', in: 'query', schema: { type: 'integer', default: 90, minimum: 30, maximum: 120 } },
+          { name: 'universe', in: 'query', schema: { type: 'string', enum: ['liquid', 'watchlists'], default: 'liquid' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20, minimum: 1, maximum: 50 } },
+          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk' } },
+        ],
+        responses: ok(ref('ScanResult')),
+      }),
+    },
+    '/strategies/screen': {
+      get: op('Strategies', 'Top de empresas para una estrategia', {
+        description: 'Evalúa la plantilla indicada en cada empresa del universo (aunque el core técnico no la elegiría) y devuelve las mejores por su puntaje. Mismos parámetros y caché que /strategies/scan; limit por defecto 10.',
+        parameters: [
+          { name: 'template', in: 'query', required: true, schema: { type: 'string', enum: ['long-straddle', 'short-straddle', 'long-strangle', 'short-strangle', 'calendar', 'diagonal'] } },
+          { name: 'horizonDays', in: 'query', schema: { type: 'integer', default: 90, minimum: 30, maximum: 120 } },
+          { name: 'universe', in: 'query', schema: { type: 'string', enum: ['liquid', 'watchlists'], default: 'liquid' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 10, minimum: 1, maximum: 50 } },
+          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk' } },
+        ],
+        responses: ok(ref('ScanResult')),
+      }),
+    },
     '/strategies/recommend/backtest': {
       get: op('Strategies', 'Backtest del recomendador: % de acierto histórico y calibración', {
         description:
@@ -227,6 +253,27 @@ export const openapi = {
   components: {
     schemas: {
       Error: { type: 'object', properties: { status: { type: 'integer' }, message: { type: 'string' }, details: {} } },
+      ScanRow: {
+        type: 'object',
+        properties: {
+          symbol: { type: 'string', example: 'NVDA' }, template: { type: 'string', example: 'short-strangle' }, name: { type: 'string' },
+          score: { type: 'number' }, actionable: { type: 'boolean', description: 'true si el valor esperado simulado es positivo' },
+          probProfit: { type: 'number' }, expectedValue: { type: 'number' }, var95: { type: 'number' }, netCost: { type: 'number' },
+          spot: { type: 'number' }, ivPct: { type: 'number' }, hv30Pct: { type: 'number' },
+          nearExpiration: { type: 'string', format: 'date' }, farExpiration: { type: 'string', format: 'date', nullable: true },
+          legs: { type: 'array', items: { type: 'object', properties: { symbol: { type: 'string' }, side: { type: 'string' }, ratio_qty: { type: 'integer' } } } },
+        },
+      },
+      ScanResult: {
+        type: 'object',
+        properties: {
+          generatedAt: { type: 'string', format: 'date-time' }, horizonDays: { type: 'integer' }, universe: { type: 'string' },
+          limit: { type: 'integer' }, cores: { type: 'array', items: { type: 'string' } }, scanned: { type: 'integer' },
+          template: { type: 'string', description: 'Solo en /strategies/screen' }, name: { type: 'string' },
+          rows: { type: 'array', items: { $ref: '#/components/schemas/ScanRow' } },
+          skipped: { type: 'array', items: { type: 'object', properties: { symbol: { type: 'string' }, reason: { type: 'string' } } } },
+        },
+      },
       WatchlistInput: {
         type: 'object',
         required: ['name'],
