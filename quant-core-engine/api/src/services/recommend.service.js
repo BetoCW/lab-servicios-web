@@ -33,6 +33,7 @@ import { riskService } from './risk.service.js';
 import { aiService } from './ai.service.js';
 import { newsService, newsFit } from './news.service.js';
 import { DEFAULT_CORES, parseCores, scoreCores } from '../lib/cores.js';
+import { levelFit } from '../lib/supportResistance.js';
 
 const { build, TEMPLATES } = globalThis.F0Templates;
 const DAY_MS = 86_400_000;
@@ -307,7 +308,7 @@ export const recommendService = {
     const nearQuotes = quotes.filter((quote) => quote.expiration === nearExpiration);
     const farQuotes = quotes.filter((quote) => quote.expiration === farExpiration);
 
-    const marketView = marketSignals(history.closes);
+    const marketView = marketSignals(history.closes, spot);
     const iv = atmIv(nearQuotes, spot) ?? marketView.hv30;
     const ivFar = farQuotes.length ? atmIv(farQuotes, spot) : null;
     const signals = {
@@ -341,6 +342,7 @@ export const recommendService = {
           );
           const mc = report.monteCarlo;
           const { parts } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] ?? 0 });
+          parts.levels = cores.includes('technical') ? levelFit(template, signals.supportResistance) : null;
           const ai = cores.includes('ai') ? await aiService.validateRisk({ symbol, strategy: built.name,
             probProfit: mc.probProfit, expectedValue: mc.mean, var95: mc.var95, cvar95: mc.cvar95,
             worstSimulated: mc.min, marginRegT: report.margin.regT, extended: report.extended }) : null;
@@ -405,6 +407,7 @@ export const recommendService = {
       actionable,
       method: `Cores activos: ${cores.join(', ')}. Pesos normalizados entre los seleccionados; compuerta EV > 0 solo con risk. Las métricas cuantitativas son insumos compartidos.`,
       signals: {
+        supportResistance: signals.supportResistance,
         spot,
         hv30Pct: round(signals.hv30 * 100, 1),
         hvLongRunPct: round(signals.hvLongRun * 100, 1),

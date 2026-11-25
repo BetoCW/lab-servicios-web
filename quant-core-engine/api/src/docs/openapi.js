@@ -241,7 +241,8 @@ export const openapi = {
       }),
     },
     '/market/{symbol}/bars': {
-      get: op('Market', 'Velas en vivo + indicadores (SMA20, EMA9, Bollinger, RSI14, MACD)', {
+      get: op('Market', 'Velas en vivo + indicadores y zonas de soporte/resistencia', {
+        description: 'Incluye supportResistance: hasta 3 zonas por lado, límites, contactos y distancia al último cierre del rango. Extremos high/low de hasta 200 velas, excluyendo la última por posible formación. No usa datos posteriores al rango. El recomendador usa cierres diarios y asigna a estas zonas 15 % del encaje técnico, solo si hay zonas disponibles y el core technical está activo.',
         parameters: [
           { name: 'symbol', in: 'path', required: true, schema: { type: 'string', example: 'SPY' } },
           { name: 'timeframe', in: 'query', schema: { type: 'string', enum: ['1Min', '5Min', '15Min', '1Hour', '1Day', '1Week', '1Month'], default: '5Min' } },

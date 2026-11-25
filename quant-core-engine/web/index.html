@@ -184,7 +184,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 #mkQuote .kpi b { font-size: 17px; font-weight: 500; white-space: nowrap; display: block; overflow: hidden; text-overflow: ellipsis; }
 #mkQuote .kpi b.t { font-family: var(--font); font-weight: 600; font-size: 13px; }
 #mkQuote .skel { height: 30px; margin: 8px 12px; }
-.chartbox { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-top: 8px; }
+.chartbox { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; margin-top: 8px; }
 .history-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 6px 12px; border-bottom: 1px solid var(--line); }
 .history-controls label { flex-direction: row; align-items: center; gap: 6px; }
 .history-controls input { padding: 3px 6px; }
@@ -203,7 +203,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 #coreControls label { display: flex; flex-direction: row; align-items: center; gap: 4px; }
 #coreControls input { margin: 0; accent-color: var(--accent); }
 #mkHistoryStatus { padding: 4px 12px; font-size: 12px; }
-#chPrice { flex: 1; min-height: 120px; }
+#chPrice { flex: 1 0 280px; min-height: 280px; }
 .pane { flex: none; border-top: 1px solid var(--line); }
 .pane > button { display: flex; width: 100%; justify-content: space-between; background: var(--panel2); color: var(--muted); border-radius: 0; padding: 2px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
 .pane .chart { height: 84px; }
@@ -456,6 +456,7 @@ body.has-max { overflow: hidden; }
         <label><input type="checkbox" data-signal="rsi" checked> RSI</label>
         <label><input type="checkbox" data-signal="macd" checked> MACD</label>
         <label><input type="checkbox" data-signal="bollinger" checked> Bollinger</label>
+        <label><input type="checkbox" id="showLevels" checked> Soportes y resistencias</label>
       </div>
       <div id="signalSummary" class="muted" aria-live="polite"></div>
       <div id="mkHistoryStatus" class="muted" role="status" aria-live="polite"></div>
@@ -463,6 +464,7 @@ body.has-max { overflow: hidden; }
       <div class="pane" id="paneRsi"><button type="button" data-pane="paneRsi"><span>RSI 14</span><span>▾</span></button><div class="chart" id="chRsi"></div></div>
       <div class="pane" id="paneMacd"><button type="button" data-pane="paneMacd"><span>MACD 12/26/9</span><span>▾</span></button><div class="chart" id="chMacd"></div></div>
       <details id="signalDetails"><summary>Detalle del análisis técnico · compras y ventas</summary>
+        <div id="levelsInfo" class="muted pad" aria-live="polite"></div>
         <p class="muted">Señales al cierre de cada vela. Flecha verde: compra; roja: venta. La fecha corresponde a la temporalidad elegida; la vela en curso puede cambiar.</p>
         <div class="scroll"><table><thead><tr><th>Fecha y hora</th><th>Señal</th><th>Indicador</th><th>Precio de cierre</th><th>Motivo</th></tr></thead><tbody id="signalRows"></tbody></table></div>
       </details>
@@ -1245,6 +1247,7 @@ function recDetail(entry) {
     </div>
     <div class="legs"><b>${esc(entry.name)}</b> · ${entry.legs.map((l) => `<span class="${l.side}">${l.side === 'buy' ? 'COMPRA' : 'VENTA'}</span> ${esc(l.symbol)}`).join(' · ')}</div>
     ${entry.news ? `<p><b>Core Noticias:</b> ${esc(entry.news.reason)}</p>` : ''}
+    ${entry.scoreParts?.levels != null ? `<p class="muted"><b>Soportes/resistencias:</b> encaje ${num(entry.scoreParts.levels * 100, 1)}/100; representa 15 % del encaje técnico, combinado con volatilidad y tendencia.</p>` : ''}
     ${(entry.legExplanations || []).length ? `
     <details class="det"><summary class="muted">¿Por qué estas patas?</summary>
       ${entry.legExplanations.map((l) => `
@@ -1283,6 +1286,35 @@ $('#recSel').onclick = async (e) => {
     flowAt(4); // siguiente paso: la estrategia ya está en el panel inferior
   } catch { e.target.disabled = false; }
 };
+
+function levelsHtml(levels, label) {
+  if (!levels) return '';
+  const zoneText = (z) => `${money(z.lower)}–${money(z.upper)} · ${z.touches} contactos · ${num(z.distancePct, 1)} % del precio${z.inZone ? ' · precio dentro de la zona' : ''}`;
+  return `<details class="det"><summary>Soportes y resistencias · ${esc(label)}</summary>
+    <p>Soporte más cercano: <b>${levels.nearestSupport ? esc(zoneText(levels.nearestSupport)) : 'sin zona confirmada'}</b><br>
+    Resistencia más cercana: <b>${levels.nearestResistance ? esc(zoneText(levels.nearestResistance)) : 'sin zona confirmada'}</b></p>
+    <p class="muted">${esc(levels.method)} Base: ${levels.basis === 'closes' ? 'cierres' : 'máximos/mínimos'} · ${levels.lookback} observaciones. Son zonas al final del rango, no señales históricas de compra/venta.</p></details>`;
+}
+
+let supportLines = [], currentLevels = null;
+function renderSupportResistance() {
+  if (!charts) return;
+  supportLines.forEach((line) => charts.series.candles.removePriceLine(line));
+  supportLines = [];
+  const enabled = $('#showLevels').checked;
+  $('#levelsInfo').innerHTML = enabled ? levelsHtml(currentLevels, 'rango y temporalidad de la gráfica') : '';
+  if (!enabled || !currentLevels) return;
+  for (const zone of currentLevels.zones) {
+    const name = zone.type === 'support' ? 'Soporte' : 'Resistencia';
+    const color = css(zone.type === 'support' ? '--ok' : '--bad');
+    // Dos límites discontinuos representan la zona, sin alterar los strikes de la estrategia.
+    for (const [i, price] of [zone.lower, zone.upper].entries()) supportLines.push(charts.series.candles.createPriceLine({
+      price, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: i === 0,
+      title: i === 0 ? `${name} (${zone.touches})` : '',
+    }));
+  }
+}
+$('#showLevels').onchange = renderSupportResistance;
 
 function newsHtml(news) {
   if (!news) return '';
@@ -1377,6 +1409,7 @@ async function recommend(symbol, mine = ticket) {
       ${noEdgeBanner}
       <p class="muted">Cores activos: ${esc(d.cores.join(', '))}</p>
       ${newsHtml(d.news)}
+      ${levelsHtml(s.supportResistance, 'recomendador: cierres diarios; independiente del rango de la gráfica')}
       ${categoryCardsHtml}
       <div id="recTableWrap">${renderRecTable(d.ranking)}</div>
       <p class="why"><b>Por qué gana la 1ª:</b> ${esc(firstSentence)}</p>
@@ -1684,7 +1717,7 @@ function renderMarketSignals() {
   $('#signalRows').innerHTML = [...visible].reverse().map((signal) => `<tr><td>${esc(signal.timestamp)}</td><td class="${signal.side}">${signal.side === 'buy' ? 'COMPRA' : 'VENTA'}</td><td>${SIGNALS[signal.key].label}</td><td>${num(signal.price)}</td><td>${esc(signal.reason)}</td></tr>`).join('') || '<tr><td colspan="5">Sin señales para los filtros y el rango seleccionados.</td></tr>';
 }
 
-$('#signalControls').onchange = renderMarketSignals;
+$('#signalControls').onchange = () => { renderMarketSignals(); renderSupportResistance(); };
 
 // Autoscale del eje de precios ampliado para que entren los strikes dibujados (el zoom manual sigue funcionando).
 function includeStrikes(original) {
@@ -1752,6 +1785,7 @@ function makeCharts() {
     drawOverlay();
     // Se renderizan las señales de mercado
     renderMarketSignals();
+    renderSupportResistance();
     loadBars(ticker(), ticket).catch(() => {}); // repinta volumen e histograma MACD (colores por barra)
   };
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => setTimeout(retheme, 50));
@@ -1792,6 +1826,7 @@ function historyParams() {
 // `live` = refresco silencioso del temporizador: sin bitácora ni alert; actualiza solo precio y bid/ask.
 async function loadBars(sym, mine, live = false) {
   const requestId = ++barsRequest;
+  if (!live) { currentLevels = null; renderSupportResistance(); }
   try {
     const params = historyParams(), tf = params.get('timeframe');
     const key = `${sym}|${params}`, path = `/market/${encodeURIComponent(sym)}/bars?${params}`;
@@ -1812,6 +1847,8 @@ async function loadBars(sym, mine, live = false) {
       series[k].setData(d.indicators[k].flatMap((v, i) => v == null ? [] : [{ time: time[i], value: v, ...(k === 'histogram' ? { color: v >= 0 ? css('--ok') : css('--bad') } : {}) }]));
     }
     marketSignals = buildMarketSignals(d.bars, d.indicators);
+    currentLevels = d.supportResistance ?? null;
+    renderSupportResistance();
     renderMarketSignals();
     barCount = d.bars.length;
     if (key !== lastKey) { resetZoom(); lastKey = key; drawOverlay(); }

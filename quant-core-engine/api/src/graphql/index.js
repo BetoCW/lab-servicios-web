@@ -79,7 +79,9 @@ const typeDefs = /* GraphQL */ `
     confidence: Float! articleCount: Int! summary: String! method: String! truncated: Boolean!
     articles: [NewsArticle!]! fit: Float reason: String
   }
-  type Recommendation { symbol: String! cores: [String!]! explanation: String! volView: String! ranking: [RankedStrategy!]! news: NewsAnalysis }
+  type PriceZone { price: Float! lower: Float! upper: Float! touches: Int! type: String! inZone: Boolean! distancePct: Float! }
+  type SupportResistance { basis: String! price: Float lookback: Int! zones: [PriceZone!]! nearestSupport: PriceZone nearestResistance: PriceZone method: String! }
+  type Recommendation { symbol: String! cores: [String!]! explanation: String! volView: String! ranking: [RankedStrategy!]! news: NewsAnalysis supportResistance: SupportResistance }
 
   input WatchlistInput { name: String! symbols: [String!] }
   input OrderInput {
@@ -181,6 +183,7 @@ const resolvers = {
         symbol: recommendation.symbol,
         cores: recommendation.cores,
         news: recommendation.news,
+        supportResistance: recommendation.signals.supportResistance,
         explanation: recommendation.explanation,
         volView: recommendation.signals.volView,
         ranking: recommendation.ranking.map((entry) => ({

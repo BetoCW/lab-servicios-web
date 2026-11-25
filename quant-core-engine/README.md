@@ -116,6 +116,26 @@ blackScholes([{ type: 'call', spot: 42, strike: 40, t: 0.5, rate: 0.1, vol: 0.2 
 
 ## Gráfica en vivo y plantillas de estrategias
 
+### Soportes y resistencias
+
+La gráfica incluye la casilla **Soportes y resistencias** y un detalle de zonas, contactos y distancia.
+Cada zona se dibuja con dos líneas discontinuas; hasta tres soportes y tres resistencias cercanos.
+Se usan máximos/mínimos del rango elegido, excluyendo la última vela por posible formación.
+Sin suficientes contactos se informa que no hay zona confirmada.
+
+El core Técnico usa el mismo detector sobre hasta 200 **cierres diarios**, independiente del rango
+de la gráfica. También se usa en Explorar y en cada ventana pasada del backtest, sin datos futuros.
+Los pivotes requieren dos observaciones a cada lado y al menos dos contactos separados por cinco
+observaciones. La tolerancia es el máximo entre 0.3 % del precio y 35 % del rango verdadero medio
+de 15 observaciones, con este último componente limitado a 2 % del precio. Los clusters no encadenan
+precios más allá de esa tolerancia. El papel soporte/resistencia depende del precio de referencia.
+
+Si hay zonas, su encaje representa 15 % del encaje Técnico; el resto conserva volatilidad y tendencia.
+Diagonales favorecen cercanía al soporte y penalizan cercanía a resistencia (distancia de hasta 3 %).
+Ventas de volatilidad y calendars reciben contexto de rango si hay zonas a no más de 10 % por ambos lados; compras
+de volatilidad permanecen neutrales en este componente. Sin zonas no se modifica el encaje anterior.
+No altera el Monte Carlo ni garantiza rebotes o ganancias. Método heurístico, sin calibración de rentabilidad.
+
 ### Aviso de mercado cerrado
 
 **Enviar a Alpaca** y la ejecución automática verifican `/v2/clock` antes de enviar estrategias.

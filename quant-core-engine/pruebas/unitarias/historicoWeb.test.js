@@ -23,6 +23,7 @@ function page() {
     api: (_, path) => new Promise((resolve) => calls.push({ path, resolve })),
     localTime: (time) => time, css: () => '#000000', drawOverlay: () => {},
     marketSignals: [], renderMarketSignals: () => {},
+    currentLevels: null, renderSupportResistance: () => {},
     charts: {
       all: [{ applyOptions() {} }], price: { timeScale: () => ({ fitContent() {} }) },
       series: Object.fromEntries(['candles', 'volume', 'sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram'].map((k) => [k, {

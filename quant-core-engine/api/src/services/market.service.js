@@ -6,6 +6,7 @@ import { badRequest } from '../lib/errors.js';
 import { memo } from '../lib/cache.js';
 import { normalizeSymbol } from '../lib/symbol.js';
 import { bollinger, ema, macd, rsi, sma } from '../lib/indicators.js';
+import { supportResistance } from '../lib/supportResistance.js';
 
 const DAY_IN_MS = 86_400_000;
 const SNAPSHOT_TTL_MS = 2000;
@@ -138,6 +139,8 @@ export const marketService = {
         prevClose: snapshot?.prevDailyBar?.c ?? null,
       },
       bars,
+      // Excluye la última vela: puede seguir formándose en vivo.
+      supportResistance: supportResistance(bars.slice(0, -1), latestBar.close),
       indicators: Object.fromEntries(
         Object.entries(series).map(([indicatorKey, values]) => [indicatorKey, values.map(round)]),
       ),

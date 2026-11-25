@@ -21,6 +21,7 @@
  */
 import { bollinger, ema, rsi, sma } from './indicators.js';
 import { historicalVol, mean } from './stats.js';
+import { supportResistance, levelFit } from './supportResistance.js';
 
 /**
  * Limita un número al intervalo [lo, hi].
@@ -44,7 +45,7 @@ export const clamp = (value, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, value)
  *   - trendStrength: (EMA9 − SMA20) / SMA20. Positivo = impulso alcista, negativo = bajista.
  *   - bollingerPosition: 0 = en la banda inferior, 0.5 = en la media, 1 = en la banda superior.
  */
-export function marketSignals(closes) {
+export function marketSignals(closes, referencePrice) {
   const price = closes.at(-1);
   const sma20 = sma(closes, 20).at(-1);
   const ema9 = ema(closes, 9).at(-1);
@@ -54,6 +55,7 @@ export function marketSignals(closes) {
   const rolling = [];
   for (let end = 60; end <= closes.length; end += 5) rolling.push(historicalVol(closes.slice(0, end), 30));
   return {
+    supportResistance: supportResistance(closes, referencePrice),
     price,
     hv30: historicalVol(closes, 30),
     hvLongRun: mean(rolling.filter(Number.isFinite)),
@@ -91,7 +93,7 @@ export function templateFit({ ivToHv, termSlope, signals }) {
   const term = termSlope == null ? 0.5 : clamp((termSlope - 0.9) / 0.3);
   const longVol = 0.7 * volCheap + 0.3 * nearBand;
   const shortVol = 0.7 * volRich + 0.3 * rangeBound;
-  return {
+  const fits = {
     'long-straddle': longVol,
     'long-strangle': longVol,
     'short-straddle': shortVol,
@@ -99,6 +101,11 @@ export function templateFit({ ivToHv, termSlope, signals }) {
     calendar: 0.5 * term + 0.5 * rangeBound,
     diagonal: 0.5 * bullish + 0.5 * (1 - Math.abs(volRich - volCheap)),
   };
+  for (const template of Object.keys(fits)) {
+    const fit = levelFit(template, signals.supportResistance);
+    if (fit != null) fits[template] = 0.85 * fits[template] + 0.15 * fit;
+  }
+  return fits;
 }
 
 export const SCORE_WEIGHTS = { probProfit: 0.4, expectedValue: 0.3, fit: 0.3 };
