@@ -119,11 +119,11 @@ export const openapi = {
     '/strategies/recommend': {
       get: op('Strategies', 'Recomendar la mejor estrategia (Straddle, Strangle, Calendar, Diagonal) para un ticker', {
         description:
-          'Simula con hv30 y ordena por los cores seleccionados. Predeterminado: technical,probability,risk (30/40/30). Pesos normalizados entre activos; IA puntúa approved=1, caution=0.5, rejected=0 y un fallo impide completar el análisis. Sin technical se evalúan seis variantes, sin filtrar compra/venta por IV/HV. La compuerta de EV positivo pertenece a risk. Las métricas son insumos compartidos; actionable indica EV positivo de la ganadora.',
+          'Simula con hv30 y ordena por los cores seleccionados. Predeterminado: technical,probability,risk (30/40/30). Sin technical se evalúan seis variantes. La compuerta EV positivo pertenece a risk. liquidity añade execution por estrategia y usa expectedAfterCosts en el componente de riesgo y su compuerta. metrics.expectedValue, probProfit y VaR siguen siendo los del modelo antes de costos. Con liquidity, actionable exige además ejecución con datos completos, feed OPRA y escenario después de costos positivo; no garantiza fills.',
         parameters: [
           { name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } },
           { name: 'paths', in: 'query', schema: { type: 'integer', default: 20000, minimum: 2000, maximum: 100000 } },
-          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk', example: 'news' }, description: 'Lista separada por comas: technical, probability, risk, ai, news. Debe seleccionar al menos uno. news: peso relativo 0.2; hasta 50 titulares de 7 días con reglas en inglés y fuentes. Sin noticias aporta 0.5; fallo del feed = 503. No cambia Monte Carlo.' },
+          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk', example: 'technical,risk,liquidity' }, description: 'Lista separada por comas: technical, probability, risk, ai, news, liquidity. Al menos uno. news y liquidity tienen peso relativo 0.2, normalizado entre activos. liquidity reutiliza snapshots por pierna, sin consultas adicionales; expone costos, tamaños, edad y advertencias. No recalcula Monte Carlo.' },
         ],
         responses: ok({ type: 'object' }),
       }),
@@ -159,7 +159,7 @@ export const openapi = {
         description:
           'Re-juega el último año del ticker cada 5 días hábiles aproximando la IV con la volatilidad histórica de largo plazo para valuar piernas y simulando Monte Carlo con hv30 del punto temporal. Mide en qué % de las veces habría ganado la primera opción a 30 días y si la probabilidad anunciada coincide con la real.',
         parameters: [{ name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } },
-          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk' }, description: 'Mismos cores del ranking; ai y news devuelven 400 porque no se reconstruyen sus señales históricas.' }],
+          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk' }, description: 'Mismos cores del ranking; ai, news y liquidity devuelven 400 porque no se reconstruyen sus señales históricas.' }],
         responses: ok({ type: 'object' }),
       }),
     },
@@ -172,7 +172,7 @@ export const openapi = {
           required: ['symbol'],
           properties: {
             symbol: { type: 'string', example: 'AAPL' },
-            cores: { type: 'array', minItems: 1, items: { type: 'string', enum: ['technical', 'probability', 'risk', 'ai', 'news'] }, description: 'Cores del ranking. Los filtros de seguridad de riesgo e IA para operar siguen siendo obligatorios.' },
+            cores: { type: 'array', minItems: 1, items: { type: 'string', enum: ['technical', 'probability', 'risk', 'ai', 'news', 'liquidity'] }, description: 'Cores del ranking. Los filtros de riesgo e IA siguen siendo obligatorios. Con liquidity se revalidan cotizaciones/costos después de IA, antes de preparar el envío.' },
             dryRun: { type: 'boolean', default: false },
             confirm: { type: 'boolean', description: 'Obligatorio en true para enviar la orden (no hace falta con dryRun)' },
           },
@@ -257,6 +257,19 @@ export const openapi = {
   components: {
     schemas: {
       Error: { type: 'object', properties: { status: { type: 'integer' }, message: { type: 'string' }, details: {} } },
+      ExecutionEstimate: {
+        type: 'object', nullable: true, description: 'Escenario bid/ask, mismo spread al cerrar; no garantiza ejecución. Sin comisiones configuradas, se excluyen explícitamente y ready=false.',
+        properties: {
+          score: { type: 'number' }, status: { type: 'string', enum: ['ok', 'limited', 'unavailable'] }, ready: { type: 'boolean' },
+          feed: { type: 'string' }, asOf: { type: 'string', format: 'date-time' }, qty: { type: 'integer' },
+          maxAgeSeconds: { type: 'number' }, commissionsKnown: { type: 'boolean' },
+          entryPenalty: { type: 'number', nullable: true }, roundTripSpread: { type: 'number', nullable: true },
+          commissions: { type: 'number', nullable: true }, slippageBps: { type: 'number' }, extraSlippage: { type: 'number', nullable: true },
+          estimatedCost: { type: 'number', nullable: true }, entryDebit: { type: 'number', nullable: true }, expectedAfterCosts: { type: 'number', nullable: true },
+          warnings: { type: 'array', items: { type: 'string' } }, method: { type: 'string' },
+          legs: { type: 'array', items: { type: 'object', description: 'symbol, side, contracts, bid/ask, bidSize/askSize, quoteTime, ageSeconds, valid, fresh, sizeKnown, sizeEnough, mid, relativeSpreadPct, entryPenalty, entryDebit, issues' } },
+        },
+      },
       NewsAnalysis: {
         type: 'object', nullable: true,
         properties: {
@@ -275,6 +288,7 @@ export const openapi = {
         properties: {
           symbol: { type: 'string', example: 'NVDA' }, template: { type: 'string', example: 'short-strangle' }, name: { type: 'string' },
           news: { $ref: '#/components/schemas/NewsAnalysis' },
+          execution: { $ref: '#/components/schemas/ExecutionEstimate' },
           score: { type: 'number' }, actionable: { type: 'boolean', description: 'true si el valor esperado simulado es positivo' },
           probProfit: { type: 'number' }, expectedValue: { type: 'number' }, var95: { type: 'number' }, netCost: { type: 'number' },
           spot: { type: 'number' }, ivPct: { type: 'number' }, hv30Pct: { type: 'number' },

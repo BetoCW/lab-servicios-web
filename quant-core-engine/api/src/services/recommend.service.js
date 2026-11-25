@@ -34,6 +34,7 @@ import { aiService } from './ai.service.js';
 import { newsService, newsFit } from './news.service.js';
 import { DEFAULT_CORES, parseCores, scoreCores } from '../lib/cores.js';
 import { levelFit } from '../lib/supportResistance.js';
+import { analyzeLiquidity } from './liquidity.service.js';
 
 const { build, TEMPLATES } = globalThis.F0Templates;
 const DAY_MS = 86_400_000;
@@ -254,7 +255,8 @@ export function buildCategoryWinners(usable) {
       template: bestRiskReward.template,
       name: bestRiskReward.name,
       value: bestRiskReward.scoreParts?.expectedValue ?? 0,
-      label: `EV $${bestRiskReward.metrics.expectedValue} (CVaR $${bestRiskReward.metrics.cvar95})`,
+      label: bestRiskReward.execution ? `EV escenario $${bestRiskReward.execution.expectedAfterCosts ?? '—'} después de costos`
+        : `EV $${bestRiskReward.metrics.expectedValue} (CVaR $${bestRiskReward.metrics.cvar95})`,
       description: 'Recomendada si buscas la mejor asimetría matemática protegiendo el capital ante colas de pérdida.',
     },
     byProbability: {
@@ -308,6 +310,8 @@ export const recommendService = {
     const nearQuotes = quotes.filter((quote) => quote.expiration === nearExpiration);
     const farQuotes = quotes.filter((quote) => quote.expiration === farExpiration);
 
+    // Zonas sobre cierres diarios, clasificadas contra el spot del análisis.
+    // No dependen del rango ni de la temporalidad que el usuario esté viendo en la gráfica.
     const marketView = marketSignals(history.closes, spot);
     const iv = atmIv(nearQuotes, spot) ?? marketView.hv30;
     const ivFar = farQuotes.length ? atmIv(farQuotes, spot) : null;
@@ -341,7 +345,12 @@ export const recommendService = {
             { stock: market.stock, snaps: market.snaps, history },
           );
           const mc = report.monteCarlo;
-          const { parts } = composite({ probProfit: mc.probProfit, expectedValue: mc.mean, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] ?? 0 });
+          const execution = cores.includes('liquidity') ? analyzeLiquidity(legs, market.snaps, mc.mean) : null;
+          const rankingEv = execution ? execution.expectedAfterCosts : mc.mean;
+          const { parts } = composite({ probProfit: mc.probProfit, expectedValue: rankingEv ?? 0, cvar95: mc.cvar95, var95: mc.var95, fit: fits[template] ?? 0 });
+          if (execution) parts.liquidity = execution.score;
+          // Dato explicativo para la interfaz: ya forma parte de fits[template].
+          // No se suma otra vez ni participa como un core independiente.
           parts.levels = cores.includes('technical') ? levelFit(template, signals.supportResistance) : null;
           const ai = cores.includes('ai') ? await aiService.validateRisk({ symbol, strategy: built.name,
             probProfit: mc.probProfit, expectedValue: mc.mean, var95: mc.var95, cvar95: mc.cvar95,
@@ -350,7 +359,7 @@ export const recommendService = {
           if (ai) parts.ai = { approved: 1, caution: 0.5, rejected: 0 }[ai.verdict];
           const newsView = news ? newsFit(news, template) : null;
           if (newsView) parts.news = newsView.score;
-          const score = scoreCores(parts, cores, mc.mean);
+          const score = execution?.status === 'unavailable' ? 0 : scoreCores(parts, cores, rankingEv ?? 0);
           if (!cores.includes('technical')) parts.fit = null;
           return {
             template,
@@ -361,6 +370,8 @@ export const recommendService = {
             scoreParts: parts,
             ai,
             news: newsView,
+            execution,
+            actionable: execution ? execution.ready && execution.expectedAfterCosts > 0 : mc.mean > 0,
             metrics: {
               probProfit: mc.probProfit,
               expectedValue: mc.mean,
@@ -397,7 +408,7 @@ export const recommendService = {
     }
     for (const entry of rankingWithBadges) entry.badges = entry.badges.filter((badge) => !categories[badge] || cores.includes(categories[badge]));
     const winner = rankingWithBadges[0];
-    const actionable = winner.metrics.expectedValue > 0;
+    const actionable = winner.actionable;
     const simulationVolSource = winner.report?.inputs?.simulationVolSource ?? (hasHv30 ? 'hv30' : 'iv-avg');
     return {
       symbol,
@@ -405,7 +416,7 @@ export const recommendService = {
       news,
       asOf: new Date().toISOString(),
       actionable,
-      method: `Cores activos: ${cores.join(', ')}. Pesos normalizados entre los seleccionados; compuerta EV > 0 solo con risk. Las métricas cuantitativas son insumos compartidos.`,
+      method: `Cores activos: ${cores.join(', ')}. Pesos normalizados entre los seleccionados; compuerta EV > 0 solo con risk. Con liquidity, riesgo y compuerta usan EV del escenario después de costos, y actionable exige datos de ejecución completos. Las métricas Monte Carlo permanecen antes de costos.`,
       signals: {
         supportResistance: signals.supportResistance,
         spot,
@@ -427,7 +438,7 @@ export const recommendService = {
       categoryWinners,
       // Cada fila lleva su reporte completo y las insignias de liderazgo por categoría.
       ranking: rankingWithBadges,
-      winner: { template: winner.template, name: winner.name, score: winner.score, actionable, metrics: winner.metrics, legs: winner.legs, legExplanations: winner.legExplanations, report: winner.report },
+      winner: { template: winner.template, name: winner.name, score: winner.score, actionable, execution: winner.execution, metrics: winner.metrics, legs: winner.legs, legExplanations: winner.legExplanations, report: winner.report },
       explanation: cores.length === DEFAULT_CORES.length && DEFAULT_CORES.every((core) => cores.includes(core))
         ? explain(winner, rankingWithBadges[1], signals, rankingWithBadges)
         : `${winner.name} obtuvo ${winner.score} puntos usando ${cores.join(', ')}.${winner.ai ? ` IA: ${winner.ai.reason}` : ''} Probabilidad simulada ${(winner.metrics.probProfit * 100).toFixed(1)} %; valor esperado $${winner.metrics.expectedValue}.`,

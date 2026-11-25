@@ -56,12 +56,14 @@ const typeDefs = /* GraphQL */ `
   }
 
   type RankedStrategy {
+    execution: ExecutionEstimate
     news: NewsFit
     rank: Int! name: String! score: Float! probProfit: Float expectedValue: Float
     worstSimulated: Float var95: Float marginRegT: Float error: String
   }
   type ScanLeg { symbol: String! side: String! ratio_qty: Int! }
   type ScanRow {
+    execution: ExecutionEstimate
     news: NewsAnalysis
     symbol: String! template: String! name: String! score: Float! actionable: Boolean!
     probProfit: Float expectedValue: Float var95: Float netCost: Float spot: Float ivPct: Float hv30Pct: Float
@@ -73,6 +75,16 @@ const typeDefs = /* GraphQL */ `
     template: String name: String rows: [ScanRow!]! skipped: [ScanSkip!]!
   }
   type NewsArticle { headline: String! url: String source: String! publishedAt: String! sentiment: Float! event: Boolean! }
+  type ExecutionLeg {
+    symbol: String! side: String! contracts: Int! bid: Float ask: Float bidSize: Float askSize: Float quoteTime: String
+    ageSeconds: Float valid: Boolean! fresh: Boolean! sizeKnown: Boolean! sizeEnough: Boolean! mid: Float relativeSpreadPct: Float
+    entryPenalty: Float entryDebit: Float issues: [String!]!
+  }
+  type ExecutionEstimate {
+    score: Float! status: String! ready: Boolean! asOf: String! feed: String! qty: Int! maxAgeSeconds: Float! commissionsKnown: Boolean!
+    entryPenalty: Float roundTripSpread: Float commissions: Float slippageBps: Float! extraSlippage: Float estimatedCost: Float
+    entryDebit: Float expectedAfterCosts: Float warnings: [String!]! legs: [ExecutionLeg!]! method: String!
+  }
   type NewsFit { score: Float! reason: String! }
   type NewsAnalysis {
     symbol: String! status: String! asOf: String! lookbackDays: Int! sentiment: Float! eventPressure: Float!
@@ -191,6 +203,7 @@ const resolvers = {
           name: entry.name,
           score: entry.score,
           news: entry.news,
+          execution: entry.execution,
           error: entry.error ?? null,
           ...(entry.metrics ?? {}),
         })),

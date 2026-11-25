@@ -116,6 +116,37 @@ blackScholes([{ type: 'call', spot: 42, strike: 40, t: 0.5, rate: 0.1, vol: 0.2 
 
 ## Gráfica en vivo y plantillas de estrategias
 
+### Core Liquidez y ejecución
+
+Activa **Liquidez y ejecución** en los cores del Recomendador. Explorar hereda esa selección y
+añade columnas de puntaje, costo de entrada/salida y EV del escenario después de costos.
+Cada estrategia incluye `execution` con bid/ask, tamaños, antigüedad y costos por pierna.
+Se reutilizan los snapshots existentes, sin un servicio externo adicional. También está en GraphQL.
+
+Para una unidad de estrategia, el costo de entrada vs. mid es `Σ (ask-bid)/2 × ratio × 100`;
+el escenario de cierre supone el mismo spread (costo de ida/vuelta = doble del de entrada).
+Comisiones por contrato/lado y deslizamiento adicional por lado son supuestos configurables en
+`api/.env`: `EXECUTION_COMMISSION_PER_CONTRACT` (vacío = desconocido),
+`EXECUTION_MAX_QUOTE_AGE_SECONDS` (120), `EXECUTION_SLIPPAGE_BPS` (0: sin deslizamiento adicional).
+El costo estimado suma spreads, comisiones configuradas y deslizamiento sobre prima bruta, sin netear piernas.
+`expectedAfterCosts` resta ese costo al EV del modelo; es un escenario de salida, incluso para
+estrategias valoradas al vencimiento, no una nueva simulación ni una previsión de cotizaciones futuras.
+
+El puntaje es `0.55/(1+spreadRelativo/0.1) + 0.25×frescura + 0.20×tamañoSuficiente`;
+spreadRelativo = spread ida/vuelta / prima bruta. Peso relativo del core: 0.2 normalizado.
+Frescura exige fechas no futuras y edad ≤ umbral; tamaño exige ambos lados suficientes por ratio.
+Bid/ask inválido, cruzado o bid cero: score=0, costos y EV del escenario no disponibles.
+Sin tamaños, comisiones, frescura o feed OPRA se limita el puntaje a 50/100 y no se marca como apta.
+El feed `indicative` modifica cotizaciones; su estimación se muestra como limitada.
+Fuentes: [snapshots de Alpaca](https://docs.alpaca.markets/us/reference/optionsnapshots).
+
+Solo al seleccionar el core se usa el EV del escenario para el componente de rendimiento/riesgo
+y su compuerta de EV positivo. Probabilidades, VaR y reportes del motor conservan sus valores originales.
+El automático agrega el filtro de liquidez y vuelve a consultar snapshots después de IA antes de crear
+una estrategia. No se garantiza ejecución ni profundidad de mercado por tener tamaños visibles.
+No se simulan fills combinados ni volumen/interés abierto ausentes en snapshots. El backtest rechaza
+liquidity porque no hay bid/ask/tamaños históricos. Está desactivado por defecto.
+
 ### Soportes y resistencias
 
 La gráfica incluye la casilla **Soportes y resistencias** y un detalle de zonas, contactos y distancia.

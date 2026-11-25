@@ -139,7 +139,9 @@ export const marketService = {
         prevClose: snapshot?.prevDailyBar?.c ?? null,
       },
       bars,
-      // Excluye la última vela: puede seguir formándose en vivo.
+      // Zonas del rango/temporalidad solicitado, usando máximos y mínimos.
+      // Excluye la última vela por posible formación; su cierre solo sirve como
+      // referencia para clasificar soportes/resistencias y medir distancias.
       supportResistance: supportResistance(bars.slice(0, -1), latestBar.close),
       indicators: Object.fromEntries(
         Object.entries(series).map(([indicatorKey, values]) => [indicatorKey, values.map(round)]),

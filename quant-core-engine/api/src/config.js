@@ -48,6 +48,11 @@ export const config = {
     // Llave secreta (sb_secret_...) o service_role: solo vive en el servidor.
     secretKey: env.SUPABASE_SECRET_KEY ?? '',
   },
+  execution: {
+    maxQuoteAgeSeconds: Number(env.EXECUTION_MAX_QUOTE_AGE_SECONDS ?? 120),
+    commissionPerContract: env.EXECUTION_COMMISSION_PER_CONTRACT?.trim() ? Number(env.EXECUTION_COMMISSION_PER_CONTRACT) : null,
+    slippageBps: Number(env.EXECUTION_SLIPPAGE_BPS ?? 0),
+  },
 };
 
 /**

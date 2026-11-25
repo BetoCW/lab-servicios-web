@@ -484,6 +484,7 @@ body.has-max { overflow: hidden; }
         <label><input type="checkbox" value="risk" checked> Rendimiento / riesgo</label>
         <label><input type="checkbox" value="ai"> IA</label>
         <label title="Titulares recientes de Alpaca: sentimiento y menciones de eventos"><input type="checkbox" value="news"> Noticias</label>
+        <label title="Spreads por pierna, antigüedad, tamaños y escenario de costos"><input type="checkbox" value="liquidity"> Liquidez y ejecución</label>
       </fieldset>
       <div id="recOut"><div class="pad muted">Elige un ticker arriba.</div></div>
       <div id="recSel" class="sel" hidden></div>
@@ -1240,13 +1241,14 @@ function recDetail(entry) {
   $('#recSel').hidden = false;
   $('#recSel').innerHTML = `
     <div class="kpis">
-      <div class="kpi"><span>Prob. de ganancia</span><b>${(m.probProfit * 100).toFixed(1)}%</b></div>
-      <div class="kpi"><span>P&L esperado</span><b class="${m.expectedValue >= 0 ? 'buy' : 'sell'}">${signed(m.expectedValue)}</b></div>
+      <div class="kpi"><span>Prob. de ganancia (modelo)</span><b>${(m.probProfit * 100).toFixed(1)}%</b></div>
+      <div class="kpi"><span>P&L esperado${entry.execution ? ' antes de costos' : ''}</span><b class="${m.expectedValue >= 0 ? 'buy' : 'sell'}">${signed(m.expectedValue)}</b></div>
       <div class="kpi"><span>Peor caso</span><b class="sell">${signed(m.worstSimulated)}</b></div>
       <div class="kpi"><span>VaR 95%</span><b>${money(m.var95)}</b></div>
     </div>
     <div class="legs"><b>${esc(entry.name)}</b> · ${entry.legs.map((l) => `<span class="${l.side}">${l.side === 'buy' ? 'COMPRA' : 'VENTA'}</span> ${esc(l.symbol)}`).join(' · ')}</div>
     ${entry.news ? `<p><b>Core Noticias:</b> ${esc(entry.news.reason)}</p>` : ''}
+    ${executionHtml(entry.execution)}
     ${entry.scoreParts?.levels != null ? `<p class="muted"><b>Soportes/resistencias:</b> encaje ${num(entry.scoreParts.levels * 100, 1)}/100; representa 15 % del encaje técnico, combinado con volatilidad y tendencia.</p>` : ''}
     ${(entry.legExplanations || []).length ? `
     <details class="det"><summary class="muted">¿Por qué estas patas?</summary>
@@ -1258,6 +1260,7 @@ function recDetail(entry) {
   // Modal con el detalle completo (se abre con "Ver más").
   $('#recDetail').innerHTML = `
     <h2>${esc(entry.name)} · detalle <span class="muted">Monte Carlo y riesgo extendido</span></h2>
+    ${executionHtml(entry.execution)}
     ${entry.ai ? `<p><b>Core IA:</b> ${esc(verdictBadge[entry.ai.verdict]?.[1] ?? entry.ai.verdict)} · ${esc(entry.ai.reason)} <span class="muted">(${esc(entry.ai.model ?? '—')})</span></p>` : ''}
     <div class="kpis">
       <div class="kpi"><span>Mejor / peor caso</span><b>${signed(m.bestSimulated)}</b><span>${signed(m.worstSimulated)}</span></div>
@@ -1287,6 +1290,23 @@ $('#recSel').onclick = async (e) => {
   } catch { e.target.disabled = false; }
 };
 
+function executionHtml(execution) {
+  if (!execution) return '';
+  const value = (n) => n == null ? 'No disponible' : money(n);
+  return `<details class="det"><summary>Liquidez y ejecución · ${num(execution.score * 100, 1)}/100 · ${execution.ready ? 'datos completos' : 'datos limitados'}</summary>
+    <div class="kpis"><div class="kpi"><span>Costo entrada vs. mid</span><b>${value(execution.entryPenalty)}</b></div>
+    <div class="kpi"><span>Costo escenario entrada + salida</span><b>${value(execution.estimatedCost)}</b></div>
+    <div class="kpi"><span>EV escenario después de costos</span><b>${value(execution.expectedAfterCosts)}</b></div>
+    <div class="kpi"><span>Comisiones entrada + salida</span><b>${execution.commissionsKnown ? value(execution.commissions) : 'Sin configurar'}</b></div></div>
+    <p>Spread ida y vuelta: ${value(execution.roundTripSpread)} · deslizamiento adicional: ${value(execution.extraSlippage)} (${num(execution.slippageBps)} puntos base por lado).</p>
+    <div class="scroll"><table><thead><tr><th>Pierna</th><th>Bid / ask</th><th>Spread % mid</th><th>Tamaños bid / ask</th><th>Edad (s)</th><th>Entrada vs. mid</th></tr></thead><tbody>
+    ${execution.legs.map((l) => `<tr><td>${esc(l.symbol)} · ${esc(l.side)} ×${l.contracts}</td><td>${value(l.bid)} / ${value(l.ask)}</td><td>${l.relativeSpreadPct == null ? '—' : num(l.relativeSpreadPct, 1) + '%'}</td><td>${l.bidSize ?? '—'} / ${l.askSize ?? '—'}</td><td>${l.ageSeconds == null ? '—' : num(l.ageSeconds, 0)}</td><td>${value(l.entryPenalty)}</td></tr>`).join('')}</tbody></table></div>
+    ${execution.warnings.map((w) => `<p class="muted">${esc(w)}</p>`).join('')}
+    <p class="muted">${esc(execution.method)} Evaluado: ${esc(new Date(execution.asOf).toLocaleString('es-MX'))} · feed ${esc(execution.feed)}.</p></details>`;
+}
+
+// Presentación de zonas calculadas por el backend: aquí no se detectan nuevos niveles.
+// label aclara si proceden de la gráfica (high/low) o del recomendador (cierres diarios).
 function levelsHtml(levels, label) {
   if (!levels) return '';
   const zoneText = (z) => `${money(z.lower)}–${money(z.upper)} · ${z.touches} contactos · ${num(z.distancePct, 1)} % del precio${z.inZone ? ' · precio dentro de la zona' : ''}`;
@@ -1296,9 +1316,13 @@ function levelsHtml(levels, label) {
     <p class="muted">${esc(levels.method)} Base: ${levels.basis === 'closes' ? 'cierres' : 'máximos/mínimos'} · ${levels.lookback} observaciones. Son zonas al final del rango, no señales históricas de compra/venta.</p></details>`;
 }
 
+// Guardar las referencias de las líneas permite retirarlas sin borrar las velas
+// ni los strikes de una estrategia. currentLevels se actualiza al recibir el histórico.
 let supportLines = [], currentLevels = null;
 function renderSupportResistance() {
   if (!charts) return;
+  // Reemplazar las líneas evita duplicarlas en cada refresco en vivo. También las
+  // limpia al desmarcar la casilla o al iniciar una consulta para otro rango/ticker.
   supportLines.forEach((line) => charts.series.candles.removePriceLine(line));
   supportLines = [];
   const enabled = $('#showLevels').checked;
@@ -1307,7 +1331,8 @@ function renderSupportResistance() {
   for (const zone of currentLevels.zones) {
     const name = zone.type === 'support' ? 'Soporte' : 'Resistencia';
     const color = css(zone.type === 'support' ? '--ok' : '--bad');
-    // Dos límites discontinuos representan la zona, sin alterar los strikes de la estrategia.
+    // Dos límites discontinuos representan la zona. Solo el inferior lleva etiqueta
+    // en el eje para reducir superposiciones; el detalle muestra ambos precios.
     for (const [i, price] of [zone.lower, zone.upper].entries()) supportLines.push(charts.series.candles.createPriceLine({
       price, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: i === 0,
       title: i === 0 ? `${name} (${zone.touches})` : '',
@@ -1361,7 +1386,7 @@ function renderRecTable(rows) {
       <tr>
         <th class="th-sort ${recSortCriterion === 'composite' ? 'sorted' : ''}" data-sort="composite" title="Ordenar por puntaje equilibrado"># Estrategia</th>
         <th class="n th-sort ${recSortCriterion === 'fit' ? 'sorted' : ''}" data-sort="fit" title="Ordenar por encaje con tendencia y volatilidad">Fit</th>
-        <th class="n th-sort ${recSortCriterion === 'ev' ? 'sorted' : ''}" data-sort="ev" title="Valor esperado en dólares (ordena por retorno ajustado EV/CVaR)">EV ($)</th>
+        <th class="n th-sort ${recSortCriterion === 'ev' ? 'sorted' : ''}" data-sort="ev" title="EV del modelo; con Liquidez el orden considera el escenario después de costos">EV modelo ($)</th>
         <th class="n th-sort ${recSortCriterion === 'prob' ? 'sorted' : ''}" data-sort="prob" title="Ordenar por probabilidad de ganancia">Prob.</th>
         <th>Insignias</th>
       </tr>
@@ -1371,7 +1396,7 @@ function renderRecTable(rows) {
         return `<tr data-template="${esc(x.template)}" style="--i:${i}">
             <td><b>${esc(x.name)}</b> <span class="n muted">${x.score}</span><div class="bar"><i style="--w:${Math.max(0, Math.min(100, x.score))}%"></i></div></td>
             <td class="n">${x.scoreParts?.fit == null ? '—' : `${Math.round(x.scoreParts.fit * 100)}%`}</td>
-            <td class="n ${x.metrics.expectedValue >= 0 ? 'buy' : 'sell'}" title="${evCvarRatio != null ? `EV/CVaR95: ${evCvarRatio}` : 'Sin CVaR95'}">${signed(x.metrics.expectedValue)}${evCvarRatio != null ? `<div class="muted" style="font-size:10px">${evCvarRatio}× CVaR</div>` : ''}</td>
+            <td class="n ${x.metrics.expectedValue >= 0 ? 'buy' : 'sell'}" title="${evCvarRatio != null ? `EV/CVaR95 del modelo: ${evCvarRatio}` : 'Sin CVaR95'}">${signed(x.metrics.expectedValue)}${x.execution ? `<div class="muted" style="font-size:10px">Esc. tras costos: ${x.execution.expectedAfterCosts == null ? '—' : signed(x.execution.expectedAfterCosts)}</div>` : evCvarRatio != null ? `<div class="muted" style="font-size:10px">${evCvarRatio}× CVaR</div>` : ''}</td>
             <td class="n">${(x.metrics.probProfit * 100).toFixed(0)}%</td>
             <td>${(x.badges || []).map((b) => badgeMap[b] || '').join('')}</td>
           </tr>`;
@@ -1402,7 +1427,7 @@ async function recommend(symbol, mine = ticket) {
       .filter(([key]) => cw[key]).map(([key, title]) => `<div class="cat-card" data-cat="${key}" title="${esc(cw[key].description)}"><div class="ctitle">${title}</div><div class="cname">${esc(cw[key].name)}</div><div class="cval">${esc(cw[key].label)}</div></div>`).join('')}</div>`;
 
     const noEdgeBanner = d.actionable === false
-      ? `<div class="badge warn" style="display:block;padding:6px 10px;margin:0 0 8px;white-space:normal">La estrategia ganadora no tiene valor esperado positivo. No es apta para ejecución automática.</div>`
+      ? `<div class="badge warn" style="display:block;padding:6px 10px;margin:0 0 8px;white-space:normal">${d.cores.includes('liquidity') ? 'La ganadora no cumple los requisitos de liquidez o de valor esperado después de costos. Revisa Liquidez y ejecución en su detalle.' : 'La estrategia ganadora no tiene valor esperado positivo.'} No es apta para ejecución automática.</div>`
       : '';
 
     $('#recOut').innerHTML = `
@@ -2023,20 +2048,22 @@ document.querySelectorAll('[data-ex]').forEach((b) => { b.onclick = () => exTab(
 function exRender(d) {
   const top = Math.max(...d.rows.map((r) => r.score), 1);
   const due = (r) => ['calendar', 'diagonal'].includes(r.template) && r.farExpiration ? `${r.nearExpiration} / ${r.farExpiration}` : r.nearExpiration;
-  $('#exOut').innerHTML = d.rows.length ? `<table><thead><tr><th>#</th><th>Empresa</th><th>Estrategia</th><th>Puntaje</th>${d.cores?.includes('news') ? '<th>Noticias / 100</th>' : ''}<th>Prob. de ganar</th><th>Valor esperado</th><th>Precio</th><th>IV / HV30</th><th>Vence</th><th></th></tr></thead><tbody>${
+  $('#exOut').innerHTML = d.rows.length ? `<table><thead><tr><th>#</th><th>Empresa</th><th>Estrategia</th><th>Puntaje</th>${d.cores?.includes('news') ? '<th>Noticias / 100</th>' : ''}${d.cores?.includes('liquidity') ? '<th>Liquidez / 100</th><th>Costo entrada + salida</th><th>EV escenario tras costos</th>' : ''}<th>Prob. de ganar (modelo)</th><th>Valor esperado (modelo)</th><th>Precio</th><th>IV / HV30</th><th>Vence</th><th></th></tr></thead><tbody>${
     d.rows.map((r, i) => `<tr tabindex="0" data-sym="${esc(r.symbol)}" title="Cargar ${esc(r.symbol)} en la gráfica y el recomendador">
       <td>${i + 1}</td><td><b>${esc(r.symbol)}</b></td><td>${esc(r.name)}</td>
       <td class="n">${num(r.score, 1)}<span class="bar" style="width:${Math.max(2, Math.round((r.score / top) * 48))}px"></span></td>
       ${d.cores?.includes('news') ? `<td class="n" title="${esc(r.news?.reason ?? '')}">${r.news?.fit == null ? '—' : num(r.news.fit * 100, 1)}</td>` : ''}
+      ${d.cores?.includes('liquidity') ? `<td class="n" title="${esc((r.execution?.warnings ?? []).join('; '))}">${r.execution ? num(r.execution.score * 100, 1) : '—'}<br><span class="muted">${r.execution?.ready ? 'datos completos' : 'datos limitados'}</span></td><td>${r.execution?.estimatedCost == null ? '—' : money(r.execution.estimatedCost)}</td><td>${r.execution?.expectedAfterCosts == null ? '—' : money(r.execution.expectedAfterCosts)}</td>` : ''}
       <td class="n">${r.probProfit == null ? '—' : (r.probProfit * 100).toFixed(1) + ' %'}</td>
       <td class="n ${r.expectedValue > 0 ? 'buy' : 'sell'}">${money(r.expectedValue)}</td>
       <td class="n">${num(r.spot)}</td><td class="n">${num(r.ivPct, 1)} / ${num(r.hv30Pct, 1)} %</td><td>${esc(due(r))}</td>
-      <td>${r.actionable ? '<span class="badge ok" title="Valor esperado positivo">EV +</span>' : '<span class="badge warn" title="Valor esperado negativo: no se operaría en automático">EV −</span>'}</td></tr>`).join('')
+      <td>${r.actionable ? '<span class="badge ok">Apta para filtros</span>' : '<span class="badge warn">No automática</span>'}</td></tr>`).join('')
   }</tbody></table>` : '<div class="pad muted">Ninguna empresa devolvió estrategias con esos filtros. Prueba otro plazo u otras empresas.</div>';
   if (d.cores?.includes('news')) {
     $('#exOut').innerHTML += '<p>Fuentes del core Noticias por empresa:</p>' + [...new Map(d.rows.filter((r) => r.news).map((r) => [r.symbol, r])).values()]
       .map((r) => `<div><b>${esc(r.symbol)}</b>${newsHtml(r.news)}</div>`).join('');
   }
+  if (d.cores?.includes('liquidity')) $('#exOut').innerHTML += '<p>Detalle de ejecución por resultado:</p>' + d.rows.map((r) => `<div><b>${esc(r.symbol)} · ${esc(r.name)}</b>${executionHtml(r.execution)}</div>`).join('');
   const when = new Date(d.generatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
   $('#exStatus').textContent = `${d.scanned} empresas revisadas, ${d.rows.length} resultados. Calculado a las ${when}; se reutiliza durante 10 minutos. Clic en una fila para abrirla.`;
   $('#exSkip').textContent = d.skipped.length ? `Sin datos suficientes: ${d.skipped.map((s) => `${s.symbol}: ${s.reason}`).join('; ')}.` : '';

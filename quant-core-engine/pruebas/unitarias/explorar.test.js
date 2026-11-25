@@ -83,3 +83,19 @@ test('screen: propaga Noticias y sus fuentes; un fallo del feed queda en skipped
   assert.equal(out.rows[0].news.articles[0].headline, 'Test');
   assert.match(out.skipped[0].reason, /Noticias/);
 });
+
+test('screen: conserva costos y estado no apto aunque el EV del modelo sea positivo', async () => {
+  const service = createScanService({ listWatchlists: async () => [{ symbols: ['TEST'] }],
+    recommend: async (symbol, query) => {
+      assert.deepEqual(query.cores, ['liquidity']);
+      const rec = await fakeRecommend()(symbol, query);
+      rec.ranking[0].metrics.expectedValue = 20;
+      rec.ranking[0].actionable = false;
+      rec.ranking[0].execution = { score: 0.4, ready: false, estimatedCost: 30, expectedAfterCosts: -10 };
+      return rec;
+    } });
+  const result = await service.screen({ universe: 'watchlists', template: 'short-strangle', cores: 'liquidity' });
+  assert.equal(result.rows[0].expectedValue, 20);
+  assert.equal(result.rows[0].execution.expectedAfterCosts, -10);
+  assert.equal(result.rows[0].actionable, false);
+});

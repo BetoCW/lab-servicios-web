@@ -356,6 +356,12 @@ test('recommendService.recommend: expone actionable=true con IV > HV30 y actiona
     const probOnly = await recommendService.recommend('ZZPROB', { paths: 2000, cores: ['probability'] });
     assert.ok(probOnly.ranking.every((entry) => entry.score === Math.round(entry.metrics.probProfit * 1000) / 10));
     assert.equal(aiCalls, 6, 'los otros cores no activan IA');
+    const liqOnly = await recommendService.recommend('ZZLIQ', { paths: 2000, cores: 'liquidity' });
+    assert.equal(liqOnly.ranking.length, 6);
+    assert.ok(liqOnly.ranking.every((entry) => entry.execution && entry.scoreParts.liquidity === entry.execution.score));
+    assert.ok(liqOnly.ranking.every((entry) => entry.execution.estimatedCost > 0));
+    assert.equal(liqOnly.actionable, false, 'quotes simuladas sin fechas ni tamaños no se consideran ejecutables');
+    assert.equal(probOnly.ranking[0].execution, null, 'core desactivado no ajusta costos');
     let newsCalls = 0;
     alpaca.news = async () => { newsCalls++; return { news: [
       { headline: 'Earnings results beat estimates; raises guidance', symbols: ['ZZNEWS'], created_at: new Date().toISOString(), source: 'Test', url: 'https://example.com/news' },

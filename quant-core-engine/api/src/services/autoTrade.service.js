@@ -29,6 +29,7 @@ import { marketSession } from './marketSession.service.js';
 import { badRequest, HttpError } from '../lib/errors.js';
 import { recommendService } from './recommend.service.js';
 import { strategiesService } from './strategies.service.js';
+import { analyzeLiquidity } from './liquidity.service.js';
 
 // Proteccion contra doble clic / peticiones repetidas: /auto es la unica ruta que mueve dinero (paper)
 // y no tiene autenticacion; con esto solo puede haber UNA ejecucion a la vez y no se repite el mismo
@@ -112,6 +113,12 @@ export const autoTradeService = {
     const account = await alpaca.account();
     const accountSummary = { equity: Number(account.equity), buyingPower: Number(account.buying_power) };
     const risk = riskFilter(winner.metrics, accountSummary);
+    if (recommendation.cores?.includes('liquidity')) {
+      const passed = winner.execution?.ready === true && winner.execution.expectedAfterCosts > 0;
+      risk.checks.push({ rule: 'Liquidez: datos de ejecución completos y escenario después de costos positivo',
+        value: winner.execution?.expectedAfterCosts ?? null, limit: '> 0 y cotizaciones/tamaños/comisiones disponibles', ok: passed });
+      risk.passed = risk.passed && passed;
+    }
 
     const ai = await askAi({
       symbol: recommendation.symbol,
@@ -138,6 +145,14 @@ export const autoTradeService = {
     if (body.dryRun) {
       result.message = 'Simulación (dryRun): pasó ambos filtros, pero no se envió la orden.';
       return result;
+    }
+
+    if (recommendation.cores?.includes('liquidity')) {
+      const snapshots = await alpaca.optionSnapshots(winner.legs.map((leg) => leg.symbol));
+      const execution = analyzeLiquidity(winner.legs, snapshots, winner.metrics.expectedValue);
+      if (!execution.ready || !(execution.expectedAfterCosts > 0)) {
+        return { ...result, execution, message: 'No se envió la orden: la liquidez cambió o el escenario después de costos dejó de ser positivo.' };
+      }
     }
 
     const blockedUntil = (lastOrderAt.get(recommendation.symbol) ?? 0) + REPEAT_BLOCK_MS;

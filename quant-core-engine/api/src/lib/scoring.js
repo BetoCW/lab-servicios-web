@@ -101,6 +101,10 @@ export function templateFit({ ivToHv, termSlope, signals }) {
     calendar: 0.5 * term + 0.5 * rangeBound,
     diagonal: 0.5 * bullish + 0.5 * (1 - Math.abs(volRich - volCheap)),
   };
+  // Las zonas aportan 15 % del ENCAJE TÉCNICO de cada plantilla, no del puntaje
+  // total. El otro 85 % conserva las señales anteriores de volatilidad y tendencia.
+  // Sin zonas, levelFit devuelve null y no cambia el encaje. recommend.service.js
+  // solo usa estos encajes para el ranking cuando el core technical está seleccionado.
   for (const template of Object.keys(fits)) {
     const fit = levelFit(template, signals.supportResistance);
     if (fit != null) fits[template] = 0.85 * fits[template] + 0.15 * fit;
