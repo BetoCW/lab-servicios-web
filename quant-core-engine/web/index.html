@@ -330,6 +330,15 @@ dialog > .dh { display: flex; justify-content: space-between; align-items: cente
 #detalle { width: min(1000px, 96vw); max-height: 92vh; background: var(--bg); }
 #dlgStrat { position: fixed; margin: 0; right: 14px; bottom: calc(var(--foot) + var(--dock) + 14px); left: auto; top: auto; width: min(560px, 94vw); z-index: 40; }
 dialog#dlgStrat:not([open]) { display: none; }
+#stDrag { cursor: grab; user-select: none; touch-action: none; }
+#stDrag .grip { color: var(--muted); margin-right: 4px; }
+#dlgStrat.dragging, #dlgStrat.dragging #stDrag { cursor: grabbing; }
+#dlgMarketClosed, #dlgAsk { width: min(460px, 94vw); }
+#dlgAsk p { margin: 0 0 8px; }
+#dlgAsk ol { margin: 0 0 8px; padding-left: 18px; } #dlgAsk li { margin: 2px 0; }
+#dlgAsk .err { font: 12px var(--mono); white-space: pre-wrap; background: var(--bad-soft); color: var(--bad); border-radius: var(--r-sm); padding: 6px 8px; }
+#askField { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 10px; } #askField[hidden] { display: none; }
+#dlgAsk .ask-btns { justify-content: flex-end; margin-top: 12px; }
 
 /* tutorial paso a paso (botón ▶): foco recortado con sombra + tarjeta flotante */
 #tourSpot { position: fixed; z-index: 95; border-radius: var(--r); box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px rgba(5, 8, 12, .62); pointer-events: none; transition: all 220ms; }
@@ -568,7 +577,7 @@ body.has-max { overflow: hidden; }
 
 <!-- Armar estrategia manual: diálogo NO modal (flota sobre el dock) para poder pulsar +C/+V en la cadena mientras está abierto -->
 <dialog id="dlgStrat">
-  <div class="dh">Armar estrategia manual <span class="muted">POST /strategies</span> <button class="ghost sm" data-close>✕</button></div>
+  <div class="dh" id="stDrag" title="Arrastra para mover la ventana"><span><span class="grip" aria-hidden="true">⠿</span> Armar estrategia manual <span class="muted">POST /strategies</span></span> <button class="ghost sm" data-close>✕</button></div>
   <p class="muted" style="margin:0 0 8px">Agrega piernas con <b>+C</b> / <b>+V</b> en la cadena (máx. 4) o usa una plantilla.</p>
   <form class="row" id="stForm">
     <label>Nombre <input name="name" required value="Bull call spread"></label>
@@ -590,6 +599,16 @@ body.has-max { overflow: hidden; }
   <p><b>Próxima apertura:</b> <span id="marketNextOpen"></span></p>
   <p class="muted">Puedes seguir analizando y guardar estrategias como borrador. En esta aplicación, los envíos de estrategias se habilitan durante la sesión regular.</p>
   <div class="row"><button data-close>Entendido</button></div>
+</dialog>
+
+<!-- Avisos, confirmaciones y preguntas de la app (reemplazan alert/confirm/prompt del navegador). Ver ask(). -->
+<dialog id="dlgAsk" aria-labelledby="askTitle" aria-describedby="askBody">
+  <form method="dialog">
+    <div class="dh"><span id="askTitle"></span><button type="button" class="ghost sm" data-ask="cancel" aria-label="Cerrar">Cerrar ✕</button></div>
+    <div id="askBody"></div>
+    <label id="askField" hidden><span id="askLabel"></span> <input id="askInput" autocomplete="off"></label>
+    <div class="row ask-btns"><button type="button" class="ghost" data-ask="cancel" id="askNo">Cancelar</button><button value="ok" id="askOk">Aceptar</button></div>
+  </form>
 </dialog>
 
 <!-- Estrategia guardada sobre la gráfica real: velas del subyacente con sus strikes, equilibrios y dónde se armó -->
@@ -670,7 +689,11 @@ async function api(method, path, body, silent = false) {
     const msg = [data?.message, ...(Array.isArray(data?.details) ? data.details : [])].filter(Boolean).join('\n');
     const marketClosed = data?.details?.code === 'MARKET_CLOSED';
     if (marketClosed) showMarketClosed(data.details);
-    else if (!silent) alert(`${method} ${path}\n${res.status}: ${msg}`);
+    else if (!silent) ask({
+      title: 'No se pudo completar la acción',
+      html: `<p>La API respondió con un error (${res.status}).</p><p class="err">${esc(msg || res.statusText)}</p><p class="muted">${esc(method)} ${esc(path)} · el detalle completo está en <b>Peticiones</b>, en el pie de página.</p>`,
+      ok: 'Entendido', cancel: null,
+    });
     throw Object.assign(new Error(msg), { code: data?.details?.code, status: res.status });
   }
   return data;
@@ -684,6 +707,37 @@ function showMarketClosed(details) {
   }) + ` (${zone}, tu hora local)`;
   if (!$('#dlgMarketClosed').open) $('#dlgMarketClosed').showModal();
 }
+
+// Diálogo propio para avisos, confirmaciones y preguntas (mismo estilo que el de mercado cerrado).
+// ask({ title, html, ok, cancel, danger }) → true/false · con `input` → texto o null · cancel: null = solo aviso.
+// Se encolan: si ya hay uno abierto, el siguiente espera a que se cierre.
+let askQueue = Promise.resolve();
+function ask(o) {
+  const run = () => new Promise((resolve) => {
+    const dlg = $('#dlgAsk');
+    $('#askTitle').textContent = o.title;
+    $('#askBody').innerHTML = o.html ?? '';
+    $('#askField').hidden = !o.input;
+    if (o.input) { $('#askLabel').textContent = o.input.label ?? ''; Object.assign($('#askInput'), { value: o.input.value ?? '', type: o.input.type ?? 'text', step: o.input.step ?? '' }); }
+    $('#askOk').textContent = o.ok ?? 'Aceptar';
+    $('#askOk').className = o.danger ? 'danger' : '';
+    $('#askNo').hidden = o.cancel === null;
+    $('#askNo').textContent = o.cancel ?? 'Cancelar';
+    dlg.returnValue = '';
+    dlg.addEventListener('close', () => {
+      const ok = dlg.returnValue === 'ok';
+      resolve(o.input ? (ok ? $('#askInput').value.trim() || null : null) : ok);
+    }, { once: true });
+    dlg.showModal();
+    (o.input ? $('#askInput') : $('#askOk')).focus();
+    if (o.input) $('#askInput').select();
+  });
+  const p = askQueue.then(run);
+  askQueue = p.catch(() => {});
+  return p;
+}
+const notice = (title, html) => ask({ title, html, ok: 'Entendido', cancel: null });
+document.addEventListener('click', (e) => { if (e.target.dataset?.ask === 'cancel') $('#dlgAsk').close('cancel'); });
 
 function log(method, path, status, ms, data) {
   const div = document.createElement('div');
@@ -763,10 +817,10 @@ $('#wlList').onclick = async (e) => {
   const id = card.dataset.id;
   if (act === 'menu') return card.querySelector('.wla').toggleAttribute('hidden');
   if (act === 'addtoggle') { const f = card.querySelector('.wladd'); f.toggleAttribute('hidden'); return f.hidden || f.symbol.focus(); }
-  if (act === 'delete' && confirm('¿Eliminar la watchlist?')) await api('DELETE', `/watchlists/${id}`);
+  if (act === 'delete' && await ask({ title: '¿Eliminar la watchlist?', html: `<p>Se borrará <b>${esc(card.querySelector('.wlh b').textContent.trim())}</b> con todos sus símbolos. No se puede deshacer.</p>`, ok: 'Eliminar', danger: true })) await api('DELETE', `/watchlists/${id}`);
   if (act === 'rm') await api('DELETE', `/watchlists/${id}/symbols/${e.target.dataset.sym}`);
   if (act === 'rename') {
-    const name = prompt('Nuevo nombre:', card.querySelector('.wlh b').textContent.trim());
+    const name = await ask({ title: 'Renombrar watchlist', input: { label: 'Nuevo nombre', value: card.querySelector('.wlh b').textContent.trim() }, ok: 'Guardar' });
     if (!name) return;
     const symbols = [...card.querySelectorAll('[data-act=rm]')].map((b) => b.dataset.sym);
     await api('PUT', `/watchlists/${id}`, { name, symbols });
@@ -817,7 +871,7 @@ $('#chTable').onclick = async (e) => {
   try {
     if (act === 'view') showChain(await api('GET', `/option-chains/${id}`));
     if (act === 'refresh') showChain(await api('POST', `/option-chains/${id}/refresh`));
-    if (act === 'delete' && confirm('¿Dejar de seguir esta cadena?')) {
+    if (act === 'delete' && await ask({ title: '¿Dejar de seguir esta cadena?', html: '<p>Se borran los contratos guardados de esta cadena. Puedes volver a ingestarla desde Alpaca cuando quieras.</p>', ok: 'Dejar de seguir', danger: true })) {
       await api('DELETE', `/option-chains/${id}`);
       $('#chDetail').hidden = true;
     }
@@ -850,7 +904,7 @@ let legs = [];
 $('#chDetail').addEventListener('click', (e) => {
   const side = e.target.dataset.leg;
   if (!side) return;
-  if (legs.length >= 4) return alert('Máximo 4 piernas');
+  if (legs.length >= 4) return notice('Máximo 4 piernas', '<p>Alpaca acepta hasta 4 piernas por orden multi-pierna. Quita una con <b>×</b> para agregar otra.</p>');
   legs.push({ symbol: e.target.dataset.sym, side, ratio_qty: 1 });
   renderLegs();
   e.target.textContent = '✓';
@@ -867,8 +921,8 @@ renderLegs();
 $('#tplName').innerHTML = Object.entries(F0Templates.TEMPLATES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
 $('#tplBuild').onclick = () => {
   const c = window.currentChain;
-  if (!c) return alert('Primero abre una cadena (panel “Cadena de opciones” o “Gestionar cadenas” → Ver).');
-  if (!c.underlyingPrice) return alert('La cadena no tiene precio del subyacente: pulsa Refresh.');
+  if (!c) return notice('Primero abre una cadena', '<p>Las plantillas se arman sobre la cadena abierta. Ábrela en el panel <b>Cadena de opciones</b> o en <b>Gestionar cadenas → Ver</b>.</p>');
+  if (!c.underlyingPrice) return notice('La cadena no tiene precio', '<p>Falta el precio del subyacente. Pulsa <b>Refresh</b> en <b>Gestionar cadenas</b> e inténtalo de nuevo.</p>');
   try {
     const t = F0Templates.build($('#tplName').value, c.quotes, c.underlyingPrice, $('#chExp').value);
     legs = t.legs;
@@ -876,12 +930,12 @@ $('#tplBuild').onclick = () => {
     f.namedItem('name').value = `${t.name} ${c.underlying}`;
     f.namedItem('order_type').value = 'market';
     renderLegs();
-  } catch (err) { alert(err.message); }
+  } catch (err) { notice('No se pudo armar la plantilla', `<p class="err">${esc(err.message)}</p>`); }
 };
 
 $('#stForm').onsubmit = (e) => {
   e.preventDefault();
-  if (!legs.length) return alert('Agrega al menos una pierna desde una cadena');
+  if (!legs.length) return notice('Faltan piernas', '<p>Agrega al menos una pierna con <b>+C</b> / <b>+V</b> en la cadena, o usa una plantilla.</p>');
   busy(e.submitter, async () => {
     const f = formData(e.target);
     const underlying = legs[0].symbol.match(/^[A-Z.]+/)[0];
@@ -1051,10 +1105,10 @@ $('#stList').onclick = async (e) => {
     if (act === 'chart') { $('#mkStrat').value = id; $('#mkStrat').onchange(); return; }
     if (act === 'risk') return await showRisk(id);
     if (act === 'submit') await api('POST', `/strategies/${id}/submit`);
-    if (act === 'delete' && confirm('¿Eliminar? Si ya se envió, se cancela la orden.')) await api('DELETE', `/strategies/${id}`);
+    if (act === 'delete' && await ask({ title: '¿Eliminar la estrategia?', html: '<p>Se borra de Estrategias guardadas. Si ya se envió a Alpaca, <b>también se cancela su orden</b>.</p>', ok: 'Eliminar', danger: true })) await api('DELETE', `/strategies/${id}`);
     if (act === 'rename') {
       const s = await api('GET', `/strategies/${id}`);
-      const name = prompt('Nuevo nombre:', s.name);
+      const name = await ask({ title: 'Renombrar estrategia', input: { label: 'Nuevo nombre', value: s.name }, ok: 'Guardar' });
       if (name) await api('PUT', `/strategies/${id}`, {
         name, underlying: s.underlying, qty: s.qty, order_type: s.orderType, limit_price: s.limitPrice ?? undefined, description: s.description ?? undefined,
         legs: s.legs.map((l) => ({ symbol: l.symbol, side: l.side, ratio_qty: l.ratioQty, position_intent: l.positionIntent })),
@@ -1508,7 +1562,16 @@ $('#recBacktest').onclick = busy($('#recBacktest'), async () => {
 // Botón automático: recomienda → filtro de riesgo → IA → orden en Alpaca PAPER. Pide confirmación y muestra el aviso.
 $('#autoRun').onclick = busy($('#autoRun'), async () => {
   const symbol = ticker(), dryRun = $('#autoDry').checked;
-  if (!dryRun && !confirm(`Se enviará una orden multi-pierna a Alpaca PAPER (dinero simulado) si ${symbol} pasa los dos filtros.\nEsto no garantiza ganancias. ¿Continuar?`)) return;
+  if (!dryRun && !(await ask({
+    title: `¿Ejecutar automático en ${symbol}?`,
+    html: `<p>Se enviará una <b>orden multi-pierna</b> a tu cuenta de práctica de Alpaca (<b>paper</b>, dinero simulado) solo si ${esc(symbol)} pasa todos los pasos:</p>
+      <ol><li>El recomendador elige la mejor estrategia con los cores marcados (${esc(selectedCores().join(', '))}).</li>
+      <li>Pasa el <b>filtro de riesgo</b> del motor (VaR / CVaR).</li>
+      <li>La <b>IA</b> la aprueba.</li></ol>
+      <p class="aviso" style="margin:0 0 8px">Esto no garantiza ganancias. Si el mercado está cerrado, la orden no se envía.</p>
+      <p class="muted">¿Solo quieres ver el resultado? Cancela y marca <b>Solo simular</b>.</p>`,
+    ok: 'Sí, ejecutar', cancel: 'Cancelar',
+  }))) return;
   $('#autoOut').innerHTML = '<span class="muted">Recomendando, validando riesgo y consultando a la IA…</span>';
   coreParams();
   let r;
@@ -1648,7 +1711,7 @@ $('#orTable').onclick = async (e) => {
   const id = e.target.closest('[data-id]')?.dataset.id;
   if (!act || !id) return;
   if (act === 'patch') {
-    const price = prompt('Nuevo precio límite:');
+    const price = await ask({ title: 'Cambiar precio límite', html: '<p class="muted">La orden se reemplaza en Alpaca con el nuevo precio.</p>', input: { label: 'Nuevo precio límite (USD)', type: 'number', step: '0.01' }, ok: 'Cambiar precio' });
     if (!price) return;
     await api('PATCH', `/orders/${id}`, { limit_price: Number(price) });
   }
@@ -1658,7 +1721,7 @@ $('#orTable').onclick = async (e) => {
 $('#orRefresh').onclick = busy($('#orRefresh'), loadOrders);
 $('#orStatus').onchange = () => loadOrders().catch(() => {});
 $('#orCancelAll').onclick = async () => {
-  if (!confirm('¿Cancelar todas las órdenes abiertas?')) return;
+  if (!(await ask({ title: '¿Cancelar todas las órdenes abiertas?', html: '<p>Se pide a Alpaca cancelar <b>todas</b> las órdenes abiertas de la cuenta paper. Las que ya se ejecutaron no cambian.</p>', ok: 'Cancelar todas', cancel: 'No, volver', danger: true }))) return;
   await api('DELETE', '/orders');
   setTimeout(loadOrders, 800);
 };
@@ -1976,6 +2039,29 @@ document.addEventListener('click', (e) => {
   else if (e.target.matches('dialog') && e.target.id !== 'dlgStrat') e.target.close(); // clic en el fondo
 });
 
+// "Armar estrategia manual" se mueve arrastrando su título. Siempre abre en su lugar de siempre (abajo a la derecha).
+(() => {
+  const dlg = $('#dlgStrat'), bar = $('#stDrag');
+  let dx = 0, dy = 0;
+  const clamp = (v, max) => Math.min(Math.max(v, 0), Math.max(max, 0));
+  bar.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const r = dlg.getBoundingClientRect();
+    dx = e.clientX - r.left; dy = e.clientY - r.top;
+    Object.assign(dlg.style, { left: `${r.left}px`, top: `${r.top}px`, right: 'auto', bottom: 'auto' });
+    dlg.classList.add('dragging');
+    bar.setPointerCapture(e.pointerId);
+  });
+  bar.addEventListener('pointermove', (e) => {
+    if (!bar.hasPointerCapture(e.pointerId)) return;
+    dlg.style.left = `${clamp(e.clientX - dx, innerWidth - dlg.offsetWidth)}px`;
+    dlg.style.top = `${clamp(e.clientY - dy, innerHeight - dlg.offsetHeight)}px`;
+  });
+  const drop = () => dlg.classList.remove('dragging');
+  bar.addEventListener('pointerup', drop); bar.addEventListener('pointercancel', drop);
+  dlg.addEventListener('close', () => { for (const k of ['left', 'top', 'right', 'bottom']) dlg.style[k] = ''; });
+})();
+
 // Dock inferior plegable (se recuerda la elección).
 const setDock = (off) => { $('#app').classList.toggle('dockOff', off); $('#btnDock').textContent = off ? '▴ Mostrar panel inferior' : '▾ Ocultar panel inferior'; store.set('f0.dock', off ? 'off' : 'on'); };
 $('#btnDock').onclick = () => setDock(!$('#app').classList.contains('dockOff'));
@@ -2167,16 +2253,20 @@ if (innerHeight < 900 || $('.chartbox').clientHeight < 560) document.querySelect
 // ------------------------------------------------------------- tutorial paso a paso (botón ▶ arriba a la derecha)
 // Cada paso resalta un panel y explica qué hacer ahí. Los pasos siguen el flujo de trabajo: elegir → analizar → decidir → operar.
 const TOUR = [
+  { sec: 'Inicio', el: '#flow', t: 'Los 4 pasos', h: '<p>La app sigue un flujo: <b>elegir</b> un activo → <b>leer</b> la gráfica → <b>decidir</b> la estrategia → <b>guardar y operar</b>.</p><p class="muted">Clic en un paso para resaltar su panel. El número junto al nombre de cada panel te dice a qué paso pertenece.</p>' },
   { sec: '1 · Elegir activo', el: '#mkSymbol', t: 'Escribe el ticker', h: '<p>Todo empieza aquí. Escribe un ticker (<b>SPY</b>) o el nombre de una empresa (<b>apple</b>) y elige de la lista.</p><p class="muted">Al cambiarlo se recarga toda la pantalla: cotización, gráfica, recomendador y cadena.</p>' },
   { sec: '1 · Elegir activo', el: '#rail', t: 'Watchlists', h: '<ol><li>Clic en un símbolo para abrirlo.</li><li><b>＋</b> crea una lista nueva.</li><li><b>⋯</b> renombra, agrega o elimina.</li></ol>' },
   { sec: '1 · Elegir activo', el: '#acct', t: 'Tu cuenta paper', h: '<p>Efectivo y poder de compra de la cuenta de práctica de Alpaca. El punto verde indica que la API está conectada; <b>⚙</b> cambia la URL.</p>' },
   { sec: '2 · Analizar', el: '#mkQuote', t: 'Cotización', h: '<p>Precio, cambio contra el cierre, bid/ask, RSI, tendencia con volatilidad histórica y próximos vencimientos de opciones.</p>' },
-  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica e histórico', h: '<ol><li>Elige minutos, horas, días, semanas o meses arriba.</li><li>Indica la cantidad máxima de velas y las fechas, y pulsa <b>Consultar histórico</b>. Sin fecha de fin se consulta hasta la actualidad; se muestran las velas más recientes del rango.</li><li>Los filtros de señales muestran compras y ventas de cruces EMA/SMA, RSI, MACD y Bollinger; la última fecha aparece debajo.</li><li><b>En vivo</b> refresca cada 5 s cuando no hay fecha de fin.</li><li>RSI y MACD se pliegan con su barra. Las piernas de la estrategia aparecen como líneas (verde compra, rojo venta).</li></ol>' },
-  { sec: '3 · Decidir', el: '#recCard', t: 'Recomendador', h: '<ol><li>El motor simula 4 estrategias con Monte Carlo y las ordena por puntaje; si ninguna tiene valor esperado positivo, lo avisa.</li><li>Las 3 tarjetas muestran la mejor por técnica, por retorno/CVaR y por probabilidad. Clic en una tarjeta, una fila o un encabezado (para reordenar).</li><li>La elegida se dibuja en la gráfica.</li><li><b>Ver más</b>: riesgo completo. <b>Backtest</b>: qué tan seguido acertó el último año.</li><li><b>Armar y guardar</b> la manda a Estrategias guardadas.</li></ol>' },
-  { sec: '3 · Decidir', el: '#autoCard', t: 'Ejecutar automático', h: '<p>Recomienda, pasa el filtro de riesgo y el de la IA, y solo entonces envía la orden a Alpaca <b>paper</b>.</p><p class="muted">Marca <b>Solo simular</b> para ver el resultado sin enviar nada.</p>' },
+  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica e histórico', h: '<ol><li>Elige minutos, horas, días, semanas o meses arriba.</li><li>Indica cuántas velas y las fechas, y pulsa <b>Consultar histórico</b>. Sin fecha de fin llega hasta hoy.</li><li>Los filtros muestran señales de compra y venta (cruces EMA/SMA, RSI, MACD y Bollinger).</li><li><b>Soportes y resistencias</b> dibuja las zonas donde el precio rebotó; el detalle y la zona más cercana están en <b>Detalle del análisis técnico</b>.</li><li><b>En vivo</b> refresca cada 5 s cuando no hay fecha de fin.</li></ol>' },
+  { sec: '2 · Analizar', el: '.chartbox .maxacts', t: 'Ampliar un panel', h: '<p><b>⤢</b> amplía el panel a toda la página y <b>⛶</b> lo pone en pantalla completa.</p><p class="muted">Lo tienen la gráfica, el recomendador y los paneles de abajo. Regresa con <b>Regresar</b> o con <b>Esc</b>.</p>' },
+  { sec: '3 · Decidir', el: '#coreControls', t: 'Cores del análisis', h: '<p>Elige qué opiniones pesan en el puntaje:</p><ol><li><b>Técnico</b>: tendencia, indicadores y soportes/resistencias.</li><li><b>Probabilidad</b> y <b>Rendimiento / riesgo</b>: simulación Monte Carlo (CVaR).</li><li><b>IA</b>: un modelo revisa la recomendación.</li><li><b>Noticias</b>: titulares recientes de Alpaca, su sentimiento y eventos.</li></ol><p class="muted">Para operar, los filtros de riesgo e IA siempre se aplican.</p>' },
+  { sec: '3 · Decidir', el: '#recCard', t: 'Recomendador', h: '<ol><li>Compara 4 estrategias y las ordena por puntaje; si ninguna tiene valor esperado positivo, lo avisa.</li><li>Las 3 tarjetas muestran la mejor por técnica, por retorno/CVaR y por probabilidad. Clic en una tarjeta o fila; clic en un encabezado reordena.</li><li>La elegida se dibuja en la gráfica.</li><li><b>Ver más</b>: riesgo completo y noticias. <b>Backtest</b>: qué tan seguido acertó el último año.</li><li><b>Armar y guardar</b> la manda a Estrategias guardadas.</li></ol>' },
+  { sec: '3 · Decidir', el: '#recExplore', t: 'Explorar', h: '<p>¿No sabes qué empresa ver? <b>Explorar</b> corre el recomendador en muchas a la vez:</p><ol><li><b>Mejores operaciones</b>: el top general.</li><li><b>Mejores empresas para una estrategia</b>: eliges la estrategia y te dice dónde encaja mejor.</li></ol><p class="muted">Clic en una fila para abrir esa empresa.</p>' },
+  { sec: '3 · Decidir', el: '#autoCard', t: 'Ejecutar automático', h: '<p>Recomienda, pasa el filtro de riesgo y el de la IA, y solo entonces envía la orden a Alpaca <b>paper</b>. Antes te pide confirmar y te explica qué va a pasar.</p><p class="muted">Marca <b>Solo simular</b> para ver el resultado sin enviar nada.</p>' },
   { sec: '4 · Operar', el: '#dock .dp:nth-child(3)', t: 'Cadena de opciones', h: '<ol><li>Muestra la cadena guardada del ticker; cambia el vencimiento arriba.</li><li><b>Gestionar cadenas</b> → define un rango de vencimientos opcional e ingesta desde Alpaca.</li><li><b>+C</b> / <b>+V</b> agregan piernas a una estrategia manual.</li></ol>', dock: true },
-  { sec: '4 · Operar', el: '#dock .dp:nth-child(2)', t: 'Estrategias guardadas', h: '<ol><li><b>＋ Armar manual</b>: con piernas +C/+V o una plantilla.</li><li><b>Riesgo</b>: motor Rust/WASM (VaR, matriz de P&L, estrés).</li><li><b>En gráfica</b>: dibuja sus strikes.</li><li><b>Enviar a Alpaca</b> manda la orden multi-pierna.</li></ol>', dock: true },
-  { sec: '4 · Operar', el: '#dock .dp:nth-child(1)', t: 'Órdenes', h: '<p>Órdenes abiertas en Alpaca paper; cambia a <b>Historial</b> para ver las anteriores. <b>＋ Nueva</b> para una orden simple, <b>Precio</b> para modificarla y <b>Cancelar</b>.</p>', dock: true },
+  { sec: '4 · Operar', el: '#dock .dp:nth-child(2)', t: 'Estrategias guardadas', h: '<ol><li><b>＋ Armar manual</b>: con piernas +C/+V o una plantilla. La ventana se mueve arrastrando su título (⠿).</li><li><b>Ver</b>: la estrategia sobre la gráfica real con su payoff.</li><li><b>Riesgo</b>: motor Rust/WASM (VaR, matriz de P&L, estrés).</li><li><b>Enviar a Alpaca</b> manda la orden multi-pierna.</li></ol>', dock: true },
+  { sec: '4 · Operar', el: '#dock .dp:nth-child(1)', t: 'Órdenes', h: '<p>Órdenes abiertas en Alpaca paper; cambia a <b>Historial</b> para ver las anteriores. <b>＋ Nueva</b> para una orden simple, <b>Precio</b> para modificarla y <b>Cancelar</b>.</p><p class="muted">Las órdenes solo se envían en la sesión regular del mercado. Fuera de ella verás el aviso <b>El mercado está cerrado</b> con la próxima apertura en tu hora local.</p>', dock: true },
   { sec: 'Listo', el: '#foot', t: 'Pie de página', h: '<p><b>Ocultar panel inferior</b> le da todo el alto a la gráfica. <b>Peticiones</b> muestra cada llamada a la API con su respuesta.</p><p class="muted">Vuelve a ver este recorrido con <b>▶ Tutorial</b>.</p>' },
 ];
 let tourAt = -1;
