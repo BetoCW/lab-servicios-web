@@ -51,6 +51,7 @@ b, th { font-weight: 600; }
 .brand, #mkSymbol, .card h2, dialog > .dh { font-family: var(--display); font-weight: 600; font-variation-settings: 'opsz' 72; }
 .n, .mono, td.n, th.n, .kpi b, #acct b, .q { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
+.news-evidence a { color: var(--accent); text-underline-offset: 2px; }
 .buy { color: var(--ok); font-weight: 600; } .sell { color: var(--bad); font-weight: 600; }
 .pad { padding: 10px 12px; }
 
@@ -480,6 +481,7 @@ body.has-max { overflow: hidden; }
         <label><input type="checkbox" value="probability" checked> Probabilidad</label>
         <label><input type="checkbox" value="risk" checked> Rendimiento / riesgo</label>
         <label><input type="checkbox" value="ai"> IA</label>
+        <label title="Titulares recientes de Alpaca: sentimiento y menciones de eventos"><input type="checkbox" value="news"> Noticias</label>
       </fieldset>
       <div id="recOut"><div class="pad muted">Elige un ticker arriba.</div></div>
       <div id="recSel" class="sel" hidden></div>
@@ -579,6 +581,14 @@ body.has-max { overflow: hidden; }
   <div id="legs" style="margin-top:10px"></div>
 </dialog>
 
+<dialog id="dlgMarketClosed" aria-labelledby="marketClosedTitle">
+  <div class="dh"><span id="marketClosedTitle">El mercado está cerrado</span><button class="ghost sm" data-close aria-label="Cerrar aviso de mercado">Cerrar ✕</button></div>
+  <p>La sesión regular terminó o todavía no comienza. No se envió tu orden a Alpaca.</p>
+  <p><b>Próxima apertura:</b> <span id="marketNextOpen"></span></p>
+  <p class="muted">Puedes seguir analizando y guardar estrategias como borrador. En esta aplicación, los envíos de estrategias se habilitan durante la sesión regular.</p>
+  <div class="row"><button data-close>Entendido</button></div>
+</dialog>
+
 <!-- Estrategia guardada sobre la gráfica real: velas del subyacente con sus strikes, equilibrios y dónde se armó -->
 <dialog id="dlgStratView" aria-labelledby="svTitle">
   <div class="dh"><span><span id="svTitle"></span> <span class="muted" id="svMeta"></span></span>
@@ -654,11 +664,22 @@ async function api(method, path, body, silent = false) {
   }
   log(method, path, res.status, performance.now() - t0, data);
   if (!res.ok) {
-    const msg = [data?.message, ...(data?.details ?? [])].filter(Boolean).join('\n');
-    if (!silent) alert(`${method} ${path}\n${res.status}: ${msg}`);
-    throw new Error(msg);
+    const msg = [data?.message, ...(Array.isArray(data?.details) ? data.details : [])].filter(Boolean).join('\n');
+    const marketClosed = data?.details?.code === 'MARKET_CLOSED';
+    if (marketClosed) showMarketClosed(data.details);
+    else if (!silent) alert(`${method} ${path}\n${res.status}: ${msg}`);
+    throw Object.assign(new Error(msg), { code: data?.details?.code, status: res.status });
   }
   return data;
+}
+
+function showMarketClosed(details) {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  $('#marketNextOpen').textContent = new Date(details.nextOpen).toLocaleString('es-MX', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    timeZoneName: 'short',
+  }) + ` (${zone}, tu hora local)`;
+  if (!$('#dlgMarketClosed').open) $('#dlgMarketClosed').showModal();
 }
 
 function log(method, path, status, ms, data) {
@@ -1037,6 +1058,8 @@ $('#stList').onclick = async (e) => {
       });
     }
     await Promise.all([loadStrategies(), loadOrders()]);
+  } catch {
+    // api() ya mostró el modal de mercado cerrado o la alerta correspondiente.
   } finally { e.target.disabled = false; }
 };
 
@@ -1221,6 +1244,7 @@ function recDetail(entry) {
       <div class="kpi"><span>VaR 95%</span><b>${money(m.var95)}</b></div>
     </div>
     <div class="legs"><b>${esc(entry.name)}</b> · ${entry.legs.map((l) => `<span class="${l.side}">${l.side === 'buy' ? 'COMPRA' : 'VENTA'}</span> ${esc(l.symbol)}`).join(' · ')}</div>
+    ${entry.news ? `<p><b>Core Noticias:</b> ${esc(entry.news.reason)}</p>` : ''}
     ${(entry.legExplanations || []).length ? `
     <details class="det"><summary class="muted">¿Por qué estas patas?</summary>
       ${entry.legExplanations.map((l) => `
@@ -1259,6 +1283,14 @@ $('#recSel').onclick = async (e) => {
     flowAt(4); // siguiente paso: la estrategia ya está en el panel inferior
   } catch { e.target.disabled = false; }
 };
+
+function newsHtml(news) {
+  if (!news) return '';
+  return `<details class="det news-evidence"><summary>Noticias · ${esc(news.summary)}</summary>
+    <p class="muted">${esc(news.method)} Consultado: ${esc(new Date(news.asOf).toLocaleString('es-MX'))} · caché de 10 minutos.</p>
+    ${(news.articles || []).map((a) => `<p>${a.url ? `<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${esc(a.headline)}</a>` : esc(a.headline)}<br><span class="muted">${esc(a.source)} · ${esc(new Date(a.publishedAt).toLocaleString('es-MX'))} · ${a.sentiment > 0 ? 'positivo por reglas' : a.sentiment < 0 ? 'negativo por reglas' : 'sin señal direccional reconocida'}${a.event ? ' · mención de evento' : ''}</span></p>`).join('')}
+    </details>`;
+}
 
 let recSortCriterion = 'composite', recRequest = 0;
 function selectedCores() {
@@ -1344,6 +1376,7 @@ async function recommend(symbol, mine = ticket) {
     $('#recOut').innerHTML = `
       ${noEdgeBanner}
       <p class="muted">Cores activos: ${esc(d.cores.join(', '))}</p>
+      ${newsHtml(d.news)}
       ${categoryCardsHtml}
       <div id="recTableWrap">${renderRecTable(d.ranking)}</div>
       <p class="why"><b>Por qué gana la 1ª:</b> ${esc(firstSentence)}</p>
@@ -1420,7 +1453,13 @@ $('#autoRun').onclick = busy($('#autoRun'), async () => {
   if (!dryRun && !confirm(`Se enviará una orden multi-pierna a Alpaca PAPER (dinero simulado) si ${symbol} pasa los dos filtros.\nEsto no garantiza ganancias. ¿Continuar?`)) return;
   $('#autoOut').innerHTML = '<span class="muted">Recomendando, validando riesgo y consultando a la IA…</span>';
   coreParams();
-  const r = await api('POST', '/strategies/auto', { symbol, cores: selectedCores(), dryRun, confirm: !dryRun }); // confirm:true solo si la persona aceptó el aviso (el backend lo exige)
+  let r;
+  try {
+    r = await api('POST', '/strategies/auto', { symbol, cores: selectedCores(), dryRun, confirm: !dryRun });
+  } catch (err) {
+    $('#autoOut').textContent = err.message;
+    return;
+  }
   const [cls, label] = verdictBadge[r.filters.ai.verdict] ?? ['', r.filters.ai.verdict];
   $('#autoOut').innerHTML = `
     <p style="margin:0 0 6px"><b>${esc(r.strategy)}</b> en ${esc(r.symbol)} — <span class="badge ${r.executed ? 'ok' : 'warn'}">${r.executed ? 'Orden enviada (paper)' : 'No se envió orden'}</span></p>
@@ -1947,22 +1986,30 @@ document.querySelectorAll('[data-ex]').forEach((b) => { b.onclick = () => exTab(
 function exRender(d) {
   const top = Math.max(...d.rows.map((r) => r.score), 1);
   const due = (r) => ['calendar', 'diagonal'].includes(r.template) && r.farExpiration ? `${r.nearExpiration} / ${r.farExpiration}` : r.nearExpiration;
-  $('#exOut').innerHTML = d.rows.length ? `<table><thead><tr><th>#</th><th>Empresa</th><th>Estrategia</th><th>Puntaje</th><th>Prob. de ganar</th><th>Valor esperado</th><th>Precio</th><th>IV / HV30</th><th>Vence</th><th></th></tr></thead><tbody>${
+  $('#exOut').innerHTML = d.rows.length ? `<table><thead><tr><th>#</th><th>Empresa</th><th>Estrategia</th><th>Puntaje</th>${d.cores?.includes('news') ? '<th>Noticias / 100</th>' : ''}<th>Prob. de ganar</th><th>Valor esperado</th><th>Precio</th><th>IV / HV30</th><th>Vence</th><th></th></tr></thead><tbody>${
     d.rows.map((r, i) => `<tr tabindex="0" data-sym="${esc(r.symbol)}" title="Cargar ${esc(r.symbol)} en la gráfica y el recomendador">
       <td>${i + 1}</td><td><b>${esc(r.symbol)}</b></td><td>${esc(r.name)}</td>
       <td class="n">${num(r.score, 1)}<span class="bar" style="width:${Math.max(2, Math.round((r.score / top) * 48))}px"></span></td>
+      ${d.cores?.includes('news') ? `<td class="n" title="${esc(r.news?.reason ?? '')}">${r.news?.fit == null ? '—' : num(r.news.fit * 100, 1)}</td>` : ''}
       <td class="n">${r.probProfit == null ? '—' : (r.probProfit * 100).toFixed(1) + ' %'}</td>
       <td class="n ${r.expectedValue > 0 ? 'buy' : 'sell'}">${money(r.expectedValue)}</td>
       <td class="n">${num(r.spot)}</td><td class="n">${num(r.ivPct, 1)} / ${num(r.hv30Pct, 1)} %</td><td>${esc(due(r))}</td>
       <td>${r.actionable ? '<span class="badge ok" title="Valor esperado positivo">EV +</span>' : '<span class="badge warn" title="Valor esperado negativo: no se operaría en automático">EV −</span>'}</td></tr>`).join('')
   }</tbody></table>` : '<div class="pad muted">Ninguna empresa devolvió estrategias con esos filtros. Prueba otro plazo u otras empresas.</div>';
+  if (d.cores?.includes('news')) {
+    $('#exOut').innerHTML += '<p>Fuentes del core Noticias por empresa:</p>' + [...new Map(d.rows.filter((r) => r.news).map((r) => [r.symbol, r])).values()]
+      .map((r) => `<div><b>${esc(r.symbol)}</b>${newsHtml(r.news)}</div>`).join('');
+  }
   const when = new Date(d.generatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
   $('#exStatus').textContent = `${d.scanned} empresas revisadas, ${d.rows.length} resultados. Calculado a las ${when}; se reutiliza durante 10 minutos. Clic en una fila para abrirla.`;
-  $('#exSkip').textContent = d.skipped.length ? `Sin datos suficientes: ${d.skipped.map((s) => s.symbol).join(', ')}.` : '';
+  $('#exSkip').textContent = d.skipped.length ? `Sin datos suficientes: ${d.skipped.map((s) => `${s.symbol}: ${s.reason}`).join('; ')}.` : '';
 }
 $('#exForm').onsubmit = async (e) => {
   e.preventDefault();
   const params = new URLSearchParams(formData(e.target));
+  const cores = selectedCores();
+  if (!cores.length) { $('#exOut').textContent = 'Selecciona al menos un core en el Recomendador.'; return; }
+  params.set('cores', cores.join(','));
   if (exMode !== 'screen') params.delete('template');
   $('#exRun').disabled = true;
   $('#exOut').innerHTML = '<div class="pad muted">Corriendo el recomendador en cada empresa. La primera vez tarda entre 20 y 60 segundos.</div>';
@@ -1975,7 +2022,10 @@ const exPick = (tr) => { $('#dlgExplore').close(); setTicker(tr.dataset.sym); fl
 $('#exOut').onclick = (e) => { const tr = e.target.closest('tr[data-sym]'); if (tr) exPick(tr); };
 $('#exOut').onkeydown = (e) => { const tr = e.target.closest('tr[data-sym]'); if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); exPick(tr); } };
 exTab('scan');
-$('#recExplore').onclick = () => $('#dlgExplore').showModal();
+$('#recExplore').onclick = () => {
+  $('#exQ').textContent = `${EX_Q[exMode]} Cores elegidos en el Recomendador: ${selectedCores().join(', ')}.`;
+  $('#dlgExplore').showModal();
+};
 
 // Ampliar / pantalla completa por panel. El mismo botón (o Esc) lo regresa a su lugar.
 const MAX_ICON = { max: ['⤢', '⤡'], full: ['⛶', '⛶'] };

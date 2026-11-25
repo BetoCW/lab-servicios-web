@@ -64,3 +64,22 @@ test('screen: fuerza la plantilla en cada empresa y devuelve el top por puntaje'
   assert.equal(new Set(out.rows.map((r) => r.symbol)).size, 3);
   await assert.rejects(service.screen({ template: 'iron-butterfly' }), { status: 400, message: /template debe ser/ });
 });
+
+test('screen: propaga Noticias y sus fuentes; un fallo del feed queda en skipped', async () => {
+  const service = createScanService({
+    listWatchlists: async () => [{ symbols: ['TEST', 'FAIL'] }],
+    recommend: async (symbol, query) => {
+      assert.deepEqual(query.cores, ['news']);
+      if (symbol === 'FAIL') throw new Error('Core Noticias no disponible');
+      const rec = await fakeRecommend()(symbol, query);
+      rec.news = { status: 'ok', articles: [{ headline: 'Test', url: 'https://example.com' }] };
+      rec.ranking[0].news = { score: 0.4, reason: 'Mención de evento' };
+      return rec;
+    },
+  });
+  const out = await service.screen({ universe: 'watchlists', template: 'short-strangle', cores: 'news', limit: 10 });
+  assert.equal(out.rows.length, 1);
+  assert.equal(out.rows[0].news.fit, 0.4);
+  assert.equal(out.rows[0].news.articles[0].headline, 'Test');
+  assert.match(out.skipped[0].reason, /Noticias/);
+});

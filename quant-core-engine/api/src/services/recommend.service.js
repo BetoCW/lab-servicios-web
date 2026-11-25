@@ -31,6 +31,7 @@ import { composite, marketSignals, templateFit, volSide } from '../lib/scoring.j
 import { getHistory } from './riskExtended.service.js';
 import { riskService } from './risk.service.js';
 import { aiService } from './ai.service.js';
+import { newsService, newsFit } from './news.service.js';
 import { DEFAULT_CORES, parseCores, scoreCores } from '../lib/cores.js';
 
 const { build, TEMPLATES } = globalThis.F0Templates;
@@ -300,6 +301,7 @@ export const recommendService = {
     const paths = Math.min(Math.max(Number(query.paths ?? 20000), 2000), 100000);
 
     const horizonDays = Number(query.horizonDays ?? 100);
+    const news = cores.includes('news') ? await newsService.analyze(symbol) : null;
     const market = await loadMarket(symbol, horizonDays);
     const { spot, quotes, nearExpiration, farExpiration, history } = market;
     const nearQuotes = quotes.filter((quote) => quote.expiration === nearExpiration);
@@ -344,6 +346,8 @@ export const recommendService = {
             worstSimulated: mc.min, marginRegT: report.margin.regT, extended: report.extended }) : null;
           if (ai?.verdict === 'unavailable') throw Object.assign(new Error(ai.reason), { coreUnavailable: true });
           if (ai) parts.ai = { approved: 1, caution: 0.5, rejected: 0 }[ai.verdict];
+          const newsView = news ? newsFit(news, template) : null;
+          if (newsView) parts.news = newsView.score;
           const score = scoreCores(parts, cores, mc.mean);
           if (!cores.includes('technical')) parts.fit = null;
           return {
@@ -354,6 +358,7 @@ export const recommendService = {
             score,
             scoreParts: parts,
             ai,
+            news: newsView,
             metrics: {
               probProfit: mc.probProfit,
               expectedValue: mc.mean,
@@ -395,6 +400,7 @@ export const recommendService = {
     return {
       symbol,
       cores,
+      news,
       asOf: new Date().toISOString(),
       actionable,
       method: `Cores activos: ${cores.join(', ')}. Pesos normalizados entre los seleccionados; compuerta EV > 0 solo con risk. Las métricas cuantitativas son insumos compartidos.`,

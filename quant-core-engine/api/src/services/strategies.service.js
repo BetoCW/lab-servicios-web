@@ -7,6 +7,7 @@ import { db, q } from '../lib/supabase.js';
 import { check, notFound, badRequest, conflict } from '../lib/errors.js';
 import { parseOcc } from '../lib/occ.js';
 import { mirrorOrders, toOrderDto } from './orders.service.js';
+import { marketSession } from './marketSession.service.js';
 
 const MAX_LEGS = 4; // Límite de Alpaca para órdenes multi-leg (mleg)
 const CONTRACT_SIZE = 100; // Multiplicador estándar por contrato de opciones
@@ -241,6 +242,7 @@ export const strategiesService = {
    * @returns {Promise<{strategy: object, order: object}>} DTO de la estrategia actualizada y orden enviada.
    */
   async submit(id) {
+    await marketSession.assertOpen();
     const { strategy, legs } = await loadStrategy(id);
     if (strategy.status !== 'draft') throw conflict(`La estrategia ya está en estado ${strategy.status}`);
     const order = await alpaca.createOrder({

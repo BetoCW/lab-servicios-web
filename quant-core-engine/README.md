@@ -116,6 +116,25 @@ blackScholes([{ type: 'call', spot: 42, strike: 40, t: 0.5, rate: 0.1, vol: 0.2 
 
 ## Gráfica en vivo y plantillas de estrategias
 
+### Aviso de mercado cerrado
+
+**Enviar a Alpaca** y la ejecución automática verifican `/v2/clock` antes de enviar estrategias.
+La app permite estos envíos durante la sesión regular; fuera de ella muestra un modal con la
+próxima apertura en la zona horaria del navegador (incluye fines de semana y festivos del proveedor).
+No encola órdenes. Puedes seguir analizando, guardar borradores y usar **Solo simular**.
+Si no se puede consultar el reloj se informa del error y no se envía la orden.
+Esta política no habilita sesiones extendidas ni los minutos adicionales de algunos ETFs.
+
+### Core Noticias
+
+En **Recomendador → Cores para el análisis**, activa **Noticias**. También influye en
+**Explorar → Mejores empresas para una estrategia**, que usa los cores seleccionados.
+Consulta titulares de Alpaca con las credenciales existentes y muestra fuentes y fechas.
+Analiza hasta 50 titulares de 7 días con reglas de sentimiento/eventos en inglés; caché de 10 minutos.
+El aporte por estrategia y sus límites aparecen junto al detalle. Sin cobertura aporta neutralidad;
+si falla el feed se informa del error. Es opcional y no cambia las probabilidades simuladas.
+El backtest requiere desmarcar Noticias. Detalle del método: [guía de cores](docs/guia/04-apis-cores-confluencia.md#04016-core-de-noticias).
+
 - Pestaña **Gráfica en vivo** del front: velas de Alpaca (feed IEX, tiempo real) que se refrescan cada 5 s,
   con SMA20, EMA9, Bollinger, RSI14 y MACD calculados en el microservicio (`GET /api/v1/market/{symbol}/bars`).
   La gráfica inicia en días y permite minutos, horas, semanas y meses. En **Consultar histórico**

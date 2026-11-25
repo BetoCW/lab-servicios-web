@@ -25,6 +25,7 @@
  */
 import { config } from '../config.js';
 import { alpaca } from '../lib/alpaca.js';
+import { marketSession } from './marketSession.service.js';
 import { badRequest, HttpError } from '../lib/errors.js';
 import { recommendService } from './recommend.service.js';
 import { strategiesService } from './strategies.service.js';
@@ -104,6 +105,7 @@ export const autoTradeService = {
 
   /** Cuerpo de `run` (separado para que el candado `running` siempre se libere en el finally). */
   async execute(body) {
+    if (!body.dryRun) await marketSession.assertOpen();
     const recommendation = await recommendService.recommend(body.symbol, { cores: body.cores });
     const { winner } = recommendation;
 

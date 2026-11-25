@@ -45,9 +45,10 @@ function toQuery(params = {}) {
  * @returns {Promise<any>} Respuesta deserializada en formato JSON o null para 204.
  * @throws {HttpError} Si la respuesta de Alpaca no es exitosa.
  */
-async function request(base, method, path, { query, body } = {}) {
+async function request(base, method, path, { query, body, signal } = {}) {
   const res = await fetch(`${base}${path}${toQuery(query)}`, {
     method,
+    signal,
     headers: { ...headers(), ...(body ? { 'content-type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -74,6 +75,9 @@ const trading = (method, path, opts) => request(config.alpaca.tradingUrl, method
 const data = (method, path, opts) => request(config.alpaca.dataUrl, method, path, opts);
 
 export const alpaca = {
+  clock: () => trading('GET', '/v2/clock', { signal: AbortSignal.timeout(10000) }),
+  // News API: https://docs.alpaca.markets/us/reference/news-3
+  news: (query) => data('GET', '/v1beta1/news', { query, signal: AbortSignal.timeout(12000) }),
   account: () => trading('GET', '/v2/account'),
   /** Catálogo de activos negociables (para el buscador de tickers). */
   assets: (query) => trading('GET', '/v2/assets', { query }),

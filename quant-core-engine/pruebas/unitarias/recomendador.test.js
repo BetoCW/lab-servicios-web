@@ -356,6 +356,21 @@ test('recommendService.recommend: expone actionable=true con IV > HV30 y actiona
     const probOnly = await recommendService.recommend('ZZPROB', { paths: 2000, cores: ['probability'] });
     assert.ok(probOnly.ranking.every((entry) => entry.score === Math.round(entry.metrics.probProfit * 1000) / 10));
     assert.equal(aiCalls, 6, 'los otros cores no activan IA');
+    let newsCalls = 0;
+    alpaca.news = async () => { newsCalls++; return { news: [
+      { headline: 'Earnings results beat estimates; raises guidance', symbols: ['ZZNEWS'], created_at: new Date().toISOString(), source: 'Test', url: 'https://example.com/news' },
+    ] }; };
+    const newsOnly = await recommendService.recommend('ZZNEWS', { paths: 2000, cores: 'news' });
+    assert.equal(newsCalls, 1, 'una consulta por empresa, compartida por todas las plantillas');
+    assert.equal(newsOnly.news.articleCount, 1);
+    assert.equal(newsOnly.ranking.length, 6);
+    assert.ok(newsOnly.ranking.every((entry) => entry.score === Math.round(entry.scoreParts.news * 1000) / 10));
+    assert.ok(newsOnly.ranking.find((e) => e.template === 'short-strangle').score < newsOnly.ranking.find((e) => e.template === 'long-strangle').score);
+    await recommendService.recommend('ZZNONEWS', { paths: 2000, cores: 'probability' });
+    assert.equal(newsCalls, 1, 'desactivado no consulta ni vota');
+    alpaca.news = async () => { throw new Error('sin conexión'); };
+    await assert.rejects(recommendService.recommend('ZZNEWSFAIL', { cores: 'news' }), { status: 503 });
+    await assert.rejects(backtestService.run('ZZBT', { cores: 'news' }), /no admite Noticias/);
     aiService.validateRisk = async () => ({ verdict: 'unavailable', reason: 'sin conexión' });
     await assert.rejects(recommendService.recommend('ZZFAIL', { paths: 2000, cores: 'ai' }), /core IA.*sin conexión/);
     await assert.rejects(recommendService.recommend('ZZBAD', { cores: [] }), { status: 400 });

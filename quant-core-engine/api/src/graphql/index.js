@@ -56,11 +56,13 @@ const typeDefs = /* GraphQL */ `
   }
 
   type RankedStrategy {
+    news: NewsFit
     rank: Int! name: String! score: Float! probProfit: Float expectedValue: Float
     worstSimulated: Float var95: Float marginRegT: Float error: String
   }
   type ScanLeg { symbol: String! side: String! ratio_qty: Int! }
   type ScanRow {
+    news: NewsAnalysis
     symbol: String! template: String! name: String! score: Float! actionable: Boolean!
     probProfit: Float expectedValue: Float var95: Float netCost: Float spot: Float ivPct: Float hv30Pct: Float
     nearExpiration: String farExpiration: String legs: [ScanLeg!]!
@@ -70,7 +72,14 @@ const typeDefs = /* GraphQL */ `
     generatedAt: String! horizonDays: Int! universe: String! limit: Int! cores: [String!]! scanned: Int!
     template: String name: String rows: [ScanRow!]! skipped: [ScanSkip!]!
   }
-  type Recommendation { symbol: String! cores: [String!]! explanation: String! volView: String! ranking: [RankedStrategy!]! }
+  type NewsArticle { headline: String! url: String source: String! publishedAt: String! sentiment: Float! event: Boolean! }
+  type NewsFit { score: Float! reason: String! }
+  type NewsAnalysis {
+    symbol: String! status: String! asOf: String! lookbackDays: Int! sentiment: Float! eventPressure: Float!
+    confidence: Float! articleCount: Int! summary: String! method: String! truncated: Boolean!
+    articles: [NewsArticle!]! fit: Float reason: String
+  }
+  type Recommendation { symbol: String! cores: [String!]! explanation: String! volView: String! ranking: [RankedStrategy!]! news: NewsAnalysis }
 
   input WatchlistInput { name: String! symbols: [String!] }
   input OrderInput {
@@ -171,12 +180,14 @@ const resolvers = {
       return {
         symbol: recommendation.symbol,
         cores: recommendation.cores,
+        news: recommendation.news,
         explanation: recommendation.explanation,
         volView: recommendation.signals.volView,
         ranking: recommendation.ranking.map((entry) => ({
           rank: entry.rank,
           name: entry.name,
           score: entry.score,
+          news: entry.news,
           error: entry.error ?? null,
           ...(entry.metrics ?? {}),
         })),

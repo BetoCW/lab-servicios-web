@@ -87,6 +87,7 @@ const toRow = (rec, entry) => ({
   template: entry.template,
   name: entry.name,
   score: entry.score,
+  news: rec.news ? { ...rec.news, fit: entry.news?.score, reason: entry.news?.reason } : null,
   actionable: entry.metrics.expectedValue > 0,
   probProfit: round(entry.metrics.probProfit, 4),
   expectedValue: round(entry.metrics.expectedValue),

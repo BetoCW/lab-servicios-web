@@ -88,12 +88,16 @@ test('overview: sin cotización es error (el resto no tiene sentido)', async () 
   }
 });
 
-test('/auto: una sola ejecución a la vez (429 en la segunda)', async () => {
+test('/auto: una sola ejecución a la vez (429 en la segunda)', async (t) => {
+  t.mock.method(alpaca, 'clock', async () => ({ is_open: true, next_open: '2026-11-27T14:30:00Z' }));
   const saved = recommendService.recommend;
   let release;
-  recommendService.recommend = () => new Promise((_, reject) => (release = reject));
+  let entered;
+  const started = new Promise((resolve) => { entered = resolve; });
+  recommendService.recommend = () => new Promise((_, reject) => { release = reject; entered(); });
   try {
     const first = autoTradeService.run({ symbol: 'AAPL', confirm: true });
+    await started;
     await assert.rejects(autoTradeService.run({ symbol: 'AAPL', confirm: true }), { status: 429 });
     release(new Error('fin'));
     await assert.rejects(first, /fin/);

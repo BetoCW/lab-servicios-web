@@ -123,7 +123,7 @@ export const openapi = {
         parameters: [
           { name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } },
           { name: 'paths', in: 'query', schema: { type: 'integer', default: 20000, minimum: 2000, maximum: 100000 } },
-          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk', example: 'ai' }, description: 'Lista separada por comas: technical, probability, risk, ai. Debe seleccionar al menos uno.' },
+          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk', example: 'news' }, description: 'Lista separada por comas: technical, probability, risk, ai, news. Debe seleccionar al menos uno. news: peso relativo 0.2; hasta 50 titulares de 7 días con reglas en inglés y fuentes. Sin noticias aporta 0.5; fallo del feed = 503. No cambia Monte Carlo.' },
         ],
         responses: ok({ type: 'object' }),
       }),
@@ -159,7 +159,7 @@ export const openapi = {
         description:
           'Re-juega el último año del ticker cada 5 días hábiles aproximando la IV con la volatilidad histórica de largo plazo para valuar piernas y simulando Monte Carlo con hv30 del punto temporal. Mide en qué % de las veces habría ganado la primera opción a 30 días y si la probabilidad anunciada coincide con la real.',
         parameters: [{ name: 'symbol', in: 'query', required: true, schema: { type: 'string', example: 'AAPL' } },
-          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk' }, description: 'Mismos cores del ranking; ai devuelve 400 porque no hay veredictos históricos.' }],
+          { name: 'cores', in: 'query', schema: { type: 'string', default: 'technical,probability,risk' }, description: 'Mismos cores del ranking; ai y news devuelven 400 porque no se reconstruyen sus señales históricas.' }],
         responses: ok({ type: 'object' }),
       }),
     },
@@ -172,7 +172,7 @@ export const openapi = {
           required: ['symbol'],
           properties: {
             symbol: { type: 'string', example: 'AAPL' },
-            cores: { type: 'array', minItems: 1, items: { type: 'string', enum: ['technical', 'probability', 'risk', 'ai'] }, description: 'Cores del ranking. Los filtros de seguridad de riesgo e IA para operar siguen siendo obligatorios.' },
+            cores: { type: 'array', minItems: 1, items: { type: 'string', enum: ['technical', 'probability', 'risk', 'ai', 'news'] }, description: 'Cores del ranking. Los filtros de seguridad de riesgo e IA para operar siguen siendo obligatorios.' },
             dryRun: { type: 'boolean', default: false },
             confirm: { type: 'boolean', description: 'Obligatorio en true para enviar la orden (no hace falta con dryRun)' },
           },
@@ -215,7 +215,10 @@ export const openapi = {
     },
     '/strategies/{id}/submit': {
       parameters: [idParam],
-      post: op('Strategies', 'Enviar como orden multi-leg a Alpaca', { responses: ok({ type: 'object' }, 201) }),
+      post: op('Strategies', 'Enviar como orden multi-leg a Alpaca', {
+        description: 'La app habilita nuevos envíos de estrategias durante la sesión regular de Alpaca (/v2/clock). Fuera de sesión devuelve 409 con details.code=MARKET_CLOSED y details.nextOpen (ISO UTC); no envía ni encola la orden. Si no se puede verificar el reloj devuelve 503. También se comprueba al ejecutar automático; dryRun y guardar borradores siguen disponibles.',
+        responses: { ...ok({ type: 'object' }, 201), 409: { description: 'Sesión cerrada (details.code=MARKET_CLOSED, details.nextOpen) o conflicto de estado de estrategia', ...json(ref('Error')) }, 503: { description: 'No se pudo verificar la sesión de mercado', ...json(ref('Error')) } },
+      }),
     },
     '/market/search': {
       get: op('Market', 'Buscar tickers por símbolo o nombre de la empresa', {
@@ -253,10 +256,24 @@ export const openapi = {
   components: {
     schemas: {
       Error: { type: 'object', properties: { status: { type: 'integer' }, message: { type: 'string' }, details: {} } },
+      NewsAnalysis: {
+        type: 'object', nullable: true,
+        properties: {
+          symbol: { type: 'string' }, status: { type: 'string', enum: ['ok', 'no-news'] }, asOf: { type: 'string', format: 'date-time' },
+          lookbackDays: { type: 'integer' }, sentiment: { type: 'number' }, eventPressure: { type: 'number' }, confidence: { type: 'number' },
+          articleCount: { type: 'integer' }, summary: { type: 'string' }, method: { type: 'string' }, truncated: { type: 'boolean' },
+          fit: { type: 'number' }, reason: { type: 'string' },
+          articles: { type: 'array', items: { type: 'object', properties: {
+            headline: { type: 'string' }, url: { type: 'string', nullable: true }, source: { type: 'string' },
+            publishedAt: { type: 'string', format: 'date-time' }, sentiment: { type: 'number' }, event: { type: 'boolean' },
+          } } },
+        },
+      },
       ScanRow: {
         type: 'object',
         properties: {
           symbol: { type: 'string', example: 'NVDA' }, template: { type: 'string', example: 'short-strangle' }, name: { type: 'string' },
+          news: { $ref: '#/components/schemas/NewsAnalysis' },
           score: { type: 'number' }, actionable: { type: 'boolean', description: 'true si el valor esperado simulado es positivo' },
           probProfit: { type: 'number' }, expectedValue: { type: 'number' }, var95: { type: 'number' }, netCost: { type: 'number' },
           spot: { type: 'number' }, ivPct: { type: 'number' }, hv30Pct: { type: 'number' },

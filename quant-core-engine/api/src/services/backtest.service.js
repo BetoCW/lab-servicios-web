@@ -80,6 +80,7 @@ export const backtestService = {
   async run(rawSymbol, query = {}) {
     const cores = parseCores(query.cores);
     if (cores.includes('ai')) throw badRequest('El backtest no admite IA: no se dispone de veredictos históricos. Selecciona cores cuantitativos.');
+    if (cores.includes('news')) throw badRequest('El backtest no admite Noticias: no se reconstruyen titulares históricos. Desmarca Noticias para ejecutar el backtest.');
     const symbol = String(rawSymbol ?? '').trim().toUpperCase();
     if (!/^[A-Z][A-Z.]{0,9}$/.test(symbol)) throw badRequest('symbol debe ser un ticker válido (ej. AAPL)');
     const { closes } = await getHistory(symbol);

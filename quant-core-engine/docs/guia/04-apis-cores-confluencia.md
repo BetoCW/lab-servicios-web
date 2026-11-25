@@ -6,11 +6,10 @@ Objetivo: entender cómo encaja F0 en la plataforma completa — los 5 *cores* d
 de confluencia que combina sus señales y los 3 modos de seleccionar estrategia ↔ empresa — y cómo
 los demás equipos consumen nuestras APIs.
 
-> **Alcance honesto.** En este repositorio están implementadas **solo las piezas de F0**: las 4 APIs
-> (watchlists, orders, option-chains, strategies), el motor de riesgo Rust/WASM y la conversión a
-> microservicios. Los 5 cores y el motor de confluencia **no están aquí**: se describen como
-> **contrato** (qué esperan recibir y qué entregan) y como **consumo** de nuestras APIs. Todo
-> nombre de campo de los cores en esta nota es una propuesta de contrato, no código existente.
+> **Alcance.** F0 incluye las APIs, el motor Rust/WASM y un recomendador con cores seleccionables
+> `technical`, `probability`, `risk`, `ai` y `news`. Los cinco cores de la arquitectura general
+> descritos abajo son una propuesta más amplia: fundamental e institucional siguen pendientes.
+> El contrato común de señal de esta guía es una propuesta; el recomendador usa encajes 0–1 por estrategia.
 
 ---
 
@@ -61,8 +60,23 @@ Contrato común propuesto para que el motor de confluencia pueda combinarlas:
 ### 04.01.6 Core de noticias
 - **Analiza**: titulares y comunicados; extrae **sentimiento** (positivo/negativo) y eventos
   (fusiones, demandas, guías de resultados).
-- **Fuente**: feeds de noticias (Alpaca tiene un endpoint de noticias; no lo usamos todavía).
-- **Señal**: sentimiento ponderado por recencia y relevancia.
+- **Implementación actual**: `api/src/services/news.service.js`, activable con `cores=news` en
+  recommend, scan, screen y el ranking del modo automático. Casilla **Noticias** en el Recomendador;
+  Explorar hereda los cores seleccionados. No sustituye los filtros de riesgo e IA para ejecutar órdenes.
+- **Fuente**: Alpaca `/v1beta1/news`, mismas llaves del backend; hasta 50 titulares de 7 días,
+  caché por empresa de 10 minutos. Expone enlaces, fuente, fecha, cobertura y truncamiento.
+- **Señal**: reglas de palabras/frases sobre titulares en inglés, ponderadas por recencia
+  (decaimiento de 2 días) y menor relevancia de artículos con muchos símbolos. Deduplica titulares;
+  excluye fechas inválidas, futuras, antiguas y símbolos ajenos. Confianza = cobertura ponderada / 3, acotada a 1;
+  es cobertura, no probabilidad de acierto. No interpreta ironía, atribución o negaciones complejas.
+- **Puntaje**: peso relativo 0.2 normalizado con los cores activos. Base 0.5; con confianza `c`,
+  sentimiento `s` y presión de eventos `e`: ventas de volatilidad `0.5 - 0.4ce`, calendar
+  `0.5 - 0.2ce`, diagonal de calls `0.5 + c(0.3s - 0.2e)`. Compras de volatilidad neutrales:
+  una noticia no demuestra que la prima esté barata. Los resultados se acotan a 0–1.
+- **Límites**: menciones de eventos en titulares, no calendario confirmado. No cambia IV, EV ni
+  probabilidad del Monte Carlo. Sin artículos = neutral con confianza cero; fallo del feed = 503
+  (en scans, empresa omitida con motivo). El backtest rechaza news para evitar usar noticias presentes
+  como evidencia histórica. Está desactivado por defecto.
 
 ---
 
