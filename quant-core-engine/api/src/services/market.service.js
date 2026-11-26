@@ -6,7 +6,7 @@ import { badRequest } from '../lib/errors.js';
 import { memo } from '../lib/cache.js';
 import { normalizeSymbol } from '../lib/symbol.js';
 import { bollinger, ema, macd, rsi, sma } from '../lib/indicators.js';
-import { supportResistance } from '../lib/supportResistance.js';
+import { supportResistance, supportResistanceSignals } from '../lib/supportResistance.js';
 
 const DAY_IN_MS = 86_400_000;
 const SNAPSHOT_TTL_MS = 2000;
@@ -143,6 +143,8 @@ export const marketService = {
       // Excluye la última vela por posible formación; su cierre solo sirve como
       // referencia para clasificar soportes/resistencias y medir distancias.
       supportResistance: supportResistance(bars.slice(0, -1), latestBar.close),
+      // Una vela aún abierta no confirma rebotes, aunque su precio se actualice en vivo.
+      levelSignals: supportResistanceSignals(Date.now() < periodEnd.getTime() ? bars.slice(0, -1) : bars),
       indicators: Object.fromEntries(
         Object.entries(series).map(([indicatorKey, values]) => [indicatorKey, values.map(round)]),
       ),

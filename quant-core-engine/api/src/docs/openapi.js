@@ -242,7 +242,7 @@ export const openapi = {
     },
     '/market/{symbol}/bars': {
       get: op('Market', 'Velas en vivo + indicadores y zonas de soporte/resistencia', {
-        description: 'Incluye supportResistance: hasta 3 zonas por lado, límites, contactos y distancia al último cierre del rango. Extremos high/low de hasta 200 velas, excluyendo la última por posible formación. No usa datos posteriores al rango. El recomendador usa cierres diarios y asigna a estas zonas 15 % del encaje técnico, solo si hay zonas disponibles y el core technical está activo.',
+        description: 'Incluye supportResistance: hasta 3 zonas por lado, límites, contactos y distancia al último cierre del rango. Extremos high/low de hasta 200 velas, excluyendo la última por posible formación. Incluye levelSignals: index, time, side, price, zone y reason. Compra: cierre previo sobre soporte, vela toca la zona y cierra sobre ella con close > open. Venta: cierre previo bajo resistencia, vela toca la zona y cierra bajo ella con close < open. Solo velas cerradas; las zonas de cada señal usan exclusivamente velas anteriores. No usa datos posteriores al rango. El recomendador usa cierres diarios y asigna a estas zonas 15 % del encaje técnico, solo si hay zonas disponibles y el core technical está activo.',
         parameters: [
           { name: 'symbol', in: 'path', required: true, schema: { type: 'string', example: 'SPY' } },
           { name: 'timeframe', in: 'query', schema: { type: 'string', enum: ['1Min', '5Min', '15Min', '1Hour', '1Day', '1Week', '1Month'], default: '5Min' } },

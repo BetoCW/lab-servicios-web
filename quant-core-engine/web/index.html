@@ -465,7 +465,7 @@ body.has-max { overflow: hidden; }
         <label><input type="checkbox" data-signal="rsi" checked> RSI</label>
         <label><input type="checkbox" data-signal="macd" checked> MACD</label>
         <label><input type="checkbox" data-signal="bollinger" checked> Bollinger</label>
-        <label><input type="checkbox" id="showLevels" checked> Soportes y resistencias</label>
+        <label><input type="checkbox" id="showLevels" data-signal="levels" checked> Soportes y resistencias</label>
       </div>
       <div id="signalSummary" class="muted" aria-live="polite"></div>
       <div id="mkHistoryStatus" class="muted" role="status" aria-live="polite"></div>
@@ -474,7 +474,7 @@ body.has-max { overflow: hidden; }
       <div class="pane" id="paneMacd"><button type="button" data-pane="paneMacd"><span>MACD 12/26/9</span><span>▾</span></button><div class="chart" id="chMacd"></div></div>
       <details id="signalDetails"><summary>Detalle del análisis técnico · compras y ventas</summary>
         <div id="levelsInfo" class="muted pad" aria-live="polite"></div>
-        <p class="muted">Señales al cierre de cada vela. Flecha verde: compra; roja: venta. La fecha corresponde a la temporalidad elegida; la vela en curso puede cambiar.</p>
+        <p class="muted">Flecha verde: compra; roja: venta. Soportes/resistencias: compra por rebote alcista y venta por rechazo bajista, confirmados en velas cerradas con zonas conocidas previamente. Los demás indicadores pueden cambiar en la vela en curso. La fecha corresponde a la temporalidad elegida.</p>
         <div class="scroll"><table><thead><tr><th>Fecha y hora</th><th>Señal</th><th>Indicador</th><th>Precio de cierre</th><th>Motivo</th></tr></thead><tbody id="signalRows"></tbody></table></div>
       </details>
     </div>
@@ -1393,7 +1393,6 @@ function renderSupportResistance() {
     }));
   }
 }
-$('#showLevels').onchange = renderSupportResistance;
 
 function newsHtml(news) {
   if (!news) return '';
@@ -1737,19 +1736,20 @@ const SIGNALS = {
   rsi: { label: 'RSI', marker: 'RSI' },
   macd: { label: 'MACD', marker: 'MACD' },
   bollinger: { label: 'Bollinger', marker: 'BB' },
+  levels: { label: 'Soportes/resistencias', marker: 'S/R' },
 };
 
 // EMA/SMA y MACD señalan cruces; RSI señala la salida de sobreventa/sobrecompra;
 // Bollinger señala cuando el cierre vuelve dentro de la banda tras salir de ella.
-function buildMarketSignals(bars, indicators) {
+function buildMarketSignals(bars, indicators, levelSignals = []) {
   const signals = [];
-  const add = (key, index, side) => {
+  const add = (key, index, side, reason) => {
     const bar = bars[index];
     signals.push({
       key, index, side, time: localTime(bar.time),
       price: bar.close,
       timestamp: new Date(bar.time * 1000).toLocaleString('es-MX'),
-      reason: {
+      reason: reason ?? {
         averages: side === 'buy' ? 'Cruce alcista: EMA9 supera SMA20' : 'Cruce bajista: EMA9 cae bajo SMA20',
         macd: side === 'buy' ? 'Cruce alcista: MACD supera su señal' : 'Cruce bajista: MACD cae bajo su señal',
         rsi: side === 'buy' ? 'RSI sale de sobreventa (supera 30)' : 'RSI sale de sobrecompra (cae bajo 70)',
@@ -1779,6 +1779,7 @@ function buildMarketSignals(bars, indicators) {
     if (previousLower != null && lower != null && bars[i - 1].close <= previousLower && bars[i].close > lower) add('bollinger', i, 'buy');
     else if (previousUpper != null && upper != null && bars[i - 1].close >= previousUpper && bars[i].close < upper) add('bollinger', i, 'sell');
   }
+  for (const signal of levelSignals) add('levels', signal.index, signal.side, signal.reason);
   return signals.sort((a, b) => a.index - b.index);
 }
 
@@ -1934,7 +1935,7 @@ async function loadBars(sym, mine, live = false) {
     for (const k of ['sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram']) {
       series[k].setData(d.indicators[k].flatMap((v, i) => v == null ? [] : [{ time: time[i], value: v, ...(k === 'histogram' ? { color: v >= 0 ? css('--ok') : css('--bad') } : {}) }]));
     }
-    marketSignals = buildMarketSignals(d.bars, d.indicators);
+    marketSignals = buildMarketSignals(d.bars, d.indicators, d.levelSignals);
     currentLevels = d.supportResistance ?? null;
     renderSupportResistance();
     renderMarketSignals();
@@ -2258,7 +2259,7 @@ const TOUR = [
   { sec: '1 · Elegir activo', el: '#rail', t: 'Watchlists', h: '<ol><li>Clic en un símbolo para abrirlo.</li><li><b>＋</b> crea una lista nueva.</li><li><b>⋯</b> renombra, agrega o elimina.</li></ol>' },
   { sec: '1 · Elegir activo', el: '#acct', t: 'Tu cuenta paper', h: '<p>Efectivo y poder de compra de la cuenta de práctica de Alpaca. El punto verde indica que la API está conectada; <b>⚙</b> cambia la URL.</p>' },
   { sec: '2 · Analizar', el: '#mkQuote', t: 'Cotización', h: '<p>Precio, cambio contra el cierre, bid/ask, RSI, tendencia con volatilidad histórica y próximos vencimientos de opciones.</p>' },
-  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica e histórico', h: '<ol><li>Elige minutos, horas, días, semanas o meses arriba.</li><li>Indica cuántas velas y las fechas, y pulsa <b>Consultar histórico</b>. Sin fecha de fin llega hasta hoy.</li><li>Los filtros muestran señales de compra y venta (cruces EMA/SMA, RSI, MACD y Bollinger).</li><li><b>Soportes y resistencias</b> dibuja las zonas donde el precio rebotó; el detalle y la zona más cercana están en <b>Detalle del análisis técnico</b>.</li><li><b>En vivo</b> refresca cada 5 s cuando no hay fecha de fin.</li></ol>' },
+  { sec: '2 · Analizar', el: '.chartbox', t: 'Gráfica e histórico', h: '<ol><li>Elige minutos, horas, días, semanas o meses arriba.</li><li>Indica cuántas velas y las fechas, y pulsa <b>Consultar histórico</b>. Sin fecha de fin llega hasta hoy.</li><li>Los filtros muestran señales de compra y venta (cruces EMA/SMA, RSI, MACD y Bollinger).</li><li><b>Soportes y resistencias</b> dibuja las zonas y las flechas S/R: compra por rebote alcista en soporte y venta por rechazo bajista en resistencia, solo con velas cerradas. Fecha, cierre y zona histórica están en <b>Detalle del análisis técnico</b>.</li><li><b>En vivo</b> refresca cada 5 s cuando no hay fecha de fin.</li></ol>' },
   { sec: '2 · Analizar', el: '.chartbox .maxacts', t: 'Ampliar un panel', h: '<p><b>⤢</b> amplía el panel a toda la página y <b>⛶</b> lo pone en pantalla completa.</p><p class="muted">Lo tienen la gráfica, el recomendador y los paneles de abajo. Regresa con <b>Regresar</b> o con <b>Esc</b>.</p>' },
   { sec: '3 · Decidir', el: '#coreControls', t: 'Cores del análisis', h: '<p>Elige qué opiniones pesan en el puntaje:</p><ol><li><b>Técnico</b>: tendencia, indicadores y soportes/resistencias.</li><li><b>Probabilidad</b> y <b>Rendimiento / riesgo</b>: simulación Monte Carlo (CVaR).</li><li><b>IA</b>: un modelo revisa la recomendación.</li><li><b>Noticias</b>: titulares recientes de Alpaca, su sentimiento y eventos.</li></ol><p class="muted">Para operar, los filtros de riesgo e IA siempre se aplican.</p>' },
   { sec: '3 · Decidir', el: '#recCard', t: 'Recomendador', h: '<ol><li>Compara 4 estrategias y las ordena por puntaje; si ninguna tiene valor esperado positivo, lo avisa.</li><li>Las 3 tarjetas muestran la mejor por técnica, por retorno/CVaR y por probabilidad. Clic en una tarjeta o fila; clic en un encabezado reordena.</li><li>La elegida se dibuja en la gráfica.</li><li><b>Ver más</b>: riesgo completo y noticias. <b>Backtest</b>: qué tan seguido acertó el último año.</li><li><b>Armar y guardar</b> la manda a Estrategias guardadas.</li></ol>' },

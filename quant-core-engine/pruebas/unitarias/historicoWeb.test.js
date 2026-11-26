@@ -91,20 +91,34 @@ test('gráfica: cada indicador genera señales de compra y venta con fecha', () 
   assert.ok(signals.every(({ timestamp, reason }) => timestamp.length > 0 && reason.length > 0));
 });
 
+test('gráfica: integra las señales S/R recibidas del servidor con sus fechas y motivos', () => {
+  const { context } = page();
+  const bars = [{ time: 1767274200, close: 97 }, { time: 1767360600, close: 102 }];
+  const indicators = Object.fromEntries(['ema9', 'sma20', 'macd', 'signal', 'rsi14', 'bbLower', 'bbUpper'].map((key) => [key, [null, null]]));
+  const levels = [{ index: 0, side: 'buy', reason: 'Rebote alcista en soporte: zona 93–95' },
+    { index: 1, side: 'sell', reason: 'Rechazo bajista en resistencia: zona 105–107' }];
+  const signals = vm.runInContext(`buildMarketSignals(${JSON.stringify(bars)}, ${JSON.stringify(indicators)}, ${JSON.stringify(levels)})`, context);
+  assert.deepEqual(Array.from(signals, ({ key, side, price }) => [key, side, price]), [['levels', 'buy', 97], ['levels', 'sell', 102]]);
+  assert.match(signals[0].reason, /Rebote alcista/);
+  assert.match(signals[1].reason, /Rechazo bajista/);
+  assert.ok(signals.every((signal) => signal.date && signal.timestamp));
+});
+
 test('gráfica: detalle y flechas respetan filtros e incluyen compra/venta, fecha y precio', () => {
   const elements = { '#signalControls': {}, '#signalSummary': {}, '#signalRows': {} };
-  const filters = { averages: true, macd: false, rsi: false, bollinger: false };
+  const filters = { averages: true, macd: false, rsi: false, bollinger: false, levels: false };
   let markers;
   const signals = [
     { key: 'averages', side: 'buy', time: 1, date: '01 ene 2026', timestamp: '01/01/2026 12:00', price: 101, reason: 'Cruce alcista' },
     { key: 'macd', side: 'sell', time: 2, date: '02 ene 2026', timestamp: '02/01/2026 12:00', price: 99, reason: 'Cruce bajista' },
+    { key: 'levels', side: 'buy', time: 3, date: '03 ene 2026', timestamp: '03/01/2026 12:00', price: 97, reason: 'Rebote alcista en soporte' },
   ];
   const context = vm.createContext({
     $: (selector) => selector.startsWith('#signalControls ')
       ? { checked: filters[selector.match(/data-signal="(.*?)"/)[1]] } : elements[selector],
     charts: { series: { candles: { setMarkers: (value) => { markers = value; } } } },
-    marketSignals: signals, css: () => '#000', esc: String, num: String,
-    SIGNALS: { averages: { label: 'EMA9/SMA20', marker: 'EMA/SMA' }, macd: { label: 'MACD', marker: 'MACD' }, rsi: {}, bollinger: {} },
+    marketSignals: signals, css: () => '#000', esc: String, num: String, renderSupportResistance: () => {},
+    SIGNALS: { averages: { label: 'EMA9/SMA20', marker: 'EMA/SMA' }, macd: { label: 'MACD', marker: 'MACD' }, rsi: {}, bollinger: {}, levels: { label: 'Soportes/resistencias', marker: 'S/R' } },
   });
   vm.runInContext(html.slice(html.indexOf('function renderMarketSignals()'), html.indexOf('// Autoscale del eje')), context);
   vm.runInContext('renderMarketSignals()', context);
@@ -120,6 +134,16 @@ test('gráfica: detalle y flechas respetan filtros e incluyen compra/venta, fech
   vm.runInContext('renderMarketSignals()', context);
   assert.equal(markers.length, 0);
   assert.match(elements['#signalRows'].innerHTML, /Sin señales/);
+  filters.levels = true;
+  elements['#signalControls'].onchange();
+  assert.equal(markers.length, 1);
+  assert.equal(markers[0].shape, 'arrowUp');
+  assert.match(markers[0].text, /S\/R COMPRA/);
+  assert.match(elements['#signalRows'].innerHTML, /Rebote alcista en soporte/);
+  assert.match(elements['#signalSummary'].innerHTML, /Soportes\/resistencias: COMPRA/);
+  filters.levels = false;
+  elements['#signalControls'].onchange();
+  assert.equal(markers.length, 0);
 });
 
 test('gráfica: descarta respuestas anteriores al cambiar el rango', async () => {
@@ -130,6 +154,7 @@ test('gráfica: descarta respuestas anteriores al cambiar el rango', async () =>
   const result = (close) => ({
     bars: [{ time: 1767274200, open: 100, high: 120, low: 90, close, volume: 1000 }],
     indicators: Object.fromEntries(['sma20', 'ema9', 'bbUpper', 'bbLower', 'rsi14', 'macd', 'signal', 'histogram'].map((k) => [k, [null]])),
+    levelSignals: [{ index: 0, side: 'buy', reason: 'Rebote en soporte de prueba' }],
   });
   calls[1].resolve(result(110));
   await second;
@@ -138,4 +163,5 @@ test('gráfica: descarta respuestas anteriores al cambiar el rango', async () =>
   assert.equal(candles.length, 1);
   assert.equal(candles[0][0].close, 110);
   assert.match(elements['#mkHistoryStatus'].textContent, /1 de hasta 1 velas/);
+  assert.equal(vm.runInContext('marketSignals[0].key', context), 'levels');
 });

@@ -1,6 +1,7 @@
 // Zonas heurísticas, no barreras ni probabilidades. Extremos locales confirmados
 // con dos observaciones a cada lado; solo se usan datos de la ventana recibida.
 // Referencia conceptual: https://www.cmegroup.com/education/courses/technical-analysis/support-and-resistance
+const MAX_LOOKBACK = 200;
 /**
  * Detecta zonas donde se repitieron extremos de precio dentro del historial recibido.
  *
@@ -15,7 +16,7 @@ export function supportResistance(input, referencePrice) {
   // 1. Unificar entradas: con cierres, high/low/close son el mismo número.
   // Esto permite reutilizar el detector en el recomendador y en el backtest.
   const basis = typeof input[0] === 'number' ? 'closes' : 'high-low';
-  const bars = input.slice(-200).map((b) => typeof b === 'number' ? { high: b, low: b, close: b } : b);
+  const bars = input.slice(-MAX_LOOKBACK).map((b) => typeof b === 'number' ? { high: b, low: b, close: b } : b);
   const valid = (b) => b && [b.high, b.low, b.close].every((v) => Number.isFinite(v) && v > 0) && b.high >= b.low;
   const price = referencePrice ?? bars.at(-1)?.close;
   // Una respuesta vacía significa falta de evidencia, no un soporte/resistencia de precio cero.
@@ -98,4 +99,31 @@ export function levelFit(template, levels) {
     return support && resistance && support.distancePct <= 10 && resistance.distancePct <= 10 ? 0.7 : 0.5;
   }
   return 0.5; // Un soporte/resistencia no demuestra que comprar volatilidad sea rentable.
+}
+
+/**
+ * Rebotes confirmados al cierre. Cada vela se compara con zonas calculadas
+ * exclusivamente con las velas anteriores (incluida la confirmación de pivotes).
+ * El llamador entrega solo velas cerradas; no se reutilizan las zonas actuales
+ * para marcar retrospectivamente señales que no se conocían en esa fecha.
+ */
+export function supportResistanceSignals(bars) {
+  const signals = [];
+  for (let index = 1; index < bars.length; index++) {
+    const bar = bars[index], previous = bars[index - 1];
+    if (![bar.open, bar.high, bar.low, bar.close, previous.close].every((value) => Number.isFinite(value) && value > 0)
+      || bar.high < Math.max(bar.open, bar.close) || bar.low > Math.min(bar.open, bar.close)) continue;
+    const levels = supportResistance(bars.slice(Math.max(0, index - MAX_LOOKBACK), index), previous.close);
+    const intersects = (zone) => bar.low <= zone.upper && bar.high >= zone.lower;
+    const support = levels.zones.find((zone) => zone.type === 'support' && previous.close > zone.upper
+      && intersects(zone) && bar.close > zone.upper && bar.close > bar.open);
+    const resistance = levels.zones.find((zone) => zone.type === 'resistance' && previous.close < zone.lower
+      && intersects(zone) && bar.close < zone.lower && bar.close < bar.open);
+    const zone = support ?? resistance;
+    if (!zone) continue;
+    const side = support ? 'buy' : 'sell';
+    signals.push({ index, time: bar.time, side, price: bar.close, zone: { ...zone },
+      reason: `${support ? 'Rebote alcista en soporte' : 'Rechazo bajista en resistencia'}: zona ${zone.lower.toFixed(2)}–${zone.upper.toFixed(2)}; ${zone.touches} contactos previos. Cierre ${support ? 'por encima' : 'por debajo'} de la zona.` });
+  }
+  return signals;
 }
