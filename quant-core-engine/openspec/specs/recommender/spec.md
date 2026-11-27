@@ -78,10 +78,10 @@ El sistema SHALL exponer `POST /ai/validate-risk` en el servicio `ai` (:3065) qu
 
 El recomendador admite `cores` en REST (lista separada por comas), GraphQL
 (arreglo) y ejecución automática (arreglo). Valores: `technical`, `probability`,
-`risk`, `ai`. Por defecto usa los tres primeros, conservando el puntaje anterior.
-Los pesos 30/40/30/30 se normalizan entre los seleccionados; la compuerta de EV
-positivo solo participa con `risk`. Las métricas cuantitativas son insumos
-compartidos, incluso al usar únicamente IA.
+`risk`, `ai`, `news`, `liquidity`. Por defecto usa los tres primeros, conservando el
+puntaje anterior. Los pesos 30/40/30/30/20/20 se normalizan entre los seleccionados;
+la compuerta de EV positivo solo participa con `risk`. Las métricas cuantitativas son
+insumos compartidos, incluso al usar únicamente IA.
 
 - Dado un conjunto vacío o desconocido, cuando se solicita análisis, entonces
   devuelve 400 antes de consultar proveedores.
@@ -98,3 +98,24 @@ compartidos, incluso al usar únicamente IA.
   históricos; con cores cuantitativos respeta sus votos y candidatos.
 - Dada ejecución automática, entonces usa los cores elegidos para el ranking,
   manteniendo obligatorios los filtros de seguridad de riesgo e IA al operar.
+
+### Requirement: Core Liquidez y ejecución
+
+Con `liquidity`, cada estrategia incluye `execution` calculado con los snapshots ya
+consultados (bid/ask, tamaños y antigüedad por pierna), sin llamadas adicionales.
+El costo de entrada vs. mid es `Σ (ask-bid)/2 × ratio × 100`; el escenario de cierre
+supone el mismo spread. Comisiones (`EXECUTION_COMMISSION_PER_CONTRACT`), antigüedad
+máxima (`EXECUTION_MAX_QUOTE_AGE_SECONDS`) y deslizamiento (`EXECUTION_SLIPPAGE_BPS`)
+son configurables. `expectedAfterCosts` = EV del modelo − costo estimado.
+
+- Dado `liquidity`, cuando se rankea, entonces el componente de riesgo y su compuerta
+  usan `expectedAfterCosts`; `metrics.expectedValue`, probabilidad y VaR permanecen
+  antes de costos.
+- Dado bid/ask ausente, cruzado o con bid cero, entonces `status = unavailable`,
+  costos nulos y puntaje 0.
+- Dadas cotizaciones antiguas, tamaños insuficientes, comisiones sin configurar o feed
+  distinto de `opra`, entonces el puntaje de liquidez se limita a 0.5, `ready = false`
+  y la estrategia no es `actionable`.
+- Dada ejecución automática con `liquidity`, entonces se vuelven a consultar snapshots
+  después de IA y no se envía la orden si `ready` es falso o el escenario deja de ser positivo.
+- Dado backtest con `liquidity`, entonces devuelve 400: no hay bid/ask históricos.

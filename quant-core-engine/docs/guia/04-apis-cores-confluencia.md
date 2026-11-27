@@ -7,7 +7,7 @@ de confluencia que combina sus señales y los 3 modos de seleccionar estrategia 
 los demás equipos consumen nuestras APIs.
 
 > **Alcance.** F0 incluye las APIs, el motor Rust/WASM y un recomendador con cores seleccionables
-> `technical`, `probability`, `risk`, `ai` y `news`. Los cinco cores de la arquitectura general
+> `technical`, `probability`, `risk`, `ai`, `news` y `liquidity`. Los cinco cores de la arquitectura general
 > descritos abajo son una propuesta más amplia: fundamental e institucional siguen pendientes.
 > El contrato común de señal de esta guía es una propuesta; el recomendador usa encajes 0–1 por estrategia.
 
@@ -77,6 +77,21 @@ Contrato común propuesto para que el motor de confluencia pueda combinarlas:
   probabilidad del Monte Carlo. Sin artículos = neutral con confianza cero; fallo del feed = 503
   (en scans, empresa omitida con motivo). El backtest rechaza news para evitar usar noticias presentes
   como evidencia histórica. Está desactivado por defecto.
+
+### 04.01.7 Core de liquidez y ejecución
+- **Analiza**: qué tan caro es entrar y salir de la estrategia según bid/ask, tamaños visibles
+  y antigüedad de la cotización de cada pierna.
+- **Implementación actual**: `api/src/services/liquidity.service.js`, activable con
+  `cores=liquidity` en recommend, scan, screen y el modo automático. Casilla **Liquidez y ejecución**
+  en el Recomendador; Explorar añade columnas de puntaje, costo y EV después de costos.
+- **Fuente**: los mismos snapshots de opciones de Alpaca que ya usa el recomendador; sin consultas extra.
+- **Puntaje**: `0.55/(1+spreadRelativo/0.1) + 0.25×frescura + 0.20×tamañoSuficiente`, peso relativo
+  0.2. Sin tamaños, comisiones, frescura o feed OPRA se limita a 0.5 y `ready = false`.
+- **Efecto**: el componente de riesgo usa `expectedAfterCosts` (EV − spreads, comisiones y
+  deslizamiento). Probabilidad, VaR y Monte Carlo no cambian. Variables en `api/.env`:
+  `EXECUTION_COMMISSION_PER_CONTRACT`, `EXECUTION_MAX_QUOTE_AGE_SECONDS`, `EXECUTION_SLIPPAGE_BPS`.
+- **Límites**: no garantiza fills ni profundidad; el backtest lo rechaza por falta de bid/ask
+  históricos. Está desactivado por defecto.
 
 ---
 
